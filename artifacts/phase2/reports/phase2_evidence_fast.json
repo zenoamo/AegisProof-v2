@@ -1,0 +1,171 @@
+{
+  "suite": "phase2_verify.mjs (optimized)",
+  "mode": "FAST",
+  "startedAt": "2026-08-04T13:21:39.279Z",
+  "protocolVersion": 2,
+  "setupVersion": "dev-phase2-v1",
+  "steps": [],
+  "checks": {
+    "SSoT-schema": {
+      "pass": true,
+      "detail": "protocol/version fields"
+    },
+    "SSoT-signal-count": {
+      "pass": true,
+      "detail": "publicSignals.length=30"
+    },
+    "SSoT-indices-contiguous": {
+      "pass": true,
+      "detail": "0..29 contiguous"
+    },
+    "SSoT-commitment-spec": {
+      "pass": true,
+      "detail": "Poseidon(6) inputs"
+    },
+    "SSoT-nullifier-spec": {
+      "pass": true,
+      "detail": "Poseidon(8) inputs"
+    },
+    "SSoT-timestamp-policy": {
+      "pass": true,
+      "detail": "MAX_AGE=24h, SKEW=5min per authorization"
+    },
+    "Layout-sym-vs-SSoT": {
+      "pass": true,
+      "detail": "wires 1..30 = SSoT order"
+    },
+    "Layout-private": {
+      "pass": true,
+      "detail": "wires 31/32 private"
+    },
+    "R1CS-nPublic": {
+      "pass": true,
+      "detail": "nPubInputs=30"
+    },
+    "R1CS-nPrivate": {
+      "pass": true,
+      "detail": "nPrvInputs=2"
+    },
+    "R1CS-nOutputs": {
+      "pass": true,
+      "detail": "nOutputs=0 (input-flip: no outputs)"
+    },
+    "R1CS-constraints": {
+      "pass": true,
+      "detail": "nConstraints=6590"
+    },
+    "Artifact-r1cs-exists": {
+      "pass": true,
+      "detail": "compiled circuit artifact present"
+    },
+    "Artifact-wasm-exists": {
+      "pass": true,
+      "detail": "wasm witness producer present"
+    },
+    "Artifact-source-status": {
+      "pass": true,
+      "detail": "v2 .circom source absent (lost); frozen r1cs/wasm treated as canonical compiled circuit; witness sanity-check asserts all constraints"
+    },
+    "C1-layout-measured": {
+      "pass": true,
+      "detail": "30 publicSignals in canonical SSoT order with expected values"
+    },
+    "C2-poseidon6-works": {
+      "pass": true,
+      "detail": "Poseidon(6) produces provided commitment"
+    },
+    "C2-poseidon8-works": {
+      "pass": true,
+      "detail": "Poseidon(8) produces provided nullifier"
+    },
+    "C4-DOMAIN-NUS": {
+      "pass": true,
+      "detail": "DOMAIN_NULLIFIER_V2 re-derived via NUS rule matches SSoT"
+    },
+    "C4-commitment-recompute": {
+      "pass": true,
+      "detail": "Poseidon(6) over SSoT commitment inputs equals provided commitment"
+    },
+    "C4-nullifier-recompute": {
+      "pass": true,
+      "detail": "Poseidon(8) over SSoT nullifier inputs equals provided nullifier"
+    },
+    "C4-publicSignals-position": {
+      "pass": true,
+      "detail": "all 30 publicSignals equal provided inputs at SSoT indices"
+    },
+    "Gate-domain": {
+      "pass": true,
+      "detail": "NUS domain consistent"
+    },
+    "Gate-timestamp-unbound": {
+      "pass": true,
+      "detail": "timestamp excluded from commitment/nullifier per approval"
+    },
+    "Gate-no-v1-domain": {
+      "pass": true,
+      "detail": "no v1 hand-picked domain separator in v2 artifacts"
+    },
+    "IC-length": {
+      "pass": true,
+      "detail": "IC.length=31 (expected nPublic+1=31)"
+    },
+    "VK-protocol": {
+      "pass": true,
+      "detail": "groth16"
+    },
+    "IC-on-curve": {
+      "pass": true,
+      "detail": "all 31 IC points + alpha/beta/delta on BN128"
+    },
+    "Gate-IC-static": {
+      "pass": true,
+      "detail": "IC length static gate (source: committed vkey)"
+    },
+    "Phase0-unchanged": {
+      "pass": true,
+      "detail": "phase0 hashes identical before/after"
+    }
+  },
+  "artifacts": {
+    "r1cs": {
+      "nVars": 6618,
+      "nPubInputs": 30,
+      "nPrvInputs": 2,
+      "nOutputs": 0,
+      "nConstraints": 6590
+    },
+    "r1csHash": "3d47226b06d707b1765d7bf35acd01966b9800b0f6fb77cfe084a775f0fa5599",
+    "wasmHash": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
+    "symHash": "3aea81b1778b99c4191491234a717ab3f226805c0662151b9b785e290b69e390"
+  },
+  "phase0": {
+    "before": {
+      "contracts/AegisShield.sol": "e5359f38477152021584445d8d2128376c774e869788d5f0092cfaf58e5eebc6",
+      "contracts/Groth16Verifier29.sol": "8c169d833c49f9b96edca785ae9cfb7895733be0138cf093d775b72060612854",
+      "circuits/aegis_commit_core.circom": "67f99ace720a3e86078faf63dff2e09f17495910f18e256a043e7d1103b2447d",
+      "circuits/aegis_commit_core.sym": "5ca55f0c9666b8580f79ff5ce695f60366d95aefbbecacbeec70edc06fc2b789",
+      "build/vkey.json": "5033f5ff1c373f9ecdf16e501808390f438694c3b32ea7aef3536277dc9692d1",
+      "build/proofs/proof_29.json": "cce228a585f87a56f0dd03b5bda1b618bd1cdda902ac53cf9bea92c6390a25b4",
+      "build/proofs/public_29.json": "a726008925b72ee8068bf058391c0bfc99210d897e02fb90563063750a630382",
+      "specs/canonical-signals.json": "fa453f5909dd5d643f551d703d3c7ba36e0762c2a03e32a8bc728e2e26763b49",
+      "test/testVerifyAndAccept.ts": "ba7a319cd34840b209a511bbaa2a681942525c05a850dc19244273e65f46bb41",
+      "scripts/input.json": "e443ffd89148ddf8e818747e767f5c0caef1829710a99d8dd40ac1976d1c8d5c"
+    },
+    "after": {
+      "contracts/AegisShield.sol": "e5359f38477152021584445d8d2128376c774e869788d5f0092cfaf58e5eebc6",
+      "contracts/Groth16Verifier29.sol": "8c169d833c49f9b96edca785ae9cfb7895733be0138cf093d775b72060612854",
+      "circuits/aegis_commit_core.circom": "67f99ace720a3e86078faf63dff2e09f17495910f18e256a043e7d1103b2447d",
+      "circuits/aegis_commit_core.sym": "5ca55f0c9666b8580f79ff5ce695f60366d95aefbbecacbeec70edc06fc2b789",
+      "build/vkey.json": "5033f5ff1c373f9ecdf16e501808390f438694c3b32ea7aef3536277dc9692d1",
+      "build/proofs/proof_29.json": "cce228a585f87a56f0dd03b5bda1b618bd1cdda902ac53cf9bea92c6390a25b4",
+      "build/proofs/public_29.json": "a726008925b72ee8068bf058391c0bfc99210d897e02fb90563063750a630382",
+      "specs/canonical-signals.json": "fa453f5909dd5d643f551d703d3c7ba36e0762c2a03e32a8bc728e2e26763b49",
+      "test/testVerifyAndAccept.ts": "ba7a319cd34840b209a511bbaa2a681942525c05a850dc19244273e65f46bb41",
+      "scripts/input.json": "e443ffd89148ddf8e818747e767f5c0caef1829710a99d8dd40ac1976d1c8d5c"
+    }
+  },
+  "evidencePath": "C:\\workspace\\AegisProof\\artifacts\\phase2\\reports\\phase2_evidence_fast.json",
+  "finishedAt": "2026-08-04T13:21:40.188Z",
+  "totalElapsedSec": 0.909
+}

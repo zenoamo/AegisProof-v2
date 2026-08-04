@@ -1,0 +1,27 @@
+{
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.11.0",
+    "viem": "^2.55.10"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
+    "@nomicfoundation/hardhat-viem": "^3.0.9",
+    "@types/node": "^22.20.1",
+    "hardhat": "^3.12.0",
+    "snarkjs": "^0.7.6",
+    "tsx": "^4.23.1",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "prove": "node scripts/prove.js",
+    "test": "tsx test/testVerifyAndAccept.ts",
+    "verify:signals": "tsx scripts/verify-signals.ts",
+    "sync:signals": "tsx scripts/sync-signals.ts",
+    "aegis:verify": "tsx scripts/aegis-auto-verify.ts"
+  },
+  "type": "module"
+}

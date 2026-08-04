@@ -1,0 +1,111 @@
+# ============================================================================
+# AegisProof Phase 2/3 reproducibility pipeline (scope item #8)
+# ----------------------------------------------------------------------------
+# FAST job (every push / PR):
+#   - codegen determinism  (SSoT -> TS/Solidity constants must be up to date)
+#   - Phase 0 / canonical artifact manifest verification (20/20)
+#   - standalone gates (Layout/Binding/IC-VK/Domain/Forbidden-Hardcode)
+#   - contract compilation (Hardhat 3, isolated artifacts dir)
+#   - verification suite --fast (30 checks, no trusted setup needed:
+#     uses the committed vkey_v2.json — dev zkey absent = CI mode)
+#
+# FULL job (weekly schedule + manual dispatch):
+#   - gates + manifest FIRST (while pinned files are untouched)
+#   - verification suite --full (41 checks). In CI the dev setup is absent,
+#     so the suite runs its DEVELOPMENT setup with EPHEMERAL random entropy:
+#     the regenerated ptau/zkey/vkey exist only inside the disposable runner
+#     and can NEVER match the committed dev hashes (random entropy by design).
+#     CI FULL therefore proves the pipeline is end-to-end reproducible from
+#     the canonical r1cs/wasm/sym, not byte-reproduction of the dev setup.
+#     The pinned evidence in Git is untouched (runner is discarded).
+#   - Production trusted setup is NEVER performed here (Phase 4 ceremony).
+# ============================================================================
+name: AegisProof Reproducibility CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # weekly FULL run (Monday 03:00 UTC)
+    - cron: "0 3 * * 1"
+
+jobs:
+  fast:
+    name: FAST gates + suite (30 checks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Codegen determinism (SSoT -> TS/Solidity constants)
+        run: |
+          node scripts/codegen_signals.mjs
+          git diff --exit-code -- generated/AegisSignals.ts contracts/generated/AegisSignals.sol
+
+      - name: Artifact manifest verification (Phase 0 + canonical hashes)
+        run: node scripts/verify_manifest.mjs
+
+      - name: Standalone gates (CI mode — committed vkey, no dev zkey)
+        run: node scripts/gates/run_all.mjs
+
+      - name: Hardhat compile (isolated artifacts dir)
+        run: npx hardhat compile
+
+      - name: Verification suite — FAST (30 checks)
+        run: node scripts/phase2_verify.mjs --fast
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-evidence-fast
+          path: |
+            artifacts/phase2/reports/phase2_evidence_fast.json
+            artifacts/phase2/reports/phase2_verify_run_fast.log
+          if-no-files-found: warn
+
+  full:
+    name: FULL suite (41 checks, ephemeral dev setup)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # FAST runs on every push/PR; the heavier FULL job runs on the weekly
+    # schedule and on manual dispatch only (note: cron fires on default branch)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Artifact manifest verification (before any setup touches files)
+        run: node scripts/verify_manifest.mjs
+
+      - name: Standalone gates (CI mode — before ephemeral setup)
+        run: node scripts/gates/run_all.mjs
+
+      - name: Verification suite — FULL (41 checks, dev setup auto-run)
+        run: node scripts/phase2_verify.mjs --full
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-evidence-full
+          path: |
+            artifacts/phase2/reports/phase2_evidence_full.json
+            artifacts/phase2/reports/phase2_verify_run_full.log
+          if-no-files-found: warn

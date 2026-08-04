@@ -1,0 +1,71 @@
+# ============================================================================
+# AegisProof Git tracking & artifact retention — POLICY C
+# (approved Phase 3: track sources + selected immutable evidence artifacts;
+#  exclude large/regenerable binaries)
+# Full classification: docs/artifact-retention.md
+# ============================================================================
+
+# --- secrets & environment ---------------------------------------------------
+.env
+.env.*
+deployments/
+
+# --- dependencies & tooling caches --------------------------------------------
+node_modules/
+server/node_modules/
+.aider*
+.qoder/
+cache/
+npm-debug.log*
+tsconfig.tsbuildinfo
+desktop.ini
+
+# --- vendored tooling (embedded git repositories) ------------------------------
+# The circom compiler is vendored with its own .git; committing it would
+# create a broken gitlink. Clone upstream iden3/circom instead.
+/circom/
+
+# --- Lean build state ----------------------------------------------------------
+.lake/
+formal/.lake/
+
+# --- Hardhat build output -------------------------------------------------------
+# Hardhat 3 writes to artifacts/hardhat/ (isolated on purpose: its build system
+# deletes unknown *.json dirs under paths.artifacts — see hardhat.config.ts).
+# Fully regenerable via `npx hardhat compile`.
+artifacts/hardhat/
+
+# --- artifacts/ tree: ignore everything, re-include canonical evidence ----------
+artifacts/*
+!artifacts/phase2/
+
+# Phase 2 tree: keep frozen circuit evidence + vkey + test vectors + evidence
+artifacts/phase2/*
+!artifacts/phase2/r1cs/
+!artifacts/phase2/vkey/
+!artifacts/phase2/tests/
+!artifacts/phase2/reports/
+!artifacts/phase2/cache/
+
+# Trusted-setup material: dev secrets, regenerable via SETUP MODE, and the
+# production setup is a Phase 4 ceremony — never commit.
+artifacts/phase2/setup/
+
+# cache/: keep only the hash manifest; scratch files are regenerable
+artifacts/phase2/cache/*
+!artifacts/phase2/cache/cache-manifest.json
+
+# --- v1-era leftovers at repo root (superseded by artifacts/phase2 + circuits/) -
+/aegis_commit_core.r1cs
+/aegis_commit_core.sym
+/aegis_commit_core_js/
+/circuits/aegis_commit_core_js/
+audit-*-slither.json
+
+# --- build/: v1 outputs; ONLY the three Phase 0 frozen evidence files are tracked
+build/*
+!build/vkey.json
+!build/proofs/
+build/proofs/*
+!build/proofs/proof_29.json
+!build/proofs/public_29.json

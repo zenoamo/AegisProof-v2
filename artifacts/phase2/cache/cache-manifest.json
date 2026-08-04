@@ -1,0 +1,12 @@
+{
+  "protocolVersion": 2,
+  "setupVersion": "dev-phase2-v1",
+  "r1csHash": "3d47226b06d707b1765d7bf35acd01966b9800b0f6fb77cfe084a775f0fa5599",
+  "wasmHash": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
+  "symHash": "3aea81b1778b99c4191491234a717ab3f226805c0662151b9b785e290b69e390",
+  "ssotHash": "90f7a6a0ee640f7c11c37a7040d8f5ba4733eb0fbb9d1e491704aa4a29df5cf4",
+  "createdAt": "2026-08-04T13:21:38.472Z",
+  "ptauHash": "b4f1f3dd3222cdfd50a555c94a7f01b54448942c1f68836b46160ff64466466f",
+  "zkeyHash": "c80f004e9f6b26fa6ed7407a4b5c6e20991cefcb5fd24675f732ce35ac7a643d",
+  "vkeyHash": "6193351af0892493e3fe5f1df672519dea47f89a54be1bf5f751ab62d680034d"
+}
