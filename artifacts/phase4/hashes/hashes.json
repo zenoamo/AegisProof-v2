@@ -1,0 +1,77 @@
+{
+  "ceremony": "phase4-production",
+  "steps": [
+    {
+      "step": "pot:0000:init",
+      "file": "artifacts\\phase4\\contributions\\pot_0000_init.ptau",
+      "sha256": "6dcf0303754e8c8a2b8fbd40f808d0308db1f52c29447caa16e08488f0b8d84e",
+      "sizeBytes": 6291664
+    },
+    {
+      "step": "pot:0001:phase4-pot-contributor-1",
+      "file": "artifacts\\phase4\\contributions\\pot_0001_phase4-pot-contributor-1.ptau",
+      "sha256": "4d57f58a525a09eca8d17a470b3168392976b5d4cb6a66e18fbe631a5395aef2",
+      "sizeBytes": 6293194
+    },
+    {
+      "step": "pot:0002:phase4-pot-contributor-2",
+      "file": "artifacts\\phase4\\contributions\\pot_0002_phase4-pot-contributor-2.ptau",
+      "sha256": "827bc393c04401265de2ca82fff2a20ec7285d234e7cb467b487fb68b7716cea",
+      "sizeBytes": 6294724
+    },
+    {
+      "step": "pot:0003:phase4-pot-contributor-3",
+      "file": "artifacts\\phase4\\contributions\\pot_0003_phase4-pot-contributor-3.ptau",
+      "sha256": "ff76a151bb51e24e29dd74374943d4f8069dd6bee6f56c4d8f12a485f43f9f93",
+      "sizeBytes": 6296254
+    },
+    {
+      "step": "pot:0004:beacon",
+      "file": "artifacts\\phase4\\contributions\\pot_0004_beacon.ptau",
+      "sha256": "9adc383e18a44a656049515c16e9e466159d5b22adc63ccd7c7e01ebdbea8100",
+      "sizeBytes": 6297813
+    },
+    {
+      "step": "pot:final",
+      "file": "artifacts\\phase4\\final\\phase4-ptau.ptau",
+      "sha256": "4afdd19bbf8cceeb24f169b55e53fbd721de90401178489d439d0839bf218fed",
+      "sizeBytes": 18880453
+    },
+    {
+      "step": "zkey:0000:init",
+      "file": "artifacts\\phase4\\contributions\\zkey_0000_init.zkey",
+      "sha256": "8a2cfe79adf9399e7f5cab1dbe05b8c3869af23811ae8210aea79db32b4b9adc",
+      "sizeBytes": 2879768
+    },
+    {
+      "step": "zkey:0001:phase4-zkey-contributor-1",
+      "file": "artifacts\\phase4\\contributions\\zkey_0001_phase4-zkey-contributor-1.zkey",
+      "sha256": "68c2f9a9e0c21112b9c0d8b8aa6a8ea2eadb5ef92c2b2b1f0dca72e74a74d868",
+      "sizeBytes": 2880187
+    },
+    {
+      "step": "zkey:0002:phase4-zkey-contributor-2",
+      "file": "artifacts\\phase4\\contributions\\zkey_0002_phase4-zkey-contributor-2.zkey",
+      "sha256": "3e4b13130a8b1ef9366a89625268c114c00c44491ffb132fc42a40ced11a6a56",
+      "sizeBytes": 2880606
+    },
+    {
+      "step": "zkey:0003:phase4-zkey-contributor-3",
+      "file": "artifacts\\phase4\\contributions\\zkey_0003_phase4-zkey-contributor-3.zkey",
+      "sha256": "e703e2015d40fa4946f835e72c511b8b1d3d726ac28f04818f6335567e039313",
+      "sizeBytes": 2881025
+    },
+    {
+      "step": "zkey:0004:beacon=FINAL",
+      "file": "artifacts\\phase4\\final\\production.zkey",
+      "sha256": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "sizeBytes": 2881473
+    },
+    {
+      "step": "vkey:final",
+      "file": "artifacts\\phase4\\final\\production-vkey.json",
+      "sha256": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+      "sizeBytes": 8840
+    }
+  ]
+}

@@ -38,6 +38,7 @@ artifacts/hardhat/
 # --- artifacts/ tree: ignore everything, re-include canonical evidence ----------
 artifacts/*
 !artifacts/phase2/
+!artifacts/phase4/
 
 # Phase 2 tree: keep frozen circuit evidence + vkey + test vectors + evidence
 artifacts/phase2/*
@@ -54,6 +55,21 @@ artifacts/phase2/setup/
 # cache/: keep only the hash manifest; scratch files are regenerable
 artifacts/phase2/cache/*
 !artifacts/phase2/cache/cache-manifest.json
+
+# Phase 4 (PRODUCTION trusted setup): track ceremony records + final vkey;
+# EXCLUDE large proving-key binaries and the raw contribution chain
+# (persisted on disk, hash-pinned in specs/artifact-manifest.json).
+artifacts/phase4/*
+!artifacts/phase4/ceremony/
+!artifacts/phase4/transcripts/
+!artifacts/phase4/hashes/
+!artifacts/phase4/beacon/
+!artifacts/phase4/reports/
+!artifacts/phase4/final/
+artifacts/phase4/contributions/
+artifacts/phase4/final/*.zkey
+artifacts/phase4/final/*.ptau
+artifacts/phase4/reports/scratch/
 
 # --- v1-era leftovers at repo root (superseded by artifacts/phase2 + circuits/) -
 /aegis_commit_core.r1cs

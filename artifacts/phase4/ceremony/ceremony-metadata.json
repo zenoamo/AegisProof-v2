@@ -1,0 +1,44 @@
+{
+  "ceremony": "AegisProof v2 production trusted setup",
+  "protocol": "groth16",
+  "curve": "bn128",
+  "r1cs": {
+    "path": "artifacts/phase2/r1cs/aegis_commit_core_v2.r1cs",
+    "sha256": "3d47226b06d707b1765d7bf35acd01966b9800b0f6fb77cfe084a775f0fa5599"
+  },
+  "ssotSha256": "90f7a6a0ee640f7c11c37a7040d8f5ba4733eb0fbb9d1e491704aa4a29df5cf4",
+  "potPower": 14,
+  "nConstraints": 6590,
+  "nPublic": 30,
+  "contributorsPerChain": 3,
+  "contributorPolicy": "orchestrated slots with fresh crypto.randomBytes entropy discarded after each contribution; NOT independent human contributors — see report disclosure",
+  "beacon": {
+    "source": "Bitcoin genesis block hash",
+    "hash": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+    "iterationsExp": 10
+  },
+  "startedAt": "2026-08-04T13:56:01.557Z",
+  "gitHead": "604c2f9be2a35822c5002180d018a7352e6a223f",
+  "snarkjsVersion": "0.7.6",
+  "devArtifactsForbidden": {
+    "devZkey": "c80f004e9f6b26fa",
+    "devPtau": "b4f1f3dd3222cdfd",
+    "devVkey": "6193351af0892493"
+  },
+  "completedAt": "2026-08-04T14:05:25.656Z",
+  "durationSeconds": 564,
+  "finalArtifacts": {
+    "ptau": {
+      "path": "artifacts/phase4/final/phase4-ptau.ptau",
+      "sha256": "4afdd19bbf8cceeb24f169b55e53fbd721de90401178489d439d0839bf218fed"
+    },
+    "zkey": {
+      "path": "artifacts/phase4/final/production.zkey",
+      "sha256": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571"
+    },
+    "vkey": {
+      "path": "artifacts/phase4/final/production-vkey.json",
+      "sha256": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec"
+    }
+  }
+}

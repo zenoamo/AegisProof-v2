@@ -1,0 +1,19 @@
+{
+  "source": "Bitcoin genesis block hash (public, immutable, independently verifiable)",
+  "beaconHash": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+  "iterationsExp": 10,
+  "iterations": 1024,
+  "appliedTo": [
+    {
+      "chain": "powers-of-tau",
+      "output": "contributions/pot_0004_beacon.ptau",
+      "sha256": "9adc383e18a44a656049515c16e9e466159d5b22adc63ccd7c7e01ebdbea8100"
+    },
+    {
+      "chain": "groth16-zkey",
+      "output": "final/production.zkey",
+      "sha256": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571"
+    }
+  ],
+  "recordedAt": "2026-08-04T14:05:25.656Z"
+}

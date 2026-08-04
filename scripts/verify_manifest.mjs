@@ -66,5 +66,27 @@ for (const [mode, rel] of Object.entries({ full: manifest.evidence.full, fast: m
   );
 }
 
+// --- Phase 4 (production trusted setup, present only after the ceremony) -----
+if (manifest.phase4) {
+  console.log("== Phase 4 (production trusted setup) ==");
+  for (const key of Object.keys(manifest.phase4.finalHashes)) {
+    const rel = manifest.phase4.paths[key];
+    const got = sha256(R(rel));
+    report(got === manifest.phase4.finalHashes[key], `phase4:${key}`, got ? got.slice(0, 16) : "MISSING");
+  }
+  // ceremony records must exist (transcript, per-step hashes, beacon record)
+  const recs = [
+    "artifacts/phase4/transcripts/ceremony-transcript.log",
+    "artifacts/phase4/hashes/hashes.json",
+    "artifacts/phase4/beacon/beacon-record.json",
+    "artifacts/phase4/ceremony/ceremony-metadata.json",
+  ];
+  for (const rel of recs) report(fs.existsSync(R(rel)), `phase4:record:${path.basename(rel)}`);
+  // dev/production separation: no phase4 final hash may match a dev hash
+  const DEV = ["c80f004e9f6b26fa", "b4f1f3dd3222cdfd", "6193351af0892493"];
+  const mixed = Object.values(manifest.phase4.finalHashes).some((h) => DEV.some((d) => h.startsWith(d)));
+  report(!mixed, "phase4:dev-separation", mixed ? "DEV HASH PROMOTED TO PRODUCTION" : "production hashes distinct from dev setup");
+}
+
 console.log(failures === 0 ? "MANIFEST VERIFICATION: PASS" : `MANIFEST VERIFICATION: FAIL (${failures})`);
 process.exit(failures === 0 ? 0 : 1);

@@ -42,5 +42,23 @@
     "policy": "mode-separated (E-1); a FAST run must never overwrite FULL evidence",
     "fullExpectedChecks": 41,
     "fastExpectedChecks": 30
+  },
+  "phase4": {
+    "policy": "PRODUCTION trusted setup (Phase 4: multi-contributor + beacon; human-AUTHORIZED 2026-08-04). Final artifacts hash-pinned below; the full contribution chain (transcripts, per-step hashes, beacon record) lives under artifacts/phase4/. Dev zkey/vkey must NEVER be promoted to production.",
+    "beacon": {
+      "source": "Bitcoin genesis block hash (public, immutable)",
+      "hash": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      "iterationsExp": 10
+    },
+    "paths": {
+      "ptauHash": "artifacts/phase4/final/phase4-ptau.ptau",
+      "zkeyHash": "artifacts/phase4/final/production.zkey",
+      "vkeyHash": "artifacts/phase4/final/production-vkey.json"
+    },
+    "finalHashes": {
+      "ptauHash": "4afdd19bbf8cceeb24f169b55e53fbd721de90401178489d439d0839bf218fed",
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkeyHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec"
+    }
   }
 }

@@ -1,0 +1,25 @@
+[2026-08-04T13:56:01.403Z] PHASE 4 PRODUCTION TRUSTED SETUP — ceremony starting
+[2026-08-04T13:56:01.436Z] canonical R1CS: artifacts\phase2\r1cs\aegis_commit_core_v2.r1cs
+[2026-08-04T13:56:01.442Z] PASS Phase 0 pre-flight: 10/10 hashes match
+[2026-08-04T13:56:01.443Z] PASS SSoT pre-flight: hash matches manifest
+[2026-08-04T13:56:01.445Z] PASS canonical R1CS verified: 3d47226b06d707b1765d7bf35acd01966b9800b0f6fb77cfe084a775f0fa5599
+[2026-08-04T13:56:01.557Z] --- POWERS OF TAU (2^14) ---
+[2026-08-04T13:56:02.473Z] HASH pot:0000:init: 6dcf0303754e8c8a2b8fbd40f808d0308db1f52c29447caa16e08488f0b8d84e (pot_0000_init.ptau)
+[2026-08-04T13:56:32.186Z] HASH pot:0001:phase4-pot-contributor-1: 4d57f58a525a09eca8d17a470b3168392976b5d4cb6a66e18fbe631a5395aef2 (pot_0001_phase4-pot-contributor-1.ptau)
+[2026-08-04T13:57:09.258Z] HASH pot:0002:phase4-pot-contributor-2: 827bc393c04401265de2ca82fff2a20ec7285d234e7cb467b487fb68b7716cea (pot_0002_phase4-pot-contributor-2.ptau)
+[2026-08-04T13:57:43.235Z] HASH pot:0003:phase4-pot-contributor-3: ff76a151bb51e24e29dd74374943d4f8069dd6bee6f56c4d8f12a485f43f9f93 (pot_0003_phase4-pot-contributor-3.ptau)
+[2026-08-04T13:58:16.474Z] HASH pot:0004:beacon: 9adc383e18a44a656049515c16e9e466159d5b22adc63ccd7c7e01ebdbea8100 (pot_0004_beacon.ptau)
+[2026-08-04T13:58:19.492Z] PASS powers-of-tau chain verified (beacon-topped)
+[2026-08-04T14:04:17.294Z] HASH pot:final: 4afdd19bbf8cceeb24f169b55e53fbd721de90401178489d439d0839bf218fed (phase4-ptau.ptau)
+[2026-08-04T14:04:17.299Z] --- GROTH16 ZKEY (canonical R1CS) ---
+[2026-08-04T14:04:28.821Z] HASH zkey:0000:init: 8a2cfe79adf9399e7f5cab1dbe05b8c3869af23811ae8210aea79db32b4b9adc (zkey_0000_init.zkey)
+[2026-08-04T14:04:31.591Z] HASH zkey:0001:phase4-zkey-contributor-1: 68c2f9a9e0c21112b9c0d8b8aa6a8ea2eadb5ef92c2b2b1f0dca72e74a74d868 (zkey_0001_phase4-zkey-contributor-1.zkey)
+[2026-08-04T14:04:42.111Z] PASS zkey chain verified after contribution 1
+[2026-08-04T14:04:44.624Z] HASH zkey:0002:phase4-zkey-contributor-2: 3e4b13130a8b1ef9366a89625268c114c00c44491ffb132fc42a40ced11a6a56 (zkey_0002_phase4-zkey-contributor-2.zkey)
+[2026-08-04T14:04:57.628Z] PASS zkey chain verified after contribution 2
+[2026-08-04T14:05:00.049Z] HASH zkey:0003:phase4-zkey-contributor-3: e703e2015d40fa4946f835e72c511b8b1d3d726ac28f04818f6335567e039313 (zkey_0003_phase4-zkey-contributor-3.zkey)
+[2026-08-04T14:05:13.623Z] PASS zkey chain verified after contribution 3
+[2026-08-04T14:05:15.988Z] HASH zkey:0004:beacon=FINAL: ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571 (production.zkey)
+[2026-08-04T14:05:25.641Z] PASS final production zkey verified against canonical R1CS + ceremony ptau
+[2026-08-04T14:05:25.655Z] HASH vkey:final: d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec (production-vkey.json)
+[2026-08-04T14:05:25.655Z] PASS dev/production separation: no dev hash appears in any phase4 artifact
