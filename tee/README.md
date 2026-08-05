@@ -1,7 +1,7 @@
 # AegisProof TEE Research
 
-**Phase**: 8.8b  
-**Status**: Experimental Ioctl Acquisition Skeleton (Research/PoC)  
+**Phase**: 8.9A  
+**Status**: Remote Attestation Architecture Design (Research/PoC — design only)  
 **Scope**: Intel TDX, AMD SEV-SNP, Attestation Adapter Layer, ZK Proof Integration Research
 
 ---
@@ -137,6 +137,7 @@ npx tsx tee/scripts/evaluate.ts
 - [x] Device acquisition layer + verification research design (Phase 8.7)
 - [x] Verification stubs + ZK claims mapper PoC (Phase 8.8)
 - [x] Experimental acquisition skeleton (Phase 8.8b — `TEE_ACQUISITION=experimental`)
+- [x] Remote Attestation architecture design (Phase 8.9A — design only)
 - [ ] Native ioctl hook (deferred — Phase 8.8c approval)
 - [ ] Production TEE integration (deferred)
 
@@ -148,6 +149,7 @@ npx tsx tee/scripts/evaluate.ts
 - [Phase 8.7 Research Plan](../docs/research/phase8.7-real-tee-research-plan.md)
 - [Phase 8.8 Verification Plan](../docs/research/phase8.8-real-tee-verification-plan.md)
 - [Phase 8.8b Experimental Acquisition](../docs/research/phase8.8b-ioctl-acquisition-poc.md)
+- [Phase 8.9A Remote Attestation Design](../docs/research/phase8.9-remote-attestation-design.md)
 - [Phase 8.5 Real TEE Evaluation Plan](../docs/research/phase8.5-real-tee-evaluation-plan.md)
 - [Phase 8.4 Evaluation Report](../docs/research/phase8.4-evaluation-report.md)
 - Intel TDX Documentation: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-trust-domain-extensions.html
