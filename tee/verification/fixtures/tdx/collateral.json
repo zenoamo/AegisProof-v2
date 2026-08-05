@@ -1,0 +1,7 @@
+{
+  "RESEARCH_FIXTURE_ONLY": true,
+  "description": "Synthetic research public key — not Intel DCAP production collateral",
+  "leafPublicKeyPem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWkmY8DX2rQM35zpEBF5vwqfkyvVF\npbkjINy3gHENIZsBYmQqKdoFeaZw6YYF87lYn4TRLULF06H6lCw5FL1ubA==\n-----END PUBLIC KEY-----\n",
+  "certificateChainPem": [],
+  "note": "Empty chain; PoC verifies signature against leaf public key only"
+}

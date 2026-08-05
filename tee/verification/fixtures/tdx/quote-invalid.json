@@ -1,0 +1,11 @@
+{
+  "RESEARCH_FIXTURE_ONLY": true,
+  "description": "Tampered TDX quote — signature must fail verification",
+  "quoteHex": "04000e151c232a31383fb94d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b4249ed0b831f23d654b871e97e7699ad745d79a70897e72cb5f43ed275ec5234c532c50889b4c4a81b41e7464cdb299c7ddce5922f85087603cc63e1422c1efe0d37",
+  "signedPayloadOffset": 0,
+  "signedPayloadLength": 48,
+  "signatureOffset": 48,
+  "signatureLength": 64,
+  "hashAlgorithm": "SHA256",
+  "curve": "P-256"
+}

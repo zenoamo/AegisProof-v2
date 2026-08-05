@@ -1,0 +1,7 @@
+{
+  "RESEARCH_FIXTURE_ONLY": true,
+  "description": "Synthetic research public key — not AMD KDS production VCEK",
+  "leafPublicKeyPem": "-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEk0lVaByn1qHlRB6UIvpncEMn8RYYYztY\nh0kUf1hAPiEMHLiIFUa9jV/Zwz15uAazRlfQ5CwF/TUbWns0JFsTfZO+R0A7FJOO\nJtNSafBbl2RYyWWJH8EeIDQn7uR3UGmR\n-----END PUBLIC KEY-----\n",
+  "certificateChainPem": [],
+  "note": "Empty chain; PoC verifies signature against leaf public key only"
+}
