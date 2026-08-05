@@ -1,7 +1,7 @@
 # AegisProof TEE Research
 
-**Phase**: 8.8  
-**Status**: Real TEE Verification Research PoC (Research/Evaluation)  
+**Phase**: 8.8b  
+**Status**: Experimental Ioctl Acquisition Skeleton (Research/PoC)  
 **Scope**: Intel TDX, AMD SEV-SNP, Attestation Adapter Layer, ZK Proof Integration Research
 
 ---
@@ -65,11 +65,17 @@ tee/
 ├── parsers/                     # Phase 8.6 structure validation
 │   ├── tdx-quote-parser.ts
 │   └── sev-report-parser.ts
-├── acquisition/                 # Phase 8.7 device acquisition (PoC)
+├── acquisition/                 # Phase 8.7–8.8b device acquisition (PoC)
 │   ├── device-reader-interface.ts
-│   ├── ioctl-acquisition-design.md
+│   ├── acquisition-factory.ts
 │   ├── tdx-guest-reader.ts
-│   └── sev-guest-reader.ts
+│   ├── sev-guest-reader.ts
+│   ├── experimental-tdx-guest-reader.ts
+│   ├── experimental-sev-guest-reader.ts
+│   ├── ioctl-hook-interface.ts
+│   ├── deferred-ioctl-hook.ts
+│   ├── ioctl-constants.ts
+│   └── ioctl-acquisition-design.md
 ├── providers/                   # Phase 8.6 Real Provider + Factory
 │   ├── tdx-provider.ts
 │   ├── sev-snp-provider.ts
@@ -117,6 +123,7 @@ npx tsx tee/scripts/evaluate.ts
 - **Stage B**: Phase 8.6 Real TEE PoC Evaluation (Parser, Provider, Factory, Normalizer)
 - **Stage C**: Phase 8.7 Device Acquisition Evaluation
 - **Stage D**: Phase 8.8 Verification Stub + ZK Claims Evaluation
+- **Stage E**: Phase 8.8b Experimental Acquisition Evaluation
 
 ---
 
@@ -129,8 +136,8 @@ npx tsx tee/scripts/evaluate.ts
 - [x] Real TEE Integration PoC (Phase 8.6)
 - [x] Device acquisition layer + verification research design (Phase 8.7)
 - [x] Verification stubs + ZK claims mapper PoC (Phase 8.8)
-- [ ] ioctl guest read PoC (deferred — Phase 8.8b approval)
-- [ ] DCAP/VCEK cryptographic verification (deferred — Phase 8.8b+ approval)
+- [x] Experimental acquisition skeleton (Phase 8.8b — `TEE_ACQUISITION=experimental`)
+- [ ] Native ioctl hook (deferred — Phase 8.8c approval)
 - [ ] Production TEE integration (deferred)
 
 ---
@@ -140,6 +147,7 @@ npx tsx tee/scripts/evaluate.ts
 - [Phase 8.6 PoC Design](../docs/research/phase8.6-real-tee-poc.md)
 - [Phase 8.7 Research Plan](../docs/research/phase8.7-real-tee-research-plan.md)
 - [Phase 8.8 Verification Plan](../docs/research/phase8.8-real-tee-verification-plan.md)
+- [Phase 8.8b Experimental Acquisition](../docs/research/phase8.8b-ioctl-acquisition-poc.md)
 - [Phase 8.5 Real TEE Evaluation Plan](../docs/research/phase8.5-real-tee-evaluation-plan.md)
 - [Phase 8.4 Evaluation Report](../docs/research/phase8.4-evaluation-report.md)
 - Intel TDX Documentation: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-trust-domain-extensions.html

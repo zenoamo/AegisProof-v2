@@ -27,7 +27,9 @@ IoctlDeviceReader (Phase 8.8b — 未実装)
 /dev/tdx_guest | /dev/sev-guest
 ```
 
-Phase 8.7 `TdxGuestReader` / `SevGuestReader` は placeholder 返却。Phase 8.8b で ioctl 実装に差し替え。
+Phase 8.7 `TdxGuestReader` / `SevGuestReader` は placeholder 返却。
+
+Phase 8.8b `ExperimentalTdxGuestReader` / `ExperimentalSevGuestReader` は `TEE_ACQUISITION=experimental` 時のみ有効。native hook は未インストール（controlled failure）。
 
 ## 4. Phase 8.8 禁止
 

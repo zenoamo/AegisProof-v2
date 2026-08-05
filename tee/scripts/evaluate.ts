@@ -51,9 +51,20 @@ try {
   execSync('npx tsx tee/tests/zk-claims-mapper.test.ts', { stdio: 'inherit' });
 
   console.log('\n✅ Phase 8.8 Verification Stub + ZK Claims Evaluation Passed.');
-  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
 } catch (error) {
   console.error('\n❌ Phase 8.8 Evaluation Failed.', error);
+  console.error('   (Prior stage results remain valid.)');
+  process.exit(1);
+}
+
+console.log('\n--- Stage E: Phase 8.8b Experimental Acquisition Evaluation ---');
+try {
+  execSync('npx tsx tee/tests/ioctl-acquisition.test.ts', { stdio: 'inherit' });
+
+  console.log('\n✅ Phase 8.8b Experimental Acquisition Evaluation Passed.');
+  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
+} catch (error) {
+  console.error('\n❌ Phase 8.8b Experimental Acquisition Evaluation Failed.', error);
   console.error('   (Prior stage results remain valid.)');
   process.exit(1);
 }
