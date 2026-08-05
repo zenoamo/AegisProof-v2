@@ -1,0 +1,24 @@
+{
+  "name": "@aegisproof/sdk",
+  "version": "1.0.0",
+  "description": "AegisProof TypeScript SDK for proof verification and contract interaction.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    }
+  },
+  "peerDependencies": {
+    "viem": "^2.55.10",
+    "ethers": "~6.0.0"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx test/index.test.ts",
+    "pack-test": "npm pack --dry-run"
+  }
+}

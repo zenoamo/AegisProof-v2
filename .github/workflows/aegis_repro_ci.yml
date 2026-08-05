@@ -1,5 +1,5 @@
 # ============================================================================
-# AegisProof Phase 2/3 reproducibility pipeline (scope item #8)
+# AegisProof Reproducibility CI (Phases 2–5)
 # ----------------------------------------------------------------------------
 # FAST job (every push / PR):
 #   - codegen determinism  (SSoT -> TS/Solidity constants must be up to date)
@@ -19,6 +19,11 @@
 #     the canonical r1cs/wasm/sym, not byte-reproduction of the dev setup.
 #     The pinned evidence in Git is untouched (runner is discarded).
 #   - Production trusted setup is NEVER performed here (Phase 4 ceremony).
+#
+# PHASE5-READYNESS job (every push):
+#   - SDK package build and dry-run packaging
+#   - Documentation link consistency check
+#   - No deployment steps; read-only verification only.
 # ============================================================================
 name: AegisProof Reproducibility CI
 
@@ -109,3 +114,42 @@ jobs:
             artifacts/phase2/reports/phase2_evidence_full.json
             artifacts/phase2/reports/phase2_verify_run_full.log
           if-no-files-found: warn
+
+  phase5-readiness:
+    name: Phase 5 readiness (SDK build, docs check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: SDK package build
+        run: cd packages/sdk && npm install && npm run build
+
+      - name: SDK pack dry-run test
+        run: cd packages/sdk && npm pack --dry-run
+
+      - name: Documentation link consistency check
+        run: |
+          # Simple check: verify all markdown links resolve to existing files
+          grep -r "\[.*\](\./[^)]*)\.md" docs/*.md | while read line; do
+            file=$(echo "$line" | sed 's/.*(\.\([^)]*\))\.md.*/\1/')
+            if [ ! -f "docs/$file.md" ]; then
+              echo "Broken link in $line"
+              exit 1
+            fi
+          done
+        shell: bash
+
+      - name: Verify production artifacts exist
+        run: |
+          test -f artifacts/phase4/final/production.zkey && echo "✓ production.zkey present"
+          test -f artifacts/phase4/final/production-vkey.json && echo "✓ production-vkey.json present"
