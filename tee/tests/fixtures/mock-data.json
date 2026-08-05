@@ -1,0 +1,4 @@
+{
+  "testData": "sample_hash_or_public_key",
+  "flags": ["MOCK_DATA_ONLY", "NOT_REAL_ATTESTATION", "DO_NOT_USE_IN_PRODUCTION"]
+}
