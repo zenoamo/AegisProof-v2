@@ -831,6 +831,28 @@ Layer 5: Operational Security
 3. **Remediation**: Apply patches, update configurations
 4. **Post-Incident**: Post-mortem, update procedures
 
+### 7. Real TEE Specific Attacks (Phase 8.5)
+
+#### 7.1 Attestation Forgery Risk
+**Description**: Attacker attempts to forge hardware signatures (e.g., extracting VCEK/PCK).
+**Impact**: Critical
+**Mitigation**: Rely solely on hardware Root of Trust; enforce strict freshness and TCB revocation checks via CSP/Vendor API.
+
+#### 7.2 Certificate Chain Issues
+**Description**: Vendor key servers (AMD KDS, Intel PCS) are unreachable or compromised.
+**Impact**: High
+**Mitigation**: Implement secure certificate caching and fallback to ZK-only mode if TEE validation infrastructure is offline.
+
+#### 7.3 Cloud Provider Variations & Vendor Lock-in
+**Description**: CSP-specific implementations (e.g. AWS vs Azure) alter the attestation metadata, causing normalization failures or vendor lock-in.
+**Impact**: Medium
+**Mitigation**: The Adapter Layer strictly separates CSP-specific metadata from core hardware measurements, maintaining a vendor-agnostic normalization schema.
+
+#### 7.4 Hardware Availability Risk
+**Description**: Insufficient availability of TDX/SEV-SNP instances in target regions.
+**Impact**: Medium
+**Mitigation**: Adapter layer allows fallback to Mock Provider for CI/CD and ZK-only mode for production environments lacking hardware support.
+
 ---
 
 ## Conclusion
@@ -854,3 +876,5 @@ The adapter layer can be secure if proper mitigations are implemented and mainta
 - TEE Adapter Layer: [Link]
 - Verification Policy: [Link]
 - Security Best Practices: [Link]
+- Intel TDX Architecture Specification: [Link]
+- AMD SEV-SNP Firmware ABI Specification: [Link]
