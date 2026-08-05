@@ -1,7 +1,7 @@
 # Intel TDX - DCAP Verification Design (Research)
 
-**Phase**: 8.7  
-**Status**: Research Design Only  
+**Phase**: 8.9B (extended from 8.7)  
+**Status**: Research Design + Offline PoC  
 **Scope**: No PCCS connection, no production verification
 
 ---
@@ -34,7 +34,8 @@ Measurement Policy Check (MRTD, RTMR[])
 |------|----------------|-------|
 | 構造検証 | `TdxQuoteParser` | 8.6 ✅ |
 | デバイス取得 | `TdxGuestReader` | 8.7 ✅ PoC |
-| 署名検証 | `TdxDcapVerifier`（未実装） | 8.8+ |
+| 構造スタブ | `TdxDcapVerifierStub` | 8.8 ✅ |
+| オフライン署名検証 | `TdxDcapOfflineVerifier` | 8.9B PoC (`TEE_VERIFICATION=offline`) |
 | 正規化 | `RealEvidenceNormalizer` | 8.6 ✅ |
 
 ## 4. 必要な外部依存（将来）
@@ -57,4 +58,14 @@ Measurement Policy Check (MRTD, RTMR[])
 *   **Assumption**: PCCS が最新 collateral を提供する。
 *   **Limitation**: クラウド CSP 固有の Quote 拡張フィールドへの対応が必要な場合あり。
 *   **Security Consideration**: オフライン検証 vs オンライン collateral 取得のトレードオフ。
-*   **Future Implementation Scope**: `tee/verification/tdx-dcap-verifier.ts` PoC（Phase 8.8、要承認）。
+*   **Future Implementation Scope**: Online PCCS collateral（Phase 8.9B+、停止条件 — 承認必須）。
+
+## 6. Phase 8.9B Offline PoC
+
+> **Research PoC Only** · **RESEARCH_FIXTURE_ONLY** · **Not Production**
+
+*   `TdxDcapOfflineVerifier`: Node.js `crypto` ECDSA P-256 + static fixture cert chain.
+*   Feature flag: `TEE_VERIFICATION=offline` (default remains stub).
+*   Collateral: `tee/verification/fixtures/tdx/` — synthetic research certs, no PCCS.
+*   `pocScope: offline-verification-poc` — not a production DCAP verdict.
+*   See [Phase 8.9B Plan](../../docs/research/phase8.9b-offline-dcap-vcek-plan.md).

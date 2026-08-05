@@ -1,7 +1,7 @@
 # AMD SEV-SNP - VCEK Verification Design (Research)
 
-**Phase**: 8.7  
-**Status**: Research Design Only  
+**Phase**: 8.9B (extended from 8.7)  
+**Status**: Research Design + Offline PoC  
 **Scope**: No KDS connection, no production verification
 
 ---
@@ -34,7 +34,8 @@ Measurement Check (LAUNCH_MEASURE, REPORT_DATA)
 |------|----------------|-------|
 | 構造検証 | `SevReportParser` | 8.6 ✅ |
 | デバイス取得 | `SevGuestReader` | 8.7 ✅ PoC |
-| 署名検証 | `SevVcekVerifier`（未実装） | 8.8+ |
+| 構造スタブ | `SevVcekVerifierStub` | 8.8 ✅ |
+| オフライン署名検証 | `SevVcekOfflineVerifier` | 8.9B PoC (`TEE_VERIFICATION=offline`) |
 | 正規化 | `RealEvidenceNormalizer` | 8.6 ✅ |
 
 ## 4. 必要な外部依存（将来）
@@ -58,4 +59,14 @@ Measurement Check (LAUNCH_MEASURE, REPORT_DATA)
 *   **Assumption**: KDS から取得した VCEK チェーンが真正。
 *   **Limitation**: ホスト stepping ごとに VCEK が異なるためキャッシュ設計が必要。
 *   **Security Consideration**: Replay 攻撃防止のため REPORT_DATA バインド必須。
-*   **Future Implementation Scope**: `tee/verification/sev-vcek-verifier.ts` PoC（Phase 8.8、要承認）。
+*   **Future Implementation Scope**: Online KDS VCEK retrieval（Phase 8.9B+、停止条件 — 承認必須）。
+
+## 6. Phase 8.9B Offline PoC
+
+> **Research PoC Only** · **RESEARCH_FIXTURE_ONLY** · **Not Production**
+
+*   `SevVcekOfflineVerifier`: Node.js `crypto` ECDSA P-384 + static fixture cert chain.
+*   Feature flag: `TEE_VERIFICATION=offline` (default remains stub).
+*   Collateral: `tee/verification/fixtures/sev/` — synthetic research certs, no KDS.
+*   `pocScope: offline-verification-poc` — not a production VCEK verdict.
+*   See [Phase 8.9B Plan](../../docs/research/phase8.9b-offline-dcap-vcek-plan.md).
