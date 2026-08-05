@@ -1,7 +1,7 @@
 # AegisProof TEE Research
 
-**Phase**: 8.9A  
-**Status**: Remote Attestation Architecture Design (Research/PoC — design only)  
+**Phase**: 8.9B  
+**Status**: Offline DCAP/VCEK Verification PoC (Research/PoC — not production)  
 **Scope**: Intel TDX, AMD SEV-SNP, Attestation Adapter Layer, ZK Proof Integration Research
 
 ---
@@ -42,10 +42,15 @@ tee/
 │   ├── attestation.md           # TDX attestation mechanism
 │   ├── real-evaluation-design.md
 │   └── research-notes.md
-├── verification/                # Phase 8.8 verification stubs (PoC)
+├── verification/                # Phase 8.8–8.9B verification (PoC)
 │   ├── verification-interface.ts
 │   ├── tdx-dcap-verifier-stub.ts
-│   └── sev-vcek-verifier-stub.ts
+│   ├── sev-vcek-verifier-stub.ts
+│   ├── tdx-dcap-offline-verifier.ts
+│   ├── sev-vcek-offline-verifier.ts
+│   ├── verification-factory.ts
+│   ├── offline-collateral-loader.ts
+│   └── fixtures/                # RESEARCH_FIXTURE_ONLY
 ├── integration/
 │   ├── attestation-flow-design.md
 │   ├── remote-attestation-flow-design.md
@@ -124,6 +129,7 @@ npx tsx tee/scripts/evaluate.ts
 - **Stage C**: Phase 8.7 Device Acquisition Evaluation
 - **Stage D**: Phase 8.8 Verification Stub + ZK Claims Evaluation
 - **Stage E**: Phase 8.8b Experimental Acquisition Evaluation
+- **Stage F**: Phase 8.9B Offline DCAP/VCEK Verification (`TEE_VERIFICATION=offline` in tests)
 
 ---
 
@@ -138,6 +144,7 @@ npx tsx tee/scripts/evaluate.ts
 - [x] Verification stubs + ZK claims mapper PoC (Phase 8.8)
 - [x] Experimental acquisition skeleton (Phase 8.8b — `TEE_ACQUISITION=experimental`)
 - [x] Remote Attestation architecture design (Phase 8.9A — design only)
+- [x] Offline DCAP/VCEK verification PoC (Phase 8.9B — `TEE_VERIFICATION=offline`)
 - [ ] Native ioctl hook (deferred — Phase 8.8c approval)
 - [ ] Production TEE integration (deferred)
 
@@ -150,6 +157,7 @@ npx tsx tee/scripts/evaluate.ts
 - [Phase 8.8 Verification Plan](../docs/research/phase8.8-real-tee-verification-plan.md)
 - [Phase 8.8b Experimental Acquisition](../docs/research/phase8.8b-ioctl-acquisition-poc.md)
 - [Phase 8.9A Remote Attestation Design](../docs/research/phase8.9-remote-attestation-design.md)
+- [Phase 8.9B Offline DCAP/VCEK Plan](../docs/research/phase8.9b-offline-dcap-vcek-plan.md)
 - [Phase 8.5 Real TEE Evaluation Plan](../docs/research/phase8.5-real-tee-evaluation-plan.md)
 - [Phase 8.4 Evaluation Report](../docs/research/phase8.4-evaluation-report.md)
 - Intel TDX Documentation: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-trust-domain-extensions.html

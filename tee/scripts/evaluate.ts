@@ -62,9 +62,20 @@ try {
   execSync('npx tsx tee/tests/ioctl-acquisition.test.ts', { stdio: 'inherit' });
 
   console.log('\n✅ Phase 8.8b Experimental Acquisition Evaluation Passed.');
-  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
 } catch (error) {
   console.error('\n❌ Phase 8.8b Experimental Acquisition Evaluation Failed.', error);
+  console.error('   (Prior stage results remain valid.)');
+  process.exit(1);
+}
+
+console.log('\n--- Stage F: Phase 8.9B Offline DCAP/VCEK Verification ---');
+try {
+  execSync('npx tsx tee/tests/offline-verification.test.ts', { stdio: 'inherit' });
+
+  console.log('\n✅ Phase 8.9B Offline Verification Evaluation Passed.');
+  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
+} catch (error) {
+  console.error('\n❌ Phase 8.9B Offline Verification Evaluation Failed.', error);
   console.error('   (Prior stage results remain valid.)');
   process.exit(1);
 }
