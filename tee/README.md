@@ -58,6 +58,10 @@ tee/
 ├── parsers/                     # Phase 8.6 structure validation
 │   ├── tdx-quote-parser.ts
 │   └── sev-report-parser.ts
+├── acquisition/                 # Phase 8.7 device acquisition (PoC)
+│   ├── device-reader-interface.ts
+│   ├── tdx-guest-reader.ts
+│   └── sev-guest-reader.ts
 ├── providers/                   # Phase 8.6 Real Provider + Factory
 │   ├── tdx-provider.ts
 │   ├── sev-snp-provider.ts
@@ -103,6 +107,7 @@ npx tsx tee/scripts/evaluate.ts
 
 - **Stage A**: Phase 8.4 Mock Evaluation (Functional, Security, Performance)
 - **Stage B**: Phase 8.6 Real TEE PoC Evaluation (Parser, Provider, Factory, Normalizer)
+- **Stage C**: Phase 8.7 Device Acquisition Evaluation
 
 ---
 
@@ -113,13 +118,16 @@ npx tsx tee/scripts/evaluate.ts
 - [x] Mock evaluation framework (Phase 8.4)
 - [x] Real TEE design (Phase 8.5)
 - [x] Real TEE Integration PoC (Phase 8.6)
-- [ ] Production TEE integration (deferred — requires Phase 8.7+ approval)
+- [x] Device acquisition layer + verification research design (Phase 8.7)
+- [ ] DCAP/VCEK verification PoC (deferred — Phase 8.8+ approval)
+- [ ] Production TEE integration (deferred)
 
 ---
 
 ## References
 
 - [Phase 8.6 PoC Design](../docs/research/phase8.6-real-tee-poc.md)
+- [Phase 8.7 Research Plan](../docs/research/phase8.7-real-tee-research-plan.md)
 - [Phase 8.5 Real TEE Evaluation Plan](../docs/research/phase8.5-real-tee-evaluation-plan.md)
 - [Phase 8.4 Evaluation Report](../docs/research/phase8.4-evaluation-report.md)
 - Intel TDX Documentation: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-trust-domain-extensions.html

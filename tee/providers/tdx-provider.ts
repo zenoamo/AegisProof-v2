@@ -1,22 +1,22 @@
 import { TeeProvider, Evidence } from '../mock/provider-interface.js';
 import { TdxQuoteParser } from '../parsers/tdx-quote-parser.js';
-import fs from 'fs';
+import { TdxGuestReader } from '../acquisition/tdx-guest-reader.js';
 
 export class TdxProvider implements TeeProvider {
   private errorType: string | null = null;
+  private readonly reader: TdxGuestReader;
+
+  constructor(reader: TdxGuestReader = new TdxGuestReader()) {
+    this.reader = reader;
+  }
 
   async generateEvidence(reportData: Buffer): Promise<Evidence> {
     if (this.errorType) {
       throw new Error(`Simulated Error: ${this.errorType}`);
     }
 
-    if (!fs.existsSync('/dev/tdx_guest')) {
-      throw new Error('device unavailable: /dev/tdx_guest not found (controlled failure)');
-    }
-
-    const dummyQuote = Buffer.alloc(48);
-    dummyQuote.writeUInt16LE(4, 0);
-    return TdxQuoteParser.parse(dummyQuote);
+    const rawQuote = this.reader.acquireRawReport(reportData);
+    return TdxQuoteParser.parse(rawQuote);
   }
 
   /**

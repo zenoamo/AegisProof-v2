@@ -28,9 +28,20 @@ try {
   execSync('npx tsx tee/tests/real-evidence-normalizer.test.ts', { stdio: 'inherit' });
 
   console.log('\n✅ Phase 8.6 Real TEE PoC Evaluation Passed.');
-  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
 } catch (error) {
   console.error('\n❌ Phase 8.6 Real TEE PoC Evaluation Failed.', error);
   console.error('   (Phase 8.4 Mock Evaluation result remains valid.)');
+  process.exit(1);
+}
+
+console.log('\n--- Stage C: Phase 8.7 Device Acquisition Evaluation ---');
+try {
+  execSync('npx tsx tee/tests/device-acquisition.test.ts', { stdio: 'inherit' });
+
+  console.log('\n✅ Phase 8.7 Device Acquisition Evaluation Passed.');
+  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
+} catch (error) {
+  console.error('\n❌ Phase 8.7 Device Acquisition Evaluation Failed.', error);
+  console.error('   (Phase 8.4 Mock and Phase 8.6 PoC results remain valid.)');
   process.exit(1);
 }
