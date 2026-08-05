@@ -1,12 +1,14 @@
 import { TeeProvider, Evidence } from '../mock/provider-interface.js';
 import { TdxQuoteParser } from '../parsers/tdx-quote-parser.js';
 import { TdxGuestReader } from '../acquisition/tdx-guest-reader.js';
+import { TeeDeviceReader } from '../acquisition/device-reader-interface.js';
+import { AcquisitionFactory } from '../acquisition/acquisition-factory.js';
 
 export class TdxProvider implements TeeProvider {
   private errorType: string | null = null;
-  private readonly reader: TdxGuestReader;
+  private readonly reader: TeeDeviceReader;
 
-  constructor(reader: TdxGuestReader = new TdxGuestReader()) {
+  constructor(reader: TeeDeviceReader = AcquisitionFactory.getTdxReader()) {
     this.reader = reader;
   }
 

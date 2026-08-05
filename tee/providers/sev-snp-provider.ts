@@ -1,12 +1,13 @@
 import { TeeProvider, Evidence } from '../mock/provider-interface.js';
 import { SevReportParser } from '../parsers/sev-report-parser.js';
-import { SevGuestReader } from '../acquisition/sev-guest-reader.js';
+import { TeeDeviceReader } from '../acquisition/device-reader-interface.js';
+import { AcquisitionFactory } from '../acquisition/acquisition-factory.js';
 
 export class SevSnpProvider implements TeeProvider {
   private errorType: string | null = null;
-  private readonly reader: SevGuestReader;
+  private readonly reader: TeeDeviceReader;
 
-  constructor(reader: SevGuestReader = new SevGuestReader()) {
+  constructor(reader: TeeDeviceReader = AcquisitionFactory.getSevReader()) {
     this.reader = reader;
   }
 
