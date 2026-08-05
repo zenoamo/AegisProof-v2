@@ -1,7 +1,7 @@
 # AegisProof TEE Research
 
-**Phase**: 8.6  
-**Status**: Real TEE Integration PoC (Research/Evaluation)  
+**Phase**: 8.8  
+**Status**: Real TEE Verification Research PoC (Research/Evaluation)  
 **Scope**: Intel TDX, AMD SEV-SNP, Attestation Adapter Layer, ZK Proof Integration Research
 
 ---
@@ -42,11 +42,18 @@ tee/
 │   ├── attestation.md           # TDX attestation mechanism
 │   ├── real-evaluation-design.md
 │   └── research-notes.md
+├── verification/                # Phase 8.8 verification stubs (PoC)
+│   ├── verification-interface.ts
+│   ├── tdx-dcap-verifier-stub.ts
+│   └── sev-vcek-verifier-stub.ts
 ├── integration/
 │   ├── attestation-flow-design.md
+│   ├── remote-attestation-flow-design.md
 │   ├── verification-policy.md
 │   ├── zk-tee-model.md
-│   └── threat-model.md
+│   ├── zk-evidence-integration-design.md
+│   ├── threat-model.md
+│   └── zk-claims-mapper.ts
 ├── mock/                        # Phase 8.3 Mock Provider (evaluation)
 │   ├── provider-interface.ts
 │   ├── tdx-provider-mock.ts
@@ -60,6 +67,7 @@ tee/
 │   └── sev-report-parser.ts
 ├── acquisition/                 # Phase 8.7 device acquisition (PoC)
 │   ├── device-reader-interface.ts
+│   ├── ioctl-acquisition-design.md
 │   ├── tdx-guest-reader.ts
 │   └── sev-guest-reader.ts
 ├── providers/                   # Phase 8.6 Real Provider + Factory
@@ -108,6 +116,7 @@ npx tsx tee/scripts/evaluate.ts
 - **Stage A**: Phase 8.4 Mock Evaluation (Functional, Security, Performance)
 - **Stage B**: Phase 8.6 Real TEE PoC Evaluation (Parser, Provider, Factory, Normalizer)
 - **Stage C**: Phase 8.7 Device Acquisition Evaluation
+- **Stage D**: Phase 8.8 Verification Stub + ZK Claims Evaluation
 
 ---
 
@@ -119,7 +128,9 @@ npx tsx tee/scripts/evaluate.ts
 - [x] Real TEE design (Phase 8.5)
 - [x] Real TEE Integration PoC (Phase 8.6)
 - [x] Device acquisition layer + verification research design (Phase 8.7)
-- [ ] DCAP/VCEK verification PoC (deferred — Phase 8.8+ approval)
+- [x] Verification stubs + ZK claims mapper PoC (Phase 8.8)
+- [ ] ioctl guest read PoC (deferred — Phase 8.8b approval)
+- [ ] DCAP/VCEK cryptographic verification (deferred — Phase 8.8b+ approval)
 - [ ] Production TEE integration (deferred)
 
 ---
@@ -128,6 +139,7 @@ npx tsx tee/scripts/evaluate.ts
 
 - [Phase 8.6 PoC Design](../docs/research/phase8.6-real-tee-poc.md)
 - [Phase 8.7 Research Plan](../docs/research/phase8.7-real-tee-research-plan.md)
+- [Phase 8.8 Verification Plan](../docs/research/phase8.8-real-tee-verification-plan.md)
 - [Phase 8.5 Real TEE Evaluation Plan](../docs/research/phase8.5-real-tee-evaluation-plan.md)
 - [Phase 8.4 Evaluation Report](../docs/research/phase8.4-evaluation-report.md)
 - Intel TDX Documentation: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-trust-domain-extensions.html

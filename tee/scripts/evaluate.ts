@@ -39,9 +39,21 @@ try {
   execSync('npx tsx tee/tests/device-acquisition.test.ts', { stdio: 'inherit' });
 
   console.log('\n✅ Phase 8.7 Device Acquisition Evaluation Passed.');
-  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
 } catch (error) {
   console.error('\n❌ Phase 8.7 Device Acquisition Evaluation Failed.', error);
   console.error('   (Phase 8.4 Mock and Phase 8.6 PoC results remain valid.)');
+  process.exit(1);
+}
+
+console.log('\n--- Stage D: Phase 8.8 Verification Stub + ZK Claims Evaluation ---');
+try {
+  execSync('npx tsx tee/tests/verification-stub.test.ts', { stdio: 'inherit' });
+  execSync('npx tsx tee/tests/zk-claims-mapper.test.ts', { stdio: 'inherit' });
+
+  console.log('\n✅ Phase 8.8 Verification Stub + ZK Claims Evaluation Passed.');
+  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
+} catch (error) {
+  console.error('\n❌ Phase 8.8 Evaluation Failed.', error);
+  console.error('   (Prior stage results remain valid.)');
   process.exit(1);
 }
