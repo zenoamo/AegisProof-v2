@@ -172,3 +172,93 @@ jobs:
 
       - name: TEE Adapter evaluation (Stages A–G)
         run: npx tsx tee/scripts/evaluate.ts
+
+  prover-compatibility:
+    name: Prover compatibility (snarkjs + optional rapidsnark)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify production artifacts (required for prover regression)
+        run: |
+          node --input-type=module -e "
+          import fs from 'fs';
+          import { artifactsReady, resolveArtifacts } from './scripts/lib/resolve-artifacts.mjs';
+          const paths = resolveArtifacts();
+          if (!artifactsReady()) {
+            console.error('FAIL: prover artifacts missing after checkout.');
+            console.error('Expected crypto-artifacts/ mirror or artifacts/phase2+phase4 paths.');
+            for (const [k,p] of Object.entries({wasm:paths.wasm,zkey:paths.zkey,vkey:paths.vkey})) {
+              console.error(k+':', p, 'exists=', fs.existsSync(p));
+            }
+            process.exit(1);
+          }
+          console.log('PASS: prover artifacts ready');
+          "
+
+      - name: Compile production verifier (isolated)
+        run: npx hardhat compile --config scripts/hardhat-prover.config.ts
+
+      - name: Install rapidsnark (optional — does not fail job)
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential cmake libgmp-dev libsodium-dev nasm curl m4
+          node scripts/install-rapidsnark.mjs
+          echo "RAPIDSNARK_BIN=${{ github.workspace }}/rapidsnark/package/bin/prover" >> "$GITHUB_ENV"
+
+      - name: Prover compatibility tests (T1–T9, snarkjs required)
+        run: npm run test:prover-compat
+
+      - name: rapidsnark evaluation (optional — T2/T4/M4 record)
+        continue-on-error: true
+        run: npm run evaluate:rapidsnark
+
+  prover-benchmark:
+    name: Prover benchmark (20 samples)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install rapidsnark (optional)
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential cmake libgmp-dev libsodium-dev nasm curl m4
+          node scripts/install-rapidsnark.mjs
+          echo "RAPIDSNARK_BIN=${{ github.workspace }}/rapidsnark/package/bin/prover" >> "$GITHUB_ENV"
+
+      - name: rapidsnark evaluation record
+        continue-on-error: true
+        run: npm run evaluate:rapidsnark
+
+      - name: Run benchmark (20 samples)
+        run: npm run bench:prover -- --samples 20
+
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prover-benchmark-report
+          path: benchmarks/reports/prover-bench-*.json
+          if-no-files-found: warn
