@@ -73,9 +73,20 @@ try {
   execSync('npx tsx tee/tests/offline-verification.test.ts', { stdio: 'inherit' });
 
   console.log('\n✅ Phase 8.9B Offline Verification Evaluation Passed.');
-  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
 } catch (error) {
   console.error('\n❌ Phase 8.9B Offline Verification Evaluation Failed.', error);
+  console.error('   (Prior stage results remain valid.)');
+  process.exit(1);
+}
+
+console.log('\n--- Stage G: Phase 8.9C-pre.4 Attestation Pipeline ---');
+try {
+  execSync('npx tsx tee/tests/pipeline-e2e.test.ts', { stdio: 'inherit' });
+
+  console.log('\n✅ Phase 8.9C-pre.4 Attestation Pipeline Evaluation Passed.');
+  console.log('\n✅ All TEE Adapter Layer Evaluations Passed Successfully.');
+} catch (error) {
+  console.error('\n❌ Phase 8.9C-pre.4 Attestation Pipeline Evaluation Failed.', error);
   console.error('   (Prior stage results remain valid.)');
   process.exit(1);
 }
