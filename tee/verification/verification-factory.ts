@@ -1,3 +1,4 @@
+import { loadTeeRuntimeConfig } from '../config/tee-runtime-config.js';
 import { TdxDcapVerifierStub } from './tdx-dcap-verifier-stub.js';
 import { SevVcekVerifierStub } from './sev-vcek-verifier-stub.js';
 import { TdxDcapOfflineVerifier } from './tdx-dcap-offline-verifier.js';
@@ -14,8 +15,7 @@ export type VerificationMode = 'stub' | 'offline';
  */
 export class VerificationFactory {
   static getMode(): VerificationMode {
-    const flag = process.env.TEE_VERIFICATION?.trim().toLowerCase();
-    return flag === 'offline' ? 'offline' : 'stub';
+    return loadTeeRuntimeConfig().verification;
   }
 
   static getTdxVerifier(): TeeVerifier {

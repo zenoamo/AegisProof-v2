@@ -1,3 +1,4 @@
+import { loadTeeRuntimeConfig } from '../config/tee-runtime-config.js';
 import { TeeDeviceReader } from './device-reader-interface.js';
 import { TdxGuestReader } from './tdx-guest-reader.js';
 import { SevGuestReader } from './sev-guest-reader.js';
@@ -12,14 +13,14 @@ import { ExperimentalSevGuestReader } from './experimental-sev-guest-reader.js';
  */
 export class AcquisitionFactory {
   static getTdxReader(): TeeDeviceReader {
-    if (process.env.TEE_ACQUISITION === 'experimental') {
+    if (loadTeeRuntimeConfig().acquisition === 'experimental') {
       return new ExperimentalTdxGuestReader();
     }
     return new TdxGuestReader();
   }
 
   static getSevReader(): TeeDeviceReader {
-    if (process.env.TEE_ACQUISITION === 'experimental') {
+    if (loadTeeRuntimeConfig().acquisition === 'experimental') {
       return new ExperimentalSevGuestReader();
     }
     return new SevGuestReader();
