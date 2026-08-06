@@ -34,6 +34,12 @@ export interface VerificationPolicy {
 }
 
 export interface PipelineDependencies {
+  /**
+   * Explicit runtime config snapshot (ADR-001 extension point).
+   * Reserved for test injection and future Remote Verifier / factory DI.
+   * Factories still read process.env via loadTeeRuntimeConfig() today;
+   * the pipeline orchestrator does not branch on config yet.
+   */
   readonly config: TeeRuntimeConfig;
   readonly providerFactory: typeof ProviderFactory;
   readonly verificationFactory: typeof VerificationFactory;

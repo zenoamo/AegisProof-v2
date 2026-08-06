@@ -153,3 +153,22 @@ jobs:
         run: |
           test -f artifacts/phase4/final/production.zkey && echo "✓ production.zkey present"
           test -f artifacts/phase4/final/production-vkey.json && echo "✓ production-vkey.json present"
+
+  tee-layer-regression:
+    name: TEE Layer regression (Stages A–G, ADR-001 D8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TEE Adapter evaluation (Stages A–G)
+        run: npx tsx tee/scripts/evaluate.ts
