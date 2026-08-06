@@ -18,7 +18,13 @@
   },
   "scripts": {
     "prove": "node scripts/prove.js",
+    "prove:native": "node scripts/prove_native.mjs",
+    "bench:prover": "node scripts/bench_prover.mjs",
+    "bench:prover:baseline": "node scripts/bench_prover.mjs --samples 20 --write-baseline",
+    "install:rapidsnark": "node scripts/install-rapidsnark.mjs",
+    "evaluate:rapidsnark": "node scripts/evaluate-rapidsnark.mjs",
     "test": "tsx test/testVerifyAndAccept.ts",
+    "test:prover-compat": "node scripts/run-prover-compat.mjs",
     "verify:signals": "tsx scripts/verify-signals.ts",
     "sync:signals": "tsx scripts/sync-signals.ts",
     "aegis:verify": "tsx scripts/aegis-auto-verify.ts"

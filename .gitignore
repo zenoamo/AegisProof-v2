@@ -13,6 +13,7 @@ deployments/
 # --- dependencies & tooling caches --------------------------------------------
 node_modules/
 server/node_modules/
+rapidsnark/
 .aider*
 .qoder/
 cache/

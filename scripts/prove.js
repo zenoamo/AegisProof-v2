@@ -1,82 +1,74 @@
 /**
- * AegisProof - Groth16 Proof Generation Script
+ * AegisProof - Groth16 Proof Generation Script (canonical path)
  *
  * Usage:
  *   node scripts/prove.js
- *   node scripts/prove.js --input scripts/input.json
- *   node scripts/prove.js --input path/to/custom_input.json --suffix myproof
+ *   node scripts/prove.js --input artifacts/phase2/tests/input_v2.json
+ *   node scripts/prove.js --suffix production-smoke
+ *   AEGIS_PROVER=rapidsnark node scripts/prove.js
+ *
+ * Path: witness generation -> groth16.prove(zkey, wtns) -> snarkjs verify
+ * Prover backend: AEGIS_PROVER=snarkjs|rapidsnark (default: snarkjs)
  *
  * Outputs:
  *   build/proofs/proof_<suffix>.json
  *   build/proofs/public_<suffix>.json
  *
- * Public Signal Layout (snarkjs: outputs first, then public inputs):
- *
- *   [0]  modelManifestCommitment   <- circuit output
- *   [1]  executionEnvCommitment    <- circuit output
- *   [2]  generationCommitment      <- circuit output
- *   [3]  commitment                <- circuit output
- *   [4]  nullifier                 <- circuit output
- *   [5]  expectedPromptRoot        <- public input
- *   [6]  expectedOutputRoot        <- public input
- *   [7]  sessionId                 <- public input
- *   [8]  purposeId                 <- public input
- *   [9]  weightsHash
- *   [10] tokenizerHash
- *   [11] systemPromptHash
- *   [12] loraHash
- *   [13] adapterHash
- *   [14] safetyLayerHash
- *   [15] quantizationHash
- *   [16] precisionHash
- *   [17] runtimeHash
- *   [18] driverHash
- *   [19] temperature
- *   [20] topP
- *   [21] topK
- *   [22] seed
- *   [23] repetitionPenalty
- *   [24] presencePenalty
- *   [25] frequencyPenalty
- *   [26] maxTokens
- *   [27] protocolVersion
- *   [28] timestamp
+ * Public Signal Layout (v2 SSoT — 30 signals):
+ *   See generated/AegisSignals.ts SIGNAL_INDEX
  */
 
-import fs   from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as snarkjs from "snarkjs";
-
-// ============================================================
-// Paths
-// ============================================================
+import {
+  EXPECTED_PUBLIC_SIGNALS,
+  ROOT,
+  getProverName,
+  proveCanonical,
+  resolveArtifactPaths,
+} from "./lib/canonical-prover.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-const ROOT       = path.resolve(__dirname, "..");
+const __dirname = path.dirname(__filename);
 
-// ============================================================
-// Signal Index Constants
-// ============================================================
-
-const IDX_MODEL_MANIFEST = 0;
-const IDX_EXEC_ENV       = 1;
-const IDX_GENERATION     = 2;
-const IDX_COMMITMENT     = 3;
-const IDX_NULLIFIER      = 4;
-const IDX_SESSION_ID     = 7;
-const IDX_PURPOSE_ID     = 8;
-const EXPECTED_SIGNALS   = 29;
-
-// ============================================================
-// CLI Argument Parsing
-// ============================================================
+const SIGNAL_LABELS = {
+  0: "expectedPromptRoot",
+  1: "expectedOutputRoot",
+  2: "sessionId",
+  3: "purposeId",
+  4: "weightsHash",
+  5: "tokenizerHash",
+  6: "systemPromptHash",
+  7: "loraHash",
+  8: "adapterHash",
+  9: "safetyLayerHash",
+  10: "quantizationHash",
+  11: "precisionHash",
+  12: "runtimeHash",
+  13: "driverHash",
+  14: "temperature",
+  15: "topP",
+  16: "topK",
+  17: "seed",
+  18: "repetitionPenalty",
+  19: "presencePenalty",
+  20: "frequencyPenalty",
+  21: "maxTokens",
+  22: "chainId",
+  23: "protocolVersion",
+  24: "timestamp",
+  25: "modelManifestCommitment",
+  26: "executionEnvCommitment",
+  27: "generationCommitment",
+  28: "commitment",
+  29: "nullifier",
+};
 
 function parseArgs() {
-  const args   = process.argv.slice(2);
-  let inputFile = path.join(ROOT, "scripts", "input.json");
-  let suffix    = "29";
+  const args = process.argv.slice(2);
+  let inputFile = null;
+  let suffix = "v2";
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--input" && args[i + 1]) {
@@ -90,259 +82,152 @@ function parseArgs() {
   return { inputFile, suffix };
 }
 
-// ============================================================
-// File Assertion
-// ============================================================
-
 function assertFile(filePath) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
   }
 }
 
-// ============================================================
-// Main
-// ============================================================
-
 async function main() {
   const { inputFile, suffix } = parseArgs();
+  const paths = resolveArtifactPaths(
+    inputFile ? { input: inputFile } : {}
+  );
+  const prover = getProverName();
 
-  const WASM_PATH = path.join(
-  ROOT,
-  "build",
-  "aegis_commit_core_js",
-  "aegis_commit_core.wasm"
-);
-
-const ZKEY_PATH = path.join(
-  ROOT,
-  "build",
-  "aegis_commit_core.zkey"
-);
-
-const OUTPUT_DIR = path.join(
-  ROOT,
-  "build",
-  "proofs"
-);
-
-const PROOF_PATH = path.join(
-  OUTPUT_DIR,
-  `proof_${suffix}.json`
-);
-
-const PUBLIC_SIGNALS_PATH = path.join(
-  OUTPUT_DIR,
-  `public_${suffix}.json`
-);
+  const OUTPUT_DIR = path.join(ROOT, "build", "proofs");
+  const PROOF_PATH = path.join(OUTPUT_DIR, `proof_${suffix}.json`);
+  const PUBLIC_SIGNALS_PATH = path.join(OUTPUT_DIR, `public_${suffix}.json`);
 
   console.log("==========================================");
-  console.log("AegisShield Groth16 Proof Generation");
+  console.log("AegisProof Groth16 Proof Generation");
   console.log("==========================================");
-  console.log(`Input  : ${inputFile}`);
-  console.log(`WASM   : ${WASM_PATH}`);
-  console.log(`ZKey   : ${ZKEY_PATH}`);
+  console.log(`Prover : ${prover}`);
+  console.log(`Input  : ${paths.input}`);
+  console.log(`WASM   : ${paths.wasm}`);
+  console.log(`ZKey   : ${paths.zkey}`);
+  console.log(`VKey   : ${paths.vkey}`);
   console.log(`Output : ${OUTPUT_DIR}`);
 
-  // ----------------------------------------------------------
-  // 1. Check Files
-  // ----------------------------------------------------------
-
   console.log("\n[1] Checking input files");
-  assertFile(inputFile);
-  assertFile(WASM_PATH);
-  assertFile(ZKEY_PATH);
-  console.log("All input files found: OK");
-
-  // ----------------------------------------------------------
-  // 2. Load Input
-  // ----------------------------------------------------------
+  assertFile(paths.input);
+  console.log("Input file found: OK");
 
   console.log("\n[2] Loading circuit input");
-
-  const input = JSON.parse(fs.readFileSync(inputFile, "utf8"));
+  const input = JSON.parse(fs.readFileSync(paths.input, "utf8"));
 
   const requiredFields = [
-    "secretKey", "deviceId",
-    "expectedPromptRoot", "expectedOutputRoot",
-    "sessionId", "purposeId",
-    "weightsHash", "tokenizerHash", "systemPromptHash",
-    "loraHash", "adapterHash", "safetyLayerHash",
-    "quantizationHash", "precisionHash", "runtimeHash", "driverHash",
-    "temperature", "topP", "topK", "seed",
-    "repetitionPenalty", "presencePenalty", "frequencyPenalty", "maxTokens",
-    "protocolVersion", "timestamp",
+    "secretKey",
+    "deviceId",
+    "expectedPromptRoot",
+    "expectedOutputRoot",
+    "sessionId",
+    "purposeId",
+    "weightsHash",
+    "tokenizerHash",
+    "systemPromptHash",
+    "loraHash",
+    "adapterHash",
+    "safetyLayerHash",
+    "quantizationHash",
+    "precisionHash",
+    "runtimeHash",
+    "driverHash",
+    "temperature",
+    "topP",
+    "topK",
+    "seed",
+    "repetitionPenalty",
+    "presencePenalty",
+    "frequencyPenalty",
+    "maxTokens",
+    "chainId",
+    "protocolVersion",
+    "timestamp",
+    "modelManifestCommitment",
+    "executionEnvCommitment",
+    "generationCommitment",
+    "commitment",
+    "nullifier",
   ];
 
   for (const field of requiredFields) {
     if (input[field] === undefined) {
-      throw new Error(`Missing required field in input.json: ${field}`);
+      throw new Error(`Missing required field in input: ${field}`);
     }
   }
 
   console.log(`  sessionId   : ${input.sessionId}`);
   console.log(`  purposeId   : ${input.purposeId}`);
-  console.log(`  secretKey   : [hidden]`);
-  console.log(`  deviceId    : ${input.deviceId}`);
+  console.log(`  chainId     : ${input.chainId}`);
   console.log(`  protocolVer : ${input.protocolVersion}`);
   console.log(`  timestamp   : ${input.timestamp}`);
 
-  // ----------------------------------------------------------
-  // 3. Generate Proof
-  // ----------------------------------------------------------
-
-  console.log("\n[3] Generating Groth16 proof (this may take 30–60 seconds)");
-
+  console.log("\n[3] Canonical prove path (witness -> prove -> verify)");
   const startMs = Date.now();
 
-  const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-    input,
-    WASM_PATH,
-    ZKEY_PATH,
-  );
+  const result = await proveCanonical(input, {
+    paths,
+    backend: prover,
+    measure: true,
+    verify: true,
+  });
 
   const elapsedMs = Date.now() - startMs;
-  console.log(`Proof generation completed in ${(elapsedMs / 1000).toFixed(1)}s`);
+  const { proof, publicSignals, timings, hashes } = result;
 
-  // ----------------------------------------------------------
-  // 4. Validate Signal Count
-  // ----------------------------------------------------------
+  console.log(`  witness : ${(timings.witnessMs / 1000).toFixed(3)}s`);
+  console.log(`  prove   : ${(timings.proveMs / 1000).toFixed(3)}s`);
+  console.log(`  verify  : ${(timings.verifyMs / 1000).toFixed(3)}s`);
+  console.log(`  total   : ${(elapsedMs / 1000).toFixed(3)}s`);
 
   console.log("\n[4] Validating public signals");
-
-  if (publicSignals.length !== EXPECTED_SIGNALS) {
+  if (publicSignals.length !== EXPECTED_PUBLIC_SIGNALS) {
     throw new Error(
-      `Expected ${EXPECTED_SIGNALS} public signals, got ${publicSignals.length}.\n` +
-      `Did you rebuild the ZKey from the latest circuit?`
+      `Expected ${EXPECTED_PUBLIC_SIGNALS} public signals, got ${publicSignals.length}`
     );
   }
 
   console.log(`Signal count: ${publicSignals.length} (OK)`);
-  console.log("\nPublic Signals:");
-
-  const LABELS = {
-    0: "modelManifestCommitment",
-    1: "executionEnvCommitment",
-    2: "generationCommitment",
-    3: "commitment",
-    4: "nullifier",
-    5: "expectedPromptRoot",
-    6: "expectedOutputRoot",
-    7: "sessionId",
-    8: "purposeId",
-    9: "weightsHash",
-    10: "tokenizerHash",
-    11: "systemPromptHash",
-    12: "loraHash",
-    13: "adapterHash",
-    14: "safetyLayerHash",
-    15: "quantizationHash",
-    16: "precisionHash",
-    17: "runtimeHash",
-    18: "driverHash",
-    19: "temperature",
-    20: "topP",
-    21: "topK",
-    22: "seed",
-    23: "repetitionPenalty",
-    24: "presencePenalty",
-    25: "frequencyPenalty",
-    26: "maxTokens",
-    27: "protocolVersion",
-    28: "timestamp",
-  };
-
   publicSignals.forEach((value, index) => {
-    const label = LABELS[index] ?? "";
-    console.log(`  signals[${String(index).padStart(2, "0")}] = ${value.padStart(78)}  // ${label}`);
+    const label = SIGNAL_LABELS[index] ?? "";
+    console.log(
+      `  signals[${String(index).padStart(2, "0")}] = ${value.padStart(78)}  // ${label}`
+    );
   });
 
-  // ----------------------------------------------------------
-  // 5. Verify Signal Binding
-  // ----------------------------------------------------------
-
   console.log("\n[5] Verifying signal binding");
+  const outSessionId = BigInt(publicSignals[2]);
+  const outPurposeId = BigInt(publicSignals[3]);
+  const outCommitment = BigInt(publicSignals[28]);
+  const outNullifier = BigInt(publicSignals[29]);
 
-  const outSessionId = BigInt(publicSignals[IDX_SESSION_ID]);
-  const outPurposeId = BigInt(publicSignals[IDX_PURPOSE_ID]);
-  const outCommitment = BigInt(publicSignals[IDX_COMMITMENT]);
-  const outNullifier  = BigInt(publicSignals[IDX_NULLIFIER]);
-
-  const inSessionId  = BigInt(input.sessionId);
-  const inPurposeId  = BigInt(input.purposeId);
-
-  if (outSessionId !== inSessionId) {
-    throw new Error(
-      `Session ID mismatch!\n` +
-      `  Input  : ${inSessionId}\n` +
-      `  signals[${IDX_SESSION_ID}] : ${outSessionId}`
-    );
+  if (outSessionId !== BigInt(input.sessionId)) {
+    throw new Error(`Session ID mismatch: input=${input.sessionId} output=${outSessionId}`);
+  }
+  if (outPurposeId !== BigInt(input.purposeId)) {
+    throw new Error(`Purpose ID mismatch: input=${input.purposeId} output=${outPurposeId}`);
   }
 
-  if (outPurposeId !== inPurposeId) {
-    throw new Error(
-      `Purpose ID mismatch!\n` +
-      `  Input  : ${inPurposeId}\n` +
-      `  signals[${IDX_PURPOSE_ID}] : ${outPurposeId}`
-    );
-  }
+  console.log(`  sessionId   : signals[2] = ${outSessionId}  (OK)`);
+  console.log(`  purposeId   : signals[3] = ${outPurposeId}  (OK)`);
+  console.log(`  commitment  : signals[28] = ${outCommitment}`);
+  console.log(`  nullifier   : signals[29] = ${outNullifier}`);
 
-  console.log(`  sessionId   : signals[${IDX_SESSION_ID}] = ${outSessionId}  (OK)`);
-  console.log(`  purposeId   : signals[${IDX_PURPOSE_ID}] = ${outPurposeId}  (OK)`);
-  console.log(`  commitment  : signals[${IDX_COMMITMENT}] = ${outCommitment}`);
-  console.log(`  nullifier   : signals[${IDX_NULLIFIER}] = ${outNullifier}`);
-
-  // ----------------------------------------------------------
-  // 6. Verify Proof (local, using vkey)
-  // ----------------------------------------------------------
-
-  console.log("\n[6] Local proof verification (snarkjs)");
-
-  const vkeyPath = path.join(ROOT, "build", "vkey.json");
-
-  if (fs.existsSync(vkeyPath)) {
-    const vkey = JSON.parse(fs.readFileSync(vkeyPath, "utf8"));
-    const verified = await snarkjs.groth16.verify(vkey, publicSignals, proof);
-
-    if (!verified) {
-      throw new Error("Local proof verification FAILED. The proof is invalid.");
-    }
-
-    console.log("Local proof verification: OK");
-  } else {
-    console.log(`vkey.json not found at ${vkeyPath}, skipping local verification.`);
-    console.log("To enable: snarkjs zkey export verificationkey build/zkey/aegis_final.zkey build/vkey.json");
-  }
-
-  // ----------------------------------------------------------
-  // 7. Write Output Files
-  // ----------------------------------------------------------
-
-  console.log("\n[7] Writing proof files");
-
+  console.log("\n[6] Writing proof files");
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-
   fs.writeFileSync(PROOF_PATH, JSON.stringify(proof, null, 2));
   fs.writeFileSync(PUBLIC_SIGNALS_PATH, JSON.stringify(publicSignals, null, 2));
 
   console.log(`  Proof         : ${PROOF_PATH}`);
   console.log(`  Public signals: ${PUBLIC_SIGNALS_PATH}`);
-
-  // ----------------------------------------------------------
-  // Final Summary
-  // ----------------------------------------------------------
+  console.log(`  zkey hash     : ${hashes.zkeyHash}`);
+  console.log(`  vkey hash     : ${hashes.vkHash}`);
+  console.log(`  input hash    : ${hashes.inputHash}`);
 
   console.log("\n==========================================");
   console.log("PROOF GENERATION COMPLETE");
   console.log("==========================================");
-  console.log(`  sessionId  : ${outSessionId}`);
-  console.log(`  purposeId  : ${outPurposeId}`);
-  console.log(`  commitment : ${outCommitment}`);
-  console.log(`  nullifier  : ${outNullifier}`);
-  console.log("==========================================");
-  console.log("\nNext step:");
-  console.log("  node test/testVerifyAndAccept.ts");
-  console.log("  (or: npm test)");
 }
 
 main().catch((error) => {
