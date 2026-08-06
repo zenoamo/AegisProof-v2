@@ -1,0 +1,24 @@
+{
+  "phase": "8.10",
+  "pinnedAt": "2026-08-06T13:48:18.291Z",
+  "environment": "win32 x64, Node v24, snarkjs canonical",
+  "hashes": {
+    "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+    "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+    "wasmHash": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd"
+  },
+  "samples": 20,
+  "modes": [
+    { "mode": "M1", "label": "fullProve", "p50": 490, "p95": 2460 },
+    { "mode": "M2", "label": "witness", "p50": 7, "p95": 9 },
+    { "mode": "M3", "label": "snarkjs prove", "p50": 345, "p95": 418 },
+    { "mode": "M4", "label": "rapidsnark prove", "p50": null, "p95": null, "skipped": true },
+    { "mode": "M5", "label": "warm", "p50": 590, "p95": 3925 }
+  ],
+  "proverSummary": {
+    "snarkjs": { "proveP50": 345, "proveP95": 418, "verify": "PASS" },
+    "rapidsnark": { "proveP50": null, "proveP95": null, "verify": "SKIP" }
+  },
+  "legacyBaselineMs": 50000,
+  "reductionPercent": 99.0
+}

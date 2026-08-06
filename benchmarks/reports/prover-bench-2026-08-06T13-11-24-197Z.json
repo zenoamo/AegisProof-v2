@@ -1,0 +1,122 @@
+{
+  "generatedAt": "2026-08-06T13:11:24.213Z",
+  "samples": 20,
+  "hashes": {
+    "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+    "vkHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+    "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe"
+  },
+  "environment": {
+    "os": "win32 10.0.26200",
+    "arch": "x64",
+    "cpus": 12,
+    "node": "v24.18.0",
+    "prover": "snarkjs",
+    "rapidsnarkAvailable": false,
+    "snarkjs": "unknown"
+  },
+  "modes": [
+    {
+      "mode": "M1",
+      "samples": 20,
+      "p50": 704,
+      "p95": 1129,
+      "min": 627,
+      "max": 2238,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      }
+    },
+    {
+      "mode": "M2",
+      "samples": 20,
+      "p50": 11,
+      "p95": 16,
+      "min": 9,
+      "max": 17,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      }
+    },
+    {
+      "mode": "M3",
+      "samples": 20,
+      "p50": 520,
+      "p95": 622,
+      "min": 407,
+      "max": 852,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      }
+    },
+    {
+      "mode": "M4",
+      "samples": 0,
+      "p50": 0,
+      "p95": 0,
+      "min": 0,
+      "max": 0,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      },
+      "skipped": true,
+      "reason": "rapidsnark binary not available"
+    },
+    {
+      "mode": "M5",
+      "samples": 20,
+      "p50": 592,
+      "p95": 695,
+      "min": 479,
+      "max": 2987,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      }
+    }
+  ]
+}
