@@ -59,6 +59,14 @@ Defined in [specs/aegis-protocol.v2.json](../specs/aegis-protocol.v2.json). Key 
 - **Verification suite** (scripts): FAST/FULL modes, negative tests, IC/VK checks.
 - **CI reproducibility** (`.github/workflows/aegis_repro_ci.yml`): FAST on push/PR, FULL weekly/manual.
 
+### 5. TEE Adapter Layer (Layer B — research/PoC)
+
+Isolated from protocol v2. Architecture frozen per [ADR-001](./adr/001-architecture-hardening-freeze.md).
+
+- **Pipeline:** [TEE Attestation Pipeline](./architecture/tee-pipeline.md) — compose-only orchestration
+- **Regression:** Stage A–G via `npx tsx tee/scripts/evaluate.ts`
+- **Trust model:** `VerificationLevel` + `ClaimsGate` (see ADR-001)
+
 ---
 
 ## Deployment topology

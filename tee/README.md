@@ -1,8 +1,9 @@
 # AegisProof TEE Research
 
-**Phase**: 8.9B  
-**Status**: Offline DCAP/VCEK Verification PoC (Research/PoC — not production)  
-**Scope**: Intel TDX, AMD SEV-SNP, Attestation Adapter Layer, ZK Proof Integration Research
+**Phase**: 8.9C-pre (Architecture Hardening complete)  
+**Status**: Offline DCAP/VCEK Verification PoC + Pipeline Composition (Research/PoC — not production)  
+**Scope**: Intel TDX, AMD SEV-SNP, Attestation Adapter Layer, ZK Proof Integration Research  
+**Architecture Freeze**: [ADR-001](../docs/adr/001-architecture-hardening-freeze.md)
 
 ---
 
@@ -58,7 +59,19 @@ tee/
 │   ├── zk-tee-model.md
 │   ├── zk-evidence-integration-design.md
 │   ├── threat-model.md
+│   ├── claims-gate.ts             # Phase 8.9C-pre.3 — claims security gate
 │   └── zk-claims-mapper.ts
+├── config/                        # Phase 8.9C-pre.2 — runtime configuration
+│   └── tee-runtime-config.ts
+├── domain/                        # Phase 8.9C-pre.1 — domain types
+│   ├── verification-level.ts
+│   ├── tee-verification-result.ts
+│   ├── attestation-error.ts
+│   └── attestation-result.ts
+├── policy/                        # Phase 8.9C-pre.2 — verification level policy
+│   └── verification-policy.ts
+├── pipeline/                      # Phase 8.9C-pre.4 — compose-only orchestrator
+│   └── attestation-pipeline.ts
 ├── mock/                        # Phase 8.3 Mock Provider (evaluation)
 │   ├── provider-interface.ts
 │   ├── tdx-provider-mock.ts
@@ -130,6 +143,7 @@ npx tsx tee/scripts/evaluate.ts
 - **Stage D**: Phase 8.8 Verification Stub + ZK Claims Evaluation
 - **Stage E**: Phase 8.8b Experimental Acquisition Evaluation
 - **Stage F**: Phase 8.9B Offline DCAP/VCEK Verification (`TEE_VERIFICATION=offline` in tests)
+- **Stage G**: Phase 8.9C-pre.4 Attestation Pipeline E2E (`pipeline-e2e.test.ts`)
 
 ---
 
@@ -145,8 +159,8 @@ npx tsx tee/scripts/evaluate.ts
 - [x] Experimental acquisition skeleton (Phase 8.8b — `TEE_ACQUISITION=experimental`)
 - [x] Remote Attestation architecture design (Phase 8.9A — design only)
 - [x] Offline DCAP/VCEK verification PoC (Phase 8.9B — `TEE_VERIFICATION=offline`)
-- [ ] Native ioctl hook (deferred — Phase 8.8c approval)
-- [ ] Production TEE integration (deferred)
+- [x] Architecture Hardening (Phase 8.9C-pre.1–pre.4 — domain, config, policy, ClaimsGate, Pipeline, Stage G)
+- [ ] Remote Verifier (Phase 8.9C — deferred)
 
 ---
 
@@ -158,6 +172,8 @@ npx tsx tee/scripts/evaluate.ts
 - [Phase 8.8b Experimental Acquisition](../docs/research/phase8.8b-ioctl-acquisition-poc.md)
 - [Phase 8.9A Remote Attestation Design](../docs/research/phase8.9-remote-attestation-design.md)
 - [Phase 8.9B Offline DCAP/VCEK Plan](../docs/research/phase8.9b-offline-dcap-vcek-plan.md)
+- [ADR-001: Architecture Hardening Freeze](../docs/adr/001-architecture-hardening-freeze.md)
+- [TEE Pipeline Architecture](../docs/architecture/tee-pipeline.md)
 - [Phase 8.5 Real TEE Evaluation Plan](../docs/research/phase8.5-real-tee-evaluation-plan.md)
 - [Phase 8.4 Evaluation Report](../docs/research/phase8.4-evaluation-report.md)
 - Intel TDX Documentation: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-trust-domain-extensions.html
