@@ -1,5 +1,5 @@
 import { SevReportParser } from '../parsers/sev-report-parser.js';
-import { TeeVerifier, VerificationResult } from './verification-interface.js';
+import { TeeVerifier, VerificationLevel, VerificationResult } from './verification-interface.js';
 
 /**
  * Phase 8.8 PoC VCEK verifier stub.
@@ -17,6 +17,7 @@ export class SevVcekVerifierStub implements TeeVerifier {
         provider: 'SEV-SNP',
         tcbStatus: 'Unknown',
         pocScope: 'verification-stub',
+        verificationLevel: VerificationLevel.STRUCTURE_ONLY,
         message: 'Structure valid; VCEK signature verification not implemented',
       };
     } catch (e: any) {
@@ -25,6 +26,7 @@ export class SevVcekVerifierStub implements TeeVerifier {
         provider: 'SEV-SNP',
         tcbStatus: 'Unknown',
         pocScope: 'verification-stub',
+        verificationLevel: VerificationLevel.STRUCTURE_ONLY,
         message: e.message ?? 'SEV-SNP report structure validation failed',
       };
     }

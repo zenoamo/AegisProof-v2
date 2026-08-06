@@ -1,5 +1,5 @@
 import { TdxQuoteParser } from '../parsers/tdx-quote-parser.js';
-import { TeeVerifier, VerificationResult } from './verification-interface.js';
+import { TeeVerifier, VerificationLevel, VerificationResult } from './verification-interface.js';
 
 /**
  * Phase 8.8 PoC DCAP verifier stub.
@@ -17,6 +17,7 @@ export class TdxDcapVerifierStub implements TeeVerifier {
         provider: 'TDX',
         tcbStatus: 'Unknown',
         pocScope: 'verification-stub',
+        verificationLevel: VerificationLevel.STRUCTURE_ONLY,
         message: 'Structure valid; DCAP signature verification not implemented',
       };
     } catch (e: any) {
@@ -25,6 +26,7 @@ export class TdxDcapVerifierStub implements TeeVerifier {
         provider: 'TDX',
         tcbStatus: 'Unknown',
         pocScope: 'verification-stub',
+        verificationLevel: VerificationLevel.STRUCTURE_ONLY,
         message: e.message ?? 'TDX quote structure validation failed',
       };
     }

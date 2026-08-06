@@ -4,7 +4,7 @@ import {
   verifyEcdsaSignature,
   verifyResearchCertChain,
 } from './offline-collateral-loader.js';
-import { TeeVerifier, VerificationResult } from './verification-interface.js';
+import { TeeVerifier, VerificationLevel, VerificationResult } from './verification-interface.js';
 import { OfflineReportFixture, OfflineCollateralFixture } from './offline-collateral-interface.js';
 
 export interface SevOfflineVerifierOptions {
@@ -70,6 +70,7 @@ export class SevVcekOfflineVerifier implements TeeVerifier {
         provider: 'SEV-SNP',
         tcbStatus: 'Unknown',
         pocScope: 'offline-verification-poc',
+        verificationLevel: VerificationLevel.OFFLINE_FIXTURE,
         message: 'Offline fixture ECDSA valid; not production VCEK verification',
       };
     } catch (e: any) {
@@ -83,6 +84,7 @@ export class SevVcekOfflineVerifier implements TeeVerifier {
       provider: 'SEV-SNP',
       tcbStatus: 'Unknown',
       pocScope: 'offline-verification-poc',
+      verificationLevel: VerificationLevel.OFFLINE_FIXTURE,
       message,
     };
   }

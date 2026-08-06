@@ -4,7 +4,7 @@ import {
   verifyEcdsaSignature,
   verifyResearchCertChain,
 } from './offline-collateral-loader.js';
-import { TeeVerifier, VerificationResult } from './verification-interface.js';
+import { TeeVerifier, VerificationLevel, VerificationResult } from './verification-interface.js';
 import { OfflineQuoteFixture, OfflineCollateralFixture } from './offline-collateral-interface.js';
 
 export interface TdxOfflineVerifierOptions {
@@ -70,6 +70,7 @@ export class TdxDcapOfflineVerifier implements TeeVerifier {
         provider: 'TDX',
         tcbStatus: 'Unknown',
         pocScope: 'offline-verification-poc',
+        verificationLevel: VerificationLevel.OFFLINE_FIXTURE,
         message: 'Offline fixture ECDSA valid; not production DCAP verification',
       };
     } catch (e: any) {
@@ -83,6 +84,7 @@ export class TdxDcapOfflineVerifier implements TeeVerifier {
       provider: 'TDX',
       tcbStatus: 'Unknown',
       pocScope: 'offline-verification-poc',
+      verificationLevel: VerificationLevel.OFFLINE_FIXTURE,
       message,
     };
   }
