@@ -2,85 +2,92 @@
 
 **Version:** 1.0  
 **Date:** 2026-08-07  
-**Scope:** Repository governance — no ZK protocol changes  
+**Scope:** Repository governance (no ZK protocol changes)
 
 ---
 
-## Purpose
+## Overview
 
-Define what belongs on **GitHub** (reproducibility · auditability · development management) vs **Secure Storage / Vault / HSM** (secrets · high-value cryptographic material).
+This document defines what belongs on **GitHub** versus **Secure Storage / Vault / HSM**.
 
-```
-GitHub          = code · design · verification evidence · public metadata
-Secure Storage  = secrets · private keys · production.zkey (target state)
-```
+| Layer | Holds |
+|-------|-------|
+| GitHub | Code, design docs, verification evidence, public metadata |
+| Secure Storage | Secrets, private keys, `production.zkey` (target state) |
 
 ---
 
-## Task 1 — Repository Inventory Classification
+## Inventory Classification
 
-### A. GitHub 管理対象 (Repository Managed)
+### A. Repository Managed (GitHub)
 
 | Category | Paths | Rationale |
 |----------|-------|-----------|
-| Source code | `scripts/`, `tests/`, `circuits/` (sources), `protocol/` (frozen) | Reproducible build & audit |
+| Source code | `scripts/`, `tests/`, `circuits/` (sources), `protocol/` (frozen) | Reproducible build and audit |
 | SDK | `packages/sdk/` | Public API surface |
 | CI | `.github/workflows/` | Verification automation |
-| Documentation | `docs/architecture/`, `docs/research/`, `docs/perf/` | Design & audit trail |
-| Public metadata | `artifacts/provenance/manifest.json`, `artifacts/provenance/public-keys/` | Hash + ML-DSA public keys |
+| Documentation | `docs/architecture/`, `docs/research/`, `docs/perf/` | Design and audit trail |
+| Public metadata | `artifacts/provenance/manifest.json`, `artifacts/provenance/public-keys/` | SHA-256 hashes and ML-DSA public keys |
 | Ceremony records | `artifacts/phase4/ceremony/`, `transcripts/`, `hashes/` | Non-secret evidence |
 | Benchmarks | `benchmarks/reports/*.json` | Performance evidence |
 | Hash pins | `scripts/lib/resolve-artifacts.mjs` constants | Integrity anchors |
 
-**Tracked file count:** ~404 files (excluding `node_modules/`).
+**Tracked file count:** 393 files (excluding `node_modules/`, as of 2026-08-07).
 
-### B. GitHub 管理禁止 (Never Commit)
+### B. Never Commit
 
 | Material | Examples | Detection |
 |----------|----------|-----------|
-| Private keys | `*.key`, `*.pem`, `*.private` | `check:sensitive-files` CRITICAL |
-| Environment secrets | `.env`, `.env.*` | gitignore + scanner |
-| ML-DSA private keys | `artifacts/provenance/keys/` | gitignore + scanner |
-| Operator / wallet credentials | mnemonics, keystore | pattern scanner |
-| HSM / deployment credentials | `deployments/` | gitignore + scanner |
-| TEE production secrets | runtime attestation keys | external vault |
+| Private keys | `*.key`, `*.pem`, `*.private` | `check:sensitive-files` (CRITICAL) |
+| Environment secrets | `.env`, `.env.*` | `.gitignore` + scanner |
+| ML-DSA private keys | `artifacts/provenance/keys/` | `.gitignore` + scanner |
+| Operator / wallet credentials | mnemonics, keystore | Pattern scanner |
+| HSM / deployment credentials | `deployments/` | `.gitignore` + scanner |
+| TEE production secrets | Runtime attestation keys | External vault |
 
-### C. Hash / Metadata のみ管理 (Metadata Only)
+### C. Hash / Metadata Only
 
-| Asset | GitHub holds | Binary location |
-|-------|-------------|-----------------|
-| production.zkey | SHA-256 pin `ce5a3d30…6571` | **Target:** secure storage (currently migration debt in `crypto-artifacts/`) |
-| production-vkey.json | File hash + ceremony hash `d012bd29…d2ec` | `crypto-artifacts/phase4/` or `artifacts/phase4/final/` |
+GitHub stores hashes and metadata; binaries live elsewhere.
+
+| Asset | On GitHub | Binary location |
+|-------|-----------|-----------------|
+| `production.zkey` | SHA-256 pin `ce5a3d30…6571` | Secure storage (currently migration debt in `crypto-artifacts/`) |
+| `production-vkey.json` | File hash + ceremony hash `d012bd29…d2ec` | `crypto-artifacts/phase4/` or `artifacts/phase4/final/` |
 | wasm / r1cs | Hash pins in manifest | `crypto-artifacts/phase2/` |
 | ML-DSA public keys | `aegis-ci-mldsa87-v1.json` | Committed registry |
 
-### D. External Storage 管理 (Secure Storage)
+### D. External Storage
 
 | Asset | Storage tier | Access |
 |-------|-------------|--------|
-| production.zkey (target) | HSM / encrypted object store | CI OIDC + short-lived download |
+| `production.zkey` (target) | HSM / encrypted object store | CI OIDC + short-lived download |
 | ML-DSA signing keys | Vault / GitHub Encrypted Secrets | `AEGIS_PQC_PRIVATE_KEY_HEX` |
-| Operator ECDSA keys | HSM / MPC | Never in repository |
+| Operator ECDSA keys | HSM / MPC | Not in repository |
 | Ceremony toxic waste | Air-gapped archive | Off GitHub permanently |
 
 ---
 
-## Current State Findings (Read-Only Audit)
+## Current State (Read-Only Audit)
 
-### ⚠️ Migration Debt — Tracked Sensitive Paths
+### Migration Debt
 
-The following are **currently git-tracked** but classified as migration debt (allowlisted in `scripts/sensitive-files-allowlist.json`):
+The paths below are **git-tracked today** but listed as migration debt in `scripts/sensitive-files-allowlist.json`:
 
 | Path | Classification | Target |
 |------|----------------|--------|
 | `crypto-artifacts/phase4/production.zkey` | HIGH — proving key | External secure storage |
 | `crypto-artifacts/phase2/phase2/setup/*.ptau` | HIGH — ceremony material | External archive |
 | `crypto-artifacts/phase2/phase2/setup/aegis_v2_0000.zkey` | HIGH — dev zkey | External archive |
-| `crypto-artifacts/phase2/phase2/witness/*.wtns` | MEDIUM — witness | Regenerable, exclude |
+| `crypto-artifacts/phase2/phase2/witness/*.wtns` | MEDIUM — witness | Regenerable; exclude from Git |
 
-**Policy:** New commits matching forbidden patterns → **FAIL** (`npm run check:sensitive-files`). Allowlisted paths → **WARN** until migrated.
+**Policy:**
+
+- New commits matching forbidden patterns → **FAIL** (`npm run check:sensitive-files`)
+- Allowlisted paths → **WARN** until migrated
 
 ### Directory Map
+
+Classification key: **[A]** repository managed · **[B]** never commit · **[C/D]** metadata or external storage
 
 ```
 aegisproof-v2/
@@ -106,15 +113,40 @@ aegisproof-v2/
 
 ---
 
-## Frozen vs Operational (Cross-Reference)
+## Frozen vs Operational
 
 | 🔴 Frozen Core | 🔵 Operational / Extension |
 |----------------|---------------------------|
 | circuits, R1CS, zkey hash, VK hash | scripts/, CI, benchmarks |
-| Groth16VerifierV2Production.sol | provenance, PQC adapter |
-| protocol/contracts, packages/sdk | hybrid auth (research) |
-| publicSignals(30), proveCanonical() | public key registry |
-| tee/ ADR-001 | check:sensitive-files |
+| `Groth16VerifierV2Production.sol` | provenance, PQC adapter |
+| `protocol/contracts`, `packages/sdk` | hybrid auth (research) |
+| `publicSignals(30)`, `proveCanonical()` | public key registry |
+| `tee/` ADR-001 | `check:sensitive-files` |
+
+---
+
+## Directory Structure Review
+
+Proposed layout compared with the current repository:
+
+| Proposed | Current | Recommendation |
+|----------|---------|----------------|
+| `circuits/` | Present | Keep — frozen sources |
+| `protocol/` | Via `contracts/` + `protocol/` | Keep frozen; no rename |
+| `packages/` | `packages/sdk/` | Keep |
+| `scripts/prover/` | Flat `scripts/` | Defer — split when script count grows |
+| `scripts/provenance/` | `scripts/lib/artifact-provenance.mjs` | Defer — `lib/` pattern is sufficient |
+| `scripts/pqc/` | `scripts/lib/pqc-signature.mjs` | Defer |
+| `scripts/auth/` | `scripts/lib/hybrid-auth-envelope.mjs` | Defer |
+| `tests/` | Present | Keep |
+| `docs/architecture/` | Present + boundary docs | Keep |
+| `docs/security/` | Partially in `docs/research/` | Add when threat model doc is ready |
+| `benchmarks/` | Present | Keep |
+| `artifacts/provenance/` | manifest + public-keys | Keep — `keys/` gitignored |
+| `.github/workflows/` | `aegis_repro_ci.yml` | Keep + `security-boundary-check` job |
+| `.gitignore` | Hardened | Keep |
+
+**Decision:** Document logical grouping only. No directory moves in this governance phase (avoids import path churn and preserves the frozen boundary).
 
 ---
 
@@ -122,41 +154,16 @@ aegisproof-v2/
 
 ```bash
 npm run check:sensitive-files          # CRITICAL fail + migration allowlist WARN
-npm run check:sensitive-files -- --strict   # fail on allowlisted too
-npm run check:security-boundary        # sensitive + provenance
+npm run check:sensitive-files -- --strict   # fail on allowlisted paths too
+npm run check:security-boundary        # sensitive scan + provenance verify
 ```
 
-CI job: `security-boundary-check` on every PR.
+CI job `security-boundary-check` runs on every pull request.
 
 ---
 
-## Related
+## Related Documents
 
-- [GitHub Security Boundary](./github-security-boundary.md) — trust model & lifecycle
+- [GitHub Security Boundary](./github-security-boundary.md) — trust model and lifecycle
 - [AegisProof v2 Full Architecture](./aegisproof-v2-full-architecture.md)
 - [Artifact Retention Policy](../artifact-retention.md)
-
----
-
-## Task 3 — Repository Structure Proposal (Review)
-
-Proposed layout vs current state:
-
-| Proposed | Current | Recommendation |
-|----------|---------|----------------|
-| `circuits/` | ✅ exists | Keep — frozen sources |
-| `protocol/` | ✅ via `contracts/` + `protocol/` | Keep frozen; no rename |
-| `packages/` | ✅ `packages/sdk/` | Keep |
-| `scripts/prover/` | flat `scripts/` | **Defer** — subdir split is cosmetic; migrate when script count grows |
-| `scripts/provenance/` | `scripts/lib/artifact-provenance.mjs` etc. | **Defer** — lib/ pattern works |
-| `scripts/pqc/` | `scripts/lib/pqc-signature.mjs` | **Defer** |
-| `scripts/auth/` | `scripts/lib/hybrid-auth-envelope.mjs` | **Defer** |
-| `tests/` | ✅ exists | Keep |
-| `docs/architecture/` | ✅ + new boundary docs | Keep |
-| `docs/security/` | partial in `docs/research/` | Add `docs/security/` when threat model doc lands |
-| `benchmarks/` | ✅ exists | Keep |
-| `artifacts/provenance/` | ✅ manifest + public-keys | Keep — keys/ gitignored |
-| `.github/workflows/` | ✅ `aegis_repro_ci.yml` | Keep + `security-boundary-check` job |
-| `.gitignore` | ✅ hardened | Keep |
-
-**Decision:** Adopt logical grouping in documentation; **no directory moves** in this governance phase (avoids import path churn, preserves frozen boundary).

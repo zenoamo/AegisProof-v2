@@ -1,6 +1,6 @@
 # AegisProof v2 — Full Architecture Diagram
 
-**Version:** v2 (current final state as of Phase 8.13)  
+**Version:** v2 (Phase 8.13)  
 **Audience:** Engineers, security auditors, architecture reviewers  
 **Format:** Mermaid (SVG-exportable)  
 **Scope:** ZK core, operational extensions, PQC layers, CI security, TEE boundary, future migration  
@@ -168,7 +168,7 @@ flowchart TB
 
 ## 2. ZK Proof Flow Diagram
 
-End-to-end Groth16 proof generation and verification — **entire path inside 🔴 Frozen Core**.
+Groth16 proof generation and verification. The entire path below is inside the 🔴 Frozen Core.
 
 ```mermaid
 flowchart LR
@@ -221,13 +221,13 @@ flowchart LR
   class WASM,R1CS,ZKEY,VKEY,PROV,OUT,G16,SHIELD frozen
 ```
 
-**Invariant checks (T1–T9):** proof verifies off-chain · on-chain · publicSignals 30/30 · zkey/VK hashes pinned · tampered proof/commitment rejected.
+**Invariant checks (T1–T9):** Proof verifies off-chain and on-chain; `publicSignals` 30/30; zkey and VK hashes pinned; tampered proof or commitment rejected.
 
 ---
 
 ## 3. Artifact Trust Chain Diagram
 
-Supply-chain integrity: classical hash binding + PQC authenticity — **does not alter ZK artifacts**.
+Supply-chain integrity via classical hash binding and PQC authenticity. Provenance is metadata-only; it does not alter ZK artifacts.
 
 ```mermaid
 flowchart TB
@@ -289,7 +289,7 @@ flowchart TB
 
 ## 4. PQC Integration Boundary Diagram
 
-Shows **where PQC applies** vs **where Groth16 remains classical** — critical for audit.
+Where PQC applies versus where Groth16 remains classical.
 
 ```mermaid
 flowchart TB
@@ -357,7 +357,7 @@ flowchart TB
 
 ## 5. Security Layer Stack Diagram
 
-Defense-in-depth from user to chain — **audit view in ~5 minutes**.
+Defense-in-depth from application to chain.
 
 ```mermaid
 flowchart BT
@@ -522,30 +522,32 @@ flowchart TB
 
 ---
 
-## Quick Audit Checklist (5-Minute Review)
+## Quick Audit Checklist
 
-1. **Is Groth16 touched by PQC?** No — separate domains, separate modules, dashed boundary in §4.
+1. **Is Groth16 touched by PQC?** No — separate domains, separate modules; see dashed boundary in §4.
 2. **What fails closed?** Artifact resolver, SHA-256 mismatch, `--pqc` strict mode, T1–T9 regression.
-3. **What is WARN-only?** Unsigned PQC on PR path; hybrid auth research mode.
-4. **What is frozen?** Red-boxed nodes in §1 table — any change requires Architecture Review.
+3. **What is WARN-only?** Unsigned PQC on the PR path; hybrid auth research mode.
+4. **What is frozen?** Red-boxed nodes in §1 table — changes require Architecture Review.
 5. **TEE vs Protocol?** ADR-001 isolation — claims only, no contract merge.
 6. **Future PQ?** Parallel version only — v2 Groth16 baseline preserved.
-7. **GitHub vs Vault?** GitHub = code + public metadata; secrets in external storage — see [GitHub Security Boundary](./github-security-boundary.md).
+7. **GitHub vs Vault?** GitHub holds code and public metadata; secrets in external storage — see [GitHub Security Boundary](./github-security-boundary.md).
 
 ---
 
-## Trust Model Layers (Task 8 — GitHub Governance)
+## GitHub Governance Trust Layers
 
 | Layer | Components | GitHub role |
 |-------|------------|-------------|
 | **Frozen Core** | circuits, R1CS, zkey hash, VK hash, Groth16Verifier, publicSignals(30), proveCanonical() | Hash pins only — binaries target external storage |
 | **Operational Layer** | scripts, CI, benchmarks | Full repository management |
 | **Trust Extension** | provenance, ML-DSA signatures, public key registry | Public keys + manifest; private keys in vault |
-| **Secret Layer** | private keys, HSM, deployment credentials | **Never commit** — enforced by `check:sensitive-files` |
+| **Secret Layer** | private keys, HSM, deployment credentials | Never commit — enforced by `check:sensitive-files` |
+
+---
 
 ## SVG Export
 
-Render any diagram to SVG via Mermaid CLI:
+Render any diagram to SVG with Mermaid CLI:
 
 ```bash
 npx @mermaid-js/mermaid-cli -i docs/architecture/aegisproof-v2-full-architecture.md -o docs/architecture/diagrams/
