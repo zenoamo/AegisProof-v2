@@ -2,12 +2,12 @@
 # Used by release workflow and public release finalization audit.
 # Frozen core: do not modify hash pins without Architecture Review.
 
-version: "2.0.0"
-tag: v2.0.0
+version: "2.0.1"
+tag: v2.0.1
 date: "2026-08-08"
 license: MIT
 
-release_notes: docs/release/v2.0.0-release-notes.md
+release_notes: docs/release/v2.0.1-release-notes.md
 audit_report: docs/security/github-public-release-audit-report.md
 
 repository:
@@ -36,5 +36,5 @@ ci_workflows:
 
 github_release:
   # Create manually or via .github/workflows/release.yml on tag push
-  title: "AegisProof v2.0.0 — Public Release"
+  title: "AegisProof v2.0.1 — Public Release"
   prerelease: false

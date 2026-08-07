@@ -10,7 +10,7 @@ const TARGETS = [
   "README.md",
   "SECURITY.md",
   "docs/README.md",
-  "docs/release/v2.0.0-release-notes.md",
+  "docs/release/v2.0.1-release-notes.md",
   "CONTRIBUTING.md",
 ];
 
