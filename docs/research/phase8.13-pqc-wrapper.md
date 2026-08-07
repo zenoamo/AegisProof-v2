@@ -1,6 +1,6 @@
 # PQC Wrapper Hardening (Phase 8.13)
 
-**Status:** Task 4 complete — ML-DSA-87 signature activation  
+**Status:** Complete (Tasks 1–9, Phase 8.13 closed)  
 **Phase:** 8.13  
 **Prerequisite:** Phase 8.12 Quantum Readiness Architecture Review  
 

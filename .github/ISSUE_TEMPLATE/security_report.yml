@@ -1,0 +1,57 @@
+name: Security Report
+description: Report a security vulnerability (non-secret details only)
+title: "[Security]: "
+labels: ["security", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste private keys, `.env` values, or exploit payloads with live credentials.**
+
+        For sensitive details, describe how to reach you privately in the report.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Repository boundary / secret exposure
+        - Provenance / artifact integrity
+        - PQC / signing layer
+        - CI / supply chain
+        - Hybrid auth (research layer)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is the issue?
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What could an attacker achieve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction (sanitized)
+      description: Steps without secrets
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have NOT included private keys or secrets in this report
+          required: true

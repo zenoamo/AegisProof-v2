@@ -1,44 +1,22 @@
 #!/usr/bin/env node
 // ============================================================================
 // Sensitive file boundary checker (AegisProof v2 GitHub governance)
-// Scans git-tracked and working-tree files for forbidden secret patterns.
 // Usage: npm run check:sensitive-files [-- --strict]
-//   --strict: fail on migration-allowlisted paths too (production.zkey etc.)
 // ============================================================================
 import fs from "fs";
 import path from "path";
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
+import {
+  CRITICAL_PATTERNS,
+  classifyPath,
+  evaluateScan,
+  isExcluded,
+  matchPatterns,
+} from "./lib/sensitive-files-policy.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-
-/** Always fail — no allowlist. */
-const CRITICAL_PATTERNS = [
-  { id: "env-file", re: /^\.env(\..+)?$/, desc: "environment secret file" },
-  { id: "private-key-ext", re: /\.(key|private|secret|pem)$/i, desc: "private key material extension" },
-  { id: "pqc-private-dir", re: /^artifacts\/provenance\/keys\//, desc: "PQC private key directory" },
-  { id: "private-keys-dir", re: /(^|\/)private-keys\//, desc: "private-keys directory" },
-  { id: "deployments-secrets", re: /^deployments\//, desc: "deployment credentials directory" },
-  { id: "wallet-env", re: /mnemonic|wallet\.json|keystore/i, desc: "wallet credential pattern" },
-];
-
-/** Fail unless listed in allowlist (migration debt). */
-const MIGRATION_PATTERNS = [
-  { id: "production-zkey", re: /production\.zkey$/i, desc: "production proving key binary" },
-  { id: "ceremony-ptau", re: /\.ptau$/i, desc: "trusted setup ptau" },
-  { id: "dev-zkey", re: /\/setup\/.*\.zkey$/i, desc: "development zkey in setup/" },
-  { id: "witness-binary", re: /\.wtns$/i, desc: "witness binary" },
-];
-
 const ALLOWLIST_PATH = path.join(ROOT, "scripts", "sensitive-files-allowlist.json");
-
-/** Vendored third-party trees — not AegisProof secrets (e.g. rapidsnark TLS test fixtures). */
-const EXCLUDE_PREFIXES = ["rapidsnark/", "node_modules/", "circom/", ".git/"];
-
-function isExcluded(relPath) {
-  const norm = relPath.replace(/\\/g, "/");
-  return EXCLUDE_PREFIXES.some((p) => norm === p.slice(0, -1) || norm.startsWith(p));
-}
 
 function loadAllowlist() {
   if (!fs.existsSync(ALLOWLIST_PATH)) return { paths: [], note: "" };
@@ -84,17 +62,6 @@ function scanWorkingTreePatterns() {
   return hits;
 }
 
-function matchPatterns(filePath, patterns, severity) {
-  const hits = [];
-  const norm = filePath.replace(/\\/g, "/");
-  for (const pat of patterns) {
-    if (pat.re.test(norm)) {
-      hits.push({ path: norm, pattern: pat.id, severity, desc: pat.desc, source: "git-tracked" });
-    }
-  }
-  return hits;
-}
-
 function main() {
   const strict = process.argv.includes("--strict");
   const allowlist = loadAllowlist();
@@ -105,29 +72,25 @@ function main() {
   const migration = [];
 
   for (const f of tracked) {
-    if (isExcluded(f)) continue;
-    critical.push(...matchPatterns(f, CRITICAL_PATTERNS, "critical"));
-    migration.push(...matchPatterns(f, MIGRATION_PATTERNS, "migration"));
+    const c = classifyPath(f);
+    critical.push(...c.critical);
+    migration.push(...c.migration);
   }
 
-  // Also scan untracked sensitive in working tree (critical only)
   const wtCritical = scanWorkingTreePatterns().filter((h) => !tracked.includes(h.path) && !isExcluded(h.path));
-
   const allCritical = [...critical, ...wtCritical];
-
-  const migrationViolations = migration.filter((h) => !allowSet.has(h.path));
-  const migrationAllowlisted = migration.filter((h) => allowSet.has(h.path));
+  const result = evaluateScan(allCritical, migration, allowSet, strict);
 
   console.log("Sensitive File Boundary Check");
   console.log(`  Tracked files scanned: ${tracked.length}`);
   console.log(`  Critical hits: ${allCritical.length}`);
-  console.log(`  Migration hits: ${migration.length} (${migrationAllowlisted.length} allowlisted)`);
+  console.log(`  Migration hits: ${migration.length} (${result.migrationAllowlisted.length} allowlisted)`);
 
-  for (const h of migrationAllowlisted) {
+  for (const h of result.migrationAllowlisted) {
     console.log(`WARN allowlisted (migration debt): ${h.path} [${h.pattern}]`);
   }
 
-  for (const h of migrationViolations) {
+  for (const h of result.migrationViolations) {
     console.error(`FAIL migration-sensitive (unallowlisted): ${h.path} [${h.pattern}] — ${h.desc}`);
   }
 
@@ -136,23 +99,20 @@ function main() {
   }
 
   if (strict) {
-    for (const h of migrationAllowlisted) {
+    for (const h of result.migrationAllowlisted) {
       console.error(`FAIL strict mode — allowlisted path still forbidden: ${h.path}`);
     }
   }
 
-  const failCritical = allCritical.length > 0;
-  const failMigration = migrationViolations.length > 0 || (strict && migrationAllowlisted.length > 0);
-
-  if (failCritical || failMigration) {
+  if (!result.pass) {
     console.error("\nFAIL sensitive file boundary check");
     if (allowlist.note) console.error(`Allowlist note: ${allowlist.note}`);
     process.exit(1);
   }
 
   console.log("\nPASS sensitive file boundary check");
-  if (migrationAllowlisted.length > 0) {
-    console.log(`  (${migrationAllowlisted.length} migration-debt paths allowlisted — see ${path.relative(ROOT, ALLOWLIST_PATH)})`);
+  if (result.migrationAllowlisted.length > 0) {
+    console.log(`  (${result.migrationAllowlisted.length} migration-debt paths allowlisted — see ${path.relative(ROOT, ALLOWLIST_PATH)})`);
   }
 }
 

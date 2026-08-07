@@ -143,6 +143,67 @@ export function validateEnvelopeMetadata(envelope, opts = {}) {
   return { ok: true, signedAtMs };
 }
 
+const FORBIDDEN_REGISTRY_FIELDS = [
+  "privateKey",
+  "secretKey",
+  "secretKeyHex",
+  "privateKeyHex",
+  "mnemonic",
+  "password",
+];
+
+/**
+ * Validate a registry record before commit (PT-05).
+ * @param {object} raw
+ * @param {string} [keyId]
+ */
+export function validateRegistryRecord(raw, keyId) {
+  const errors = [];
+  for (const field of FORBIDDEN_REGISTRY_FIELDS) {
+    if (raw?.[field] != null) {
+      errors.push(`forbidden field: ${field}`);
+    }
+  }
+  const record = normalizeRegistryRecord(raw, keyId);
+  if (!record.publicKey || record.publicKey.length < 64) {
+    errors.push("malformed publicKey");
+  } else if (!/^[0-9a-fA-F]+$/.test(record.publicKey)) {
+    errors.push("publicKey must be hex");
+  }
+  if (!record.keyId) {
+    errors.push("keyId missing");
+  }
+  if (record.algorithm !== REGISTRY_ALGORITHM) {
+    errors.push(`unsupported algorithm: ${record.algorithm}`);
+  }
+  return { ok: errors.length === 0, errors, record };
+}
+
+/**
+ * Detect duplicate keyIds across registry directory.
+ * @returns {{ ok: boolean, duplicates: string[] }}
+ */
+export function detectDuplicateRegistryKeyIds(dir = DEFAULT_PUBLIC_KEYS_DIR) {
+  if (!fs.existsSync(dir)) return { ok: true, duplicates: [], mismatches: [] };
+  const seen = new Map();
+  const duplicates = [];
+  const mismatches = [];
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const keyId = file.replace(/\.json$/, "");
+    const raw = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
+    const record = normalizeRegistryRecord(raw, keyId);
+    const canonical = record.keyId;
+    if (seen.has(canonical)) {
+      duplicates.push(canonical);
+    }
+    seen.set(canonical, file);
+    if (record.keyId !== keyId) {
+      mismatches.push(`${file} vs ${record.keyId}`);
+    }
+  }
+  return { ok: duplicates.length === 0 && mismatches.length === 0, duplicates, mismatches };
+}
+
 /**
  * Write a committable public key registry entry.
  * @param {{ keyId: string, publicKeyHex: string, purpose?: string }} params

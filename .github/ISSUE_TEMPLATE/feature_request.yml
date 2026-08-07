@@ -1,0 +1,47 @@
+name: Feature Request
+description: Suggest an enhancement (non-frozen-core scope preferred)
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests must respect the frozen Groth16 core boundary.
+        Changes to circuits, verifier, zkey, VK, `publicSignals(30)`, `protocol/`, `packages/sdk/`, or `tee/` require Architecture Review.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Target layer
+      options:
+        - scripts/ tooling
+        - CI / security gates
+        - Documentation
+        - Provenance / PQC outer layer
+        - Research / TEE
+        - Frozen core (requires Architecture Review)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: frozen
+    attributes:
+      label: Scope
+      options:
+        - label: This request does NOT require modifying the frozen Groth16 core
+          required: false

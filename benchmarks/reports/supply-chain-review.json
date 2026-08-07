@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "lockDigest": "7ef235c3b14e241fc58c4951eab5449a1f7043736e5b021eea3c7e8fadcd186c",
+  "packageCount": 308,
+  "findings": [
+    {
+      "severity": "warn",
+      "message": "unexpected executable tracked: scripts/compile.sh"
+    },
+    {
+      "severity": "warn",
+      "message": "unexpected executable tracked: scripts/prove_native.sh"
+    },
+    {
+      "severity": "warn",
+      "message": "unexpected executable tracked: scripts/setup.sh"
+    }
+  ],
+  "generatedAt": "2026-08-07T21:05:24.840Z"
+}

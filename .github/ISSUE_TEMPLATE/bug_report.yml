@@ -1,0 +1,51 @@
+name: Bug Report
+description: Report a reproducible defect in AegisProof v2
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Please do not include secrets, private keys, or `.env` contents.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Clear description of the issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Commands and environment
+      placeholder: |
+        npm run test:prover-compat
+        Node.js version:
+        OS:
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: frozen
+    attributes:
+      label: Scope confirmation
+      options:
+        - label: This bug is NOT in the frozen Groth16 core (circuits, zkey hash, VK, verifier, publicSignals, protocol/, packages/sdk/, tee/)
+          required: true

@@ -1,0 +1,136 @@
+{
+  "generatedAt": "2026-08-07T00:18:31.189Z",
+  "phase": "8.10",
+  "samples": 20,
+  "hashes": {
+    "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+    "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+    "vkFileHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+    "wasmHash": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
+    "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe"
+  },
+  "environment": {
+    "os": "win32 10.0.26200",
+    "arch": "x64",
+    "cpus": 12,
+    "node": "v24.18.0",
+    "prover": "snarkjs",
+    "rapidsnarkAvailable": false,
+    "snarkjs": "unknown"
+  },
+  "modes": [
+    {
+      "mode": "M1",
+      "samples": 20,
+      "p50": 441,
+      "p95": 541,
+      "min": 406,
+      "max": 791,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      }
+    },
+    {
+      "mode": "M2",
+      "samples": 20,
+      "p50": 8,
+      "p95": 10,
+      "min": 8,
+      "max": 11,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      }
+    },
+    {
+      "mode": "M3",
+      "samples": 20,
+      "p50": 363,
+      "p95": 413,
+      "min": 349,
+      "max": 414,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      }
+    },
+    {
+      "mode": "M4",
+      "samples": 0,
+      "p50": 0,
+      "p95": 0,
+      "min": 0,
+      "max": 0,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      },
+      "skipped": true,
+      "reason": "rapidsnark binary not available"
+    },
+    {
+      "mode": "M5",
+      "samples": 20,
+      "p50": 3298,
+      "p95": 5450,
+      "min": 364,
+      "max": 5533,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      }
+    }
+  ],
+  "proverSummary": {
+    "snarkjs": {
+      "proveP50": 363,
+      "proveP95": 413
+    },
+    "rapidsnark": {
+      "proveP50": 0,
+      "proveP95": 0,
+      "skipped": true
+    }
+  }
+}
