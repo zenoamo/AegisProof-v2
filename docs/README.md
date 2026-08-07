@@ -4,6 +4,8 @@
 
 Central index for reviewers, researchers, and OSS contributors.
 
+**License:** [MIT](../LICENSE) — see [LICENSE](../LICENSE) at repository root.
+
 ---
 
 ## Start Here
@@ -42,6 +44,7 @@ Central index for reviewers, researchers, and OSS contributors.
 | [penetration-test-report.md](./security/penetration-test-report.md) | Latest PT execution |
 | [penetration-test-completion-report.md](./security/penetration-test-completion-report.md) | PT closure |
 | [github-public-release-audit-report.md](./security/github-public-release-audit-report.md) | **Final public release audit** |
+| [v2.0.0-release-notes.md](./release/v2.0.0-release-notes.md) | v2.0.0 release notes |
 
 ---
 

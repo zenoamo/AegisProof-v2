@@ -86,3 +86,9 @@ Use the [Security issue template](.github/ISSUE_TEMPLATE/security_report.yml). D
 ## Questions
 
 Open a discussion or issue with the `question` label. For architecture changes affecting the frozen core, describe the motivation and impact on T1–T9 regression.
+
+---
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE), the same license that covers this project.

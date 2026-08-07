@@ -1,5 +1,9 @@
 # AegisProof v2
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/zenoamo/AegisProof-v2?label=v2.0.0)](https://github.com/zenoamo/AegisProof-v2/releases/tag/v2.0.0)
+[![CI](https://img.shields.io/github/actions/workflow/status/zenoamo/AegisProof-v2/aegis_repro_ci.yml?branch=master&label=CI)](https://github.com/zenoamo/AegisProof-v2/actions/workflows/aegis_repro_ci.yml)
+
 Groth16-based zero-knowledge protocol for proving knowledge of secret inputs that produce a commitment and nullifier, with **30 public signals** bound into the proof. Verification runs off-chain (Node.js) and on-chain (Solidity verifier + shield contract).
 
 **Status:** Production artifacts are hash-pinned; testnet dry-runs only. No mainnet deployment has been performed.
@@ -63,8 +67,9 @@ PQC (ML-DSA-87) and hybrid auth are **additive** — they do not replace Groth16
 ## Quick Start
 
 ```bash
-git clone <repository-url>
-cd aegis-proof-copy
+git clone https://github.com/zenoamo/AegisProof-v2.git
+cd AegisProof-v2
+git checkout v2.0.0
 npm install
 npx hardhat compile
 
@@ -106,6 +111,7 @@ Pinned hashes: zkey `ce5a3d30…6571`, VK ceremony `d012bd29…d2ec`.
 | Architecture | [docs/architecture/overview.md](docs/architecture/overview.md) |
 | Security | [docs/security/](docs/security/) |
 | ADRs | [docs/adr/](docs/adr/) |
+| Release notes | [docs/release/v2.0.0-release-notes.md](docs/release/v2.0.0-release-notes.md) |
 | Public release audit | [docs/security/github-public-release-audit-report.md](docs/security/github-public-release-audit-report.md) |
 
 ---
@@ -139,3 +145,11 @@ Use the PR checklist: frozen core unchanged, no secrets, tests run, docs updated
 ## Disclaimer
 
 This repository is provided for review and research. Artifact hashes are pinned for reproducibility; PQC manifest signing on PR tier may emit WARN until strict promotion. Migration debt (8 allowlisted binary paths) is documented in [docs/security/repository-boundary-report.md](docs/security/repository-boundary-report.md).
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+You may use, copy, modify, merge, publish, distribute, sublicense, and sell copies of the software, subject to the conditions in the license file. The software is provided "as is", without warranty of any kind.
