@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "note": "Grandfathered paths pending migration to external secure storage. Remove entries as assets move off GitHub. Use --strict in CI when migration completes.",
+  "migrationTarget": "Secure Storage / Vault / HSM — not GitHub",
+  "paths": [
+    "crypto-artifacts/phase4/production.zkey",
+    "crypto-artifacts/phase2/phase2/setup/aegis_v2_0000.zkey",
+    "crypto-artifacts/phase2/phase2/setup/pot10_0000.ptau",
+    "crypto-artifacts/phase2/phase2/setup/pot10_0001.ptau",
+    "crypto-artifacts/phase2/phase2/setup/pot10_dev_contrib.ptau",
+    "crypto-artifacts/phase2/phase2/setup/pot10_dev_tmp.ptau",
+    "crypto-artifacts/phase2/phase2/setup/pot10_final.ptau",
+    "crypto-artifacts/phase2/phase2/witness/witness_v2_baseline.wtns"
+  ]
+}

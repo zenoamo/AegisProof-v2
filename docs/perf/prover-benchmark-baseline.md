@@ -1,8 +1,20 @@
-# Prover Benchmark Baseline (Phase 8.10)
+# Prover Benchmark Baseline (Phase 8.11)
 
-**SSoT (machine-readable):** `benchmarks/reports/baseline.json`
+**SSoT (machine-readable):** `benchmarks/reports/baseline.json` (schemaVersion 2)
 
 Pinned performance reference for Groth16 BN128 / 6590 constraints / `production.zkey`.
+
+## Schema v2 Fields
+
+| Field | Purpose |
+|-------|---------|
+| `schemaVersion` | Baseline format version (currently `2`) |
+| `commit` | Git commit when baseline was pinned |
+| `platform` | OS/arch summary |
+| `environment` | Full runtime snapshot |
+| `proverBackend` | Default prover (`snarkjs` / `rapidsnark`) |
+| `artifacts` | zkey, VK, wasm, input hashes |
+| `modes` | Map of M1–M5 timing stats |
 
 ## Artifact Hashes (immutable)
 
@@ -18,35 +30,48 @@ Pinned performance reference for Groth16 BN128 / 6590 constraints / `production.
 |--------|-------|
 | Legacy baseline | ~50,000 ms (`fullProve`, pre-optimization) |
 | Canonical separated p50 | ~352 ms (M2 witness 7 ms + M3 prove 345 ms) |
-| Warm canonical p50 | ~590 ms (M5) |
+| rapidsnark prove p50 (Linux) | ~183 ms (M4) |
 | Reduction | **~99%** vs legacy |
 
-## Baseline Timings (snarkjs, 20 samples, win32 x64 Node 24)
+## Baseline Timings
 
 | Mode | Label | p50 (ms) | p95 (ms) |
 |------|-------|----------|----------|
 | M1 | fullProve | 490 | 2460 |
 | M2 | witness | 7 | 9 |
 | M3 | snarkjs prove | 345 | 418 |
-| M4 | rapidsnark prove | — | — (see rapidsnark-evaluation.json) |
+| M4 | rapidsnark prove | 183 | 252 |
 | M5 | warm | 590 | 3925 |
+
+M4 sourced from Linux rapidsnark validation (`rapidsnark-evaluation.json`).
+
+## Drift Detection
+
+```bash
+npm run bench:prover -- --samples 20
+npm run check:bench-drift              # warn-only (default)
+npm run check:bench-drift -- --enforce # fail on hard regression (>50%)
+```
+
+Thresholds: WARN at +30% p50, FAIL at +50% p50 (M2, M3, M4).
 
 ## rapidsnark (optional, Linux CI)
 
 ```bash
-npm run install:rapidsnark          # Linux/macOS only
-npm run evaluate:rapidsnark         # T2/M4 evaluation record
+npm run install:rapidsnark
+npm run evaluate:rapidsnark
 RAPIDSNARK_BIN=./rapidsnark/package/bin/prover npm run prove:native
 ```
 
 Evaluation record: `benchmarks/reports/rapidsnark-evaluation.json`
 
-Windows local build: **not supported** (platform/binary issue). Use CI `prover-benchmark` job.
-
 ## Reproduce
 
 ```bash
 npm run bench:prover -- --samples 20
-npm run bench:prover:baseline       # refresh benchmarks/reports/baseline.json
+npm run bench:prover:baseline       # refresh baseline.json (schema v2)
 npm run test:prover-compat          # T1–T9 regression
+npm run check:bench-drift
 ```
+
+See also: `docs/perf/prover-regression-contract.md`

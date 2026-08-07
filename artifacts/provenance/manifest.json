@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "phase": "8.13",
+  "generatedAt": "2026-08-07T03:17:37.672Z",
+  "commit": "a61ee8866140f2be8f3bac67989ff86c026795c1",
+  "profile": "prover",
+  "resolverSource": "crypto-artifacts",
+  "pinnedProductionHashes": {
+    "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+    "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec"
+  },
+  "resolvedHashes": {
+    "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+    "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+    "vkFileHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+    "wasmHash": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
+    "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe"
+  },
+  "entries": [
+    {
+      "artifact": "production.zkey",
+      "path": "crypto-artifacts/phase4/production.zkey",
+      "sha256": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "size": 2881473,
+      "createdAt": "2026-08-05T03:57:14.200Z",
+      "source": "crypto-artifacts",
+      "version": "v2",
+      "present": true,
+      "classicalHash": {
+        "algorithm": "SHA-256",
+        "digest": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571"
+      },
+      "pqcSignatureEnvelope": {
+        "status": "unsigned",
+        "algorithmVersion": "ML-DSA-87",
+        "version": "v1",
+        "signature": null,
+        "publicKey": null,
+        "publicKeyId": null,
+        "signedAt": null
+      }
+    },
+    {
+      "artifact": "production-vkey.json",
+      "path": "crypto-artifacts/phase4/production-vkey.json",
+      "sha256": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+      "size": 9078,
+      "createdAt": "2026-08-05T03:57:14.187Z",
+      "source": "crypto-artifacts",
+      "version": "v2",
+      "present": true,
+      "classicalHash": {
+        "algorithm": "SHA-256",
+        "digest": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814"
+      },
+      "pqcSignatureEnvelope": {
+        "status": "unsigned",
+        "algorithmVersion": "ML-DSA-87",
+        "version": "v1",
+        "signature": null,
+        "publicKey": null,
+        "publicKeyId": null,
+        "signedAt": null
+      }
+    },
+    {
+      "artifact": "aegis_commit_core_v2.wasm",
+      "path": "crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm",
+      "sha256": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
+      "size": 4777840,
+      "createdAt": "2026-08-05T03:57:14.058Z",
+      "source": "crypto-artifacts",
+      "version": "v2",
+      "present": true,
+      "classicalHash": {
+        "algorithm": "SHA-256",
+        "digest": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd"
+      },
+      "pqcSignatureEnvelope": {
+        "status": "unsigned",
+        "algorithmVersion": "ML-DSA-87",
+        "version": "v1",
+        "signature": null,
+        "publicKey": null,
+        "publicKeyId": null,
+        "signedAt": null
+      }
+    },
+    {
+      "artifact": "aegis_commit_core_v2.r1cs",
+      "path": "crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs",
+      "sha256": "3d47226b06d707b1765d7bf35acd01966b9800b0f6fb77cfe084a775f0fa5599",
+      "size": 944872,
+      "createdAt": "2026-08-05T03:57:14.032Z",
+      "source": "crypto-artifacts",
+      "version": "v2",
+      "present": true,
+      "classicalHash": {
+        "algorithm": "SHA-256",
+        "digest": "3d47226b06d707b1765d7bf35acd01966b9800b0f6fb77cfe084a775f0fa5599"
+      },
+      "pqcSignatureEnvelope": {
+        "status": "unsigned",
+        "algorithmVersion": "ML-DSA-87",
+        "version": "v1",
+        "signature": null,
+        "publicKey": null,
+        "publicKeyId": null,
+        "signedAt": null
+      }
+    },
+    {
+      "artifact": "baseline.json",
+      "path": "benchmarks/reports/baseline.json",
+      "sha256": "4392525abff292ace6c5a1065a108a0122363a6e6530bfba68e4e09b8466282e",
+      "size": 1564,
+      "createdAt": "2026-08-07T02:04:06.258Z",
+      "source": "benchmarks/reports",
+      "version": "8.11",
+      "present": true,
+      "classicalHash": {
+        "algorithm": "SHA-256",
+        "digest": "4392525abff292ace6c5a1065a108a0122363a6e6530bfba68e4e09b8466282e"
+      },
+      "pqcSignatureEnvelope": {
+        "status": "unsigned",
+        "algorithmVersion": "ML-DSA-87",
+        "version": "v1",
+        "signature": null,
+        "publicKey": null,
+        "publicKeyId": null,
+        "signedAt": null
+      }
+    },
+    {
+      "artifact": "rapidsnark-evaluation.json",
+      "path": "benchmarks/reports/rapidsnark-evaluation.json",
+      "sha256": "7388573f191cb35aa2553685142171da089bdd80f8987d0b40242ad2c038a6bd",
+      "size": 824,
+      "createdAt": "2026-08-07T02:04:06.358Z",
+      "source": "benchmarks/reports",
+      "version": "8.11",
+      "present": true,
+      "classicalHash": {
+        "algorithm": "SHA-256",
+        "digest": "7388573f191cb35aa2553685142171da089bdd80f8987d0b40242ad2c038a6bd"
+      },
+      "pqcSignatureEnvelope": {
+        "status": "unsigned",
+        "algorithmVersion": "ML-DSA-87",
+        "version": "v1",
+        "signature": null,
+        "publicKey": null,
+        "publicKeyId": null,
+        "signedAt": null
+      }
+    }
+  ],
+  "pqcPolicy": {
+    "classicalRequired": true,
+    "pqcSignatureRequired": false,
+    "allowedPqcAlgorithms": [
+      "ML-DSA-44",
+      "ML-DSA-65",
+      "ML-DSA-87"
+    ],
+    "algorithmVersion": "ML-DSA-87",
+    "version": "v1"
+  }
+}

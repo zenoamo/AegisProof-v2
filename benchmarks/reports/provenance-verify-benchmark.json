@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "phase": "8.13",
+  "generatedAt": "2026-08-07T01:44:13.237Z",
+  "entryCount": 6,
+  "signedEntryCount": 6,
+  "benchmarks": [
+    {
+      "label": "sha256-verify",
+      "iterations": 5,
+      "p50Ms": 16,
+      "samplesMs": [
+        14,
+        15,
+        16,
+        16,
+        17
+      ]
+    },
+    {
+      "label": "sha256-plus-mldsa-verify",
+      "iterations": 5,
+      "p50Ms": 23,
+      "samplesMs": [
+        20,
+        23,
+        23,
+        28,
+        43
+      ]
+    }
+  ],
+  "deltaP50Ms": 7,
+  "note": "Provenance verification only — prover M1–M5 unaffected"
+}

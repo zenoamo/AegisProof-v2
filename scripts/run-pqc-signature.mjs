@@ -4,12 +4,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-process.env.HARDHAT_CONFIG = path.join(ROOT, "scripts", "hardhat-prover.config.ts");
 
-const tsxCli = path.join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
 const result = spawnSync(
   process.execPath,
-  [tsxCli, path.join(ROOT, "tests", "prover-compatibility.test.ts"), ...process.argv.slice(2)],
+  [path.join(ROOT, "tests", "pqc-signature.test.mjs"), ...process.argv.slice(2)],
   { stdio: "inherit", env: process.env, cwd: ROOT }
 );
 process.exit(result.status ?? 1);

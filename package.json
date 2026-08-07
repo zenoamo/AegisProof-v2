@@ -7,6 +7,7 @@
     "viem": "^2.55.10"
   },
   "devDependencies": {
+    "@noble/post-quantum": "^0.6.1",
     "@nomicfoundation/hardhat-toolbox": "^7.0.0",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
     "@nomicfoundation/hardhat-viem": "^3.0.9",
@@ -23,8 +24,20 @@
     "bench:prover:baseline": "node scripts/bench_prover.mjs --samples 20 --write-baseline",
     "install:rapidsnark": "node scripts/install-rapidsnark.mjs",
     "evaluate:rapidsnark": "node scripts/evaluate-rapidsnark.mjs",
+    "check:sensitive-files": "node scripts/run-check-sensitive-files.mjs",
+    "check:security-boundary": "node scripts/run-security-boundary-check.mjs",
     "test": "tsx test/testVerifyAndAccept.ts",
     "test:prover-compat": "node scripts/run-prover-compat.mjs",
+    "test:artifact-resolution": "node scripts/run-artifact-resolution.mjs",
+    "test:artifact-provenance": "node scripts/run-artifact-provenance.mjs",
+    "test:pqc-signature": "node scripts/run-pqc-signature.mjs",
+    "test:hybrid-auth": "node scripts/run-hybrid-auth.mjs",
+    "generate:provenance": "node scripts/generate-provenance-manifest.mjs",
+    "generate:pqc-dev-keys": "node scripts/generate-pqc-dev-keys.mjs",
+    "export:pqc-public-key": "node scripts/export-pqc-public-key.mjs",
+    "verify:provenance": "node scripts/verify-provenance-manifest.mjs",
+    "bench:provenance": "node scripts/bench-provenance-verify.mjs",
+    "bench:hybrid-auth": "node scripts/bench-hybrid-auth.mjs",
     "verify:signals": "tsx scripts/verify-signals.ts",
     "sync:signals": "tsx scripts/sync-signals.ts",
     "aegis:verify": "tsx scripts/aegis-auto-verify.ts"

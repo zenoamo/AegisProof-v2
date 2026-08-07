@@ -1,0 +1,11 @@
+[t+0.0s] PHASE 2 VERIFICATION SUITE — MODE=FAST
+[t+0.0s] Development setup only; production trusted setup is Phase 4 (multi-contributor + beacon).
+[t+0.0s] UNCAUGHT: Error: ENOENT: no such file or directory, open 'C:\workspace\aegis-proof-copy\specs\aegis-protocol.v2.json'
+    at Object.openSync (node:fs:561:18)
+    at Object.readFileSync (node:fs:445:35)
+    at sha256File (file:///C:/workspace/aegis-proof-copy/scripts/phase2_verify.mjs:85:41)
+    at computeCacheKeys (file:///C:/workspace/aegis-proof-copy/scripts/phase2_verify.mjs:250:15)
+    at file:///C:/workspace/aegis-proof-copy/scripts/phase2_verify.mjs:575:16
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)

@@ -14,42 +14,49 @@
 import { createRequire } from "module";
 import fs from "fs";
 import path from "path";
-import crypto from "crypto";
 import { fileURLToPath } from "url";
+import {
+  ROOT,
+  assertProductionHashes,
+  logArtifactResolver,
+  resolveArtifacts,
+  sha256File,
+} from "./lib/resolve-artifacts.mjs";
 
 const require = createRequire(import.meta.url);
 const snarkjs = require("snarkjs");
 const silent = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const R = (p) => path.join(ROOT, p);
-const P4 = R("artifacts/phase4");
-const ZKEY = path.join(P4, "final", "production.zkey");
-const VKEY_JSON = path.join(P4, "final", "production-vkey.json");
-const WITNESS_DIR = path.join(P4, "reports", "scratch");
-const INPUT = R("artifacts/phase2/tests/input_v2.json");
-const WASM = R("artifacts/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm");
-const CALC_SRC = R("artifacts/phase2/r1cs/aegis_commit_core_v2_js/witness_calculator.js");
-const SOL = R("contracts/Groth16VerifierV2Production.sol");
-const OUT_PROOF = path.join(P4, "reports", "production_proof_baseline.json");
+const paths = resolveArtifacts({ production: true });
+const resolution = logArtifactResolver(paths, { json: process.argv.includes("--artifact-json") });
+
+const SOL = R("protocol/contracts/Groth16VerifierV2Production.sol");
+const OUT_PROOF = paths.baselineProof;
 
 const fail = (m) => {
   console.error(`FAIL: ${m}`);
   process.exit(1);
 };
-const sha256File = (p) => crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
 
-if (!fs.existsSync(ZKEY) || !fs.existsSync(VKEY_JSON)) fail("production ceremony artifacts missing");
-if (fs.existsSync(SOL) === false) fail("production verifier contract missing — run scripts/gen_verifier_production.mjs first");
+try {
+  assertProductionHashes(paths);
+} catch (e) {
+  fail(e.message ?? e);
+}
 
-const vkey = JSON.parse(fs.readFileSync(VKEY_JSON, "utf8"));
-const input = JSON.parse(fs.readFileSync(INPUT, "utf8"));
+if (!fs.existsSync(SOL)) {
+  fail("production verifier contract missing at protocol/contracts/Groth16VerifierV2Production.sol");
+}
+
+const vkey = JSON.parse(fs.readFileSync(paths.vkey, "utf8"));
+const input = JSON.parse(fs.readFileSync(paths.input, "utf8"));
 
 // witness via the CANONICAL wasm (frozen v2 circuit)
-fs.mkdirSync(WITNESS_DIR, { recursive: true });
-const calcCjs = path.join(WITNESS_DIR, "witness_calculator.cjs");
-fs.copyFileSync(CALC_SRC, calcCjs);
-const wc = await require(calcCjs)(fs.readFileSync(WASM));
+fs.mkdirSync(paths.scratchDir, { recursive: true });
+const calcCjs = path.join(paths.scratchDir, "witness_calculator.cjs");
+fs.copyFileSync(paths.witCalc, calcCjs);
+const wc = await require(calcCjs)(fs.readFileSync(paths.wasm));
 const witBin = await wc.calculateBinWitness(input, 1);
 
 // .wtns container (same layout as phase2 suite)
@@ -73,11 +80,11 @@ s1.writeUInt32LE(nVars, 16 + n8);
 const s2head = Buffer.alloc(12);
 s2head.writeUInt32LE(2, 0);
 s2head.writeBigUInt64LE(BigInt(witBin.length), 4);
-const wtnsPath = path.join(WITNESS_DIR, "production_smoke.wtns");
+const wtnsPath = path.join(paths.scratchDir, "production_smoke.wtns");
 fs.writeFileSync(wtnsPath, Buffer.concat([head, s1, s2head, Buffer.from(witBin)]));
 
 // PROVE with the PRODUCTION zkey (dev zkey never touched)
-const { proof, publicSignals } = await snarkjs.groth16.prove(ZKEY, wtnsPath, silent);
+const { proof, publicSignals } = await snarkjs.groth16.prove(paths.zkey, wtnsPath, silent);
 fs.rmSync(wtnsPath, { force: true });
 
 // canonical signal order + values
@@ -110,8 +117,10 @@ for (let i = 0; i < 31; i++) {
 console.log("PASS contract IC constants == production vkey IC (31/31)");
 
 // persist the proof for the on-chain test
+fs.mkdirSync(path.dirname(OUT_PROOF), { recursive: true });
 fs.writeFileSync(OUT_PROOF, JSON.stringify({ proof, publicSignals }, null, 2), "utf8");
 console.log(`wrote ${path.relative(ROOT, OUT_PROOF)}`);
-console.log(`production zkey hash: ${sha256File(ZKEY)}`);
+console.log(`production zkey hash: ${sha256File(paths.zkey)}`);
+console.log("artifactResolution:", JSON.stringify(resolution));
 console.log("PRODUCTION VK VERIFICATION: PASS");
 process.exit(0);

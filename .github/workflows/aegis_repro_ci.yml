@@ -36,6 +36,47 @@ on:
     - cron: "0 3 * * 1"
 
 jobs:
+  security-boundary-check:
+    name: Security boundary gate (PR)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sensitive file boundary scan
+        run: npm run check:sensitive-files
+
+      - name: Verify production artifacts (required for T1–T9)
+        run: |
+          node --input-type=module -e "
+          import fs from 'fs';
+          import { artifactsReady, resolveArtifacts } from './scripts/lib/resolve-artifacts.mjs';
+          const paths = resolveArtifacts();
+          if (!artifactsReady()) {
+            console.error('FAIL: prover artifacts missing after checkout.');
+            for (const [k,p] of Object.entries({wasm:paths.wasm,zkey:paths.zkey,vkey:paths.vkey})) {
+              console.error(k+':', p, 'exists=', fs.existsSync(p));
+            }
+            process.exit(1);
+          }
+          console.log('PASS: prover artifacts ready');
+          "
+
+      - name: Artifact provenance verification (hash required)
+        run: npm run verify:provenance -- --live
+
+      - name: Prover compatibility regression (T1–T9)
+        run: npm run test:prover-compat
+
   fast:
     name: FAST gates + suite (30 checks)
     runs-on: ubuntu-latest
@@ -66,7 +107,10 @@ jobs:
         run: npx hardhat compile
 
       - name: Verification suite — FAST (30 checks)
-        run: node scripts/phase2_verify.mjs --fast
+        run: node scripts/phase2_verify.mjs --fast --artifact-json
+
+      - name: Artifact resolution regression
+        run: npm run test:artifact-resolution
 
       - name: Upload evidence
         if: always()
@@ -220,9 +264,25 @@ jobs:
       - name: Prover compatibility tests (T1–T9, snarkjs required)
         run: npm run test:prover-compat
 
+      - name: Artifact provenance check (Phase 8.13 Task 5 — hash required, PQC WARN)
+        run: npm run verify:provenance -- --live
+
+      - name: Artifact provenance unit tests
+        run: npm run test:artifact-provenance
+
+      - name: ML-DSA signature unit tests (T-PQC-01..10)
+        run: npm run test:pqc-signature
+
+      - name: Hybrid auth envelope research tests (T-AUTH-01..08)
+        run: npm run test:hybrid-auth
+
       - name: rapidsnark evaluation (optional — T2/T4/M4 record)
         continue-on-error: true
         run: npm run evaluate:rapidsnark
+
+      - name: Benchmark drift check (warn-only)
+        continue-on-error: true
+        run: npm run check:bench-drift
 
   prover-benchmark:
     name: Prover benchmark (20 samples)
@@ -255,10 +315,110 @@ jobs:
       - name: Run benchmark (20 samples)
         run: npm run bench:prover -- --samples 20
 
+      - name: Benchmark drift check (warn-only)
+        continue-on-error: true
+        run: npm run check:bench-drift
+
       - name: Upload benchmark report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: prover-benchmark-report
-          path: benchmarks/reports/prover-bench-*.json
+          path: |
+            benchmarks/reports/prover-bench-*.json
+            benchmarks/reports/baseline.json
+            benchmarks/reports/rapidsnark-evaluation.json
+          if-no-files-found: warn
+
+  provenance-pqc-hardening:
+    name: Provenance PQC hardening (strict + production simulation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify public key registry present
+        run: |
+          test -f artifacts/provenance/public-keys/aegis-ci-mldsa87-v1.json
+          node --input-type=module -e "
+          import { loadRegistryPublicKey } from './scripts/lib/public-key-registry.mjs';
+          const k = loadRegistryPublicKey('aegis-ci-mldsa87-v1');
+          if (!k?.publicKey) { console.error('FAIL registry key'); process.exit(1); }
+          console.log('PASS registry key:', k.keyId, k.algorithm, k.version);
+          "
+
+      - name: Generate ephemeral ML-DSA keys (strict CI tier)
+        run: node scripts/generate-pqc-dev-keys.mjs ci-ephemeral
+
+      - name: Strict provenance verify (--live --pqc)
+        env:
+          AEGIS_PQC_PRIVATE_KEY_PATH: ${{ github.workspace }}/artifacts/provenance/keys/ci-ephemeral.key.json
+        run: npm run verify:provenance -- --live --pqc
+
+      - name: Production simulation (--require-pqc alias, optional secret)
+        continue-on-error: true
+        env:
+          AEGIS_PQC_PRIVATE_KEY_HEX: ${{ secrets.AEGIS_PQC_PRIVATE_KEY_HEX }}
+          AEGIS_PQC_PUBLIC_KEY_ID: aegis-ci-mldsa87-v1
+        run: |
+          if [ -z "$AEGIS_PQC_PRIVATE_KEY_HEX" ]; then
+            echo "SKIP production simulation — AEGIS_PQC_PRIVATE_KEY_HEX secret not configured"
+            exit 0
+          fi
+          npm run verify:provenance -- --live --require-pqc
+
+      - name: Provenance verification benchmark
+        run: npm run bench:provenance
+
+      - name: ML-DSA regression tests (T-PQC-01..10)
+        run: npm run test:pqc-signature
+
+      - name: Upload provenance benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provenance-pqc-benchmark
+          path: benchmarks/reports/provenance-verify-benchmark.json
+          if-no-files-found: warn
+
+  hybrid-auth-research:
+    name: Hybrid auth envelope research (optional)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Hybrid auth unit tests (T-AUTH-01..08)
+        run: npm run test:hybrid-auth
+
+      - name: Full hybrid auth validation + benchmark (schedule/manual only)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          npm run test:hybrid-auth
+          npm run bench:hybrid-auth
+
+      - name: Upload hybrid auth benchmark
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: hybrid-auth-benchmark
+          path: benchmarks/reports/hybrid-auth-benchmark.json
           if-no-files-found: warn

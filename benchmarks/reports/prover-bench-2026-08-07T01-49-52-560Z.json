@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-08-07T01:49:52.561Z",
+  "phase": "8.10",
+  "samples": 2,
+  "hashes": {
+    "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+    "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+    "vkFileHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+    "wasmHash": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
+    "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe"
+  },
+  "environment": {
+    "os": "win32 10.0.26200",
+    "arch": "x64",
+    "cpus": 12,
+    "node": "v24.18.0",
+    "prover": "snarkjs",
+    "rapidsnarkAvailable": false,
+    "snarkjs": "unknown"
+  },
+  "modes": [
+    {
+      "mode": "M2",
+      "samples": 2,
+      "p50": 12,
+      "p95": 14,
+      "min": 12,
+      "max": 14,
+      "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+      "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+      "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe",
+      "environment": {
+        "os": "win32 10.0.26200",
+        "arch": "x64",
+        "cpus": 12,
+        "node": "v24.18.0",
+        "prover": "snarkjs",
+        "rapidsnarkAvailable": false,
+        "snarkjs": "unknown"
+      }
+    }
+  ],
+  "proverSummary": {
+    "snarkjs": {
+      "proveP50": null,
+      "proveP95": null
+    },
+    "rapidsnark": {
+      "proveP50": null,
+      "proveP95": null,
+      "skipped": true
+    }
+  }
+}

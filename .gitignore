@@ -8,9 +8,23 @@
 # --- secrets & environment ---------------------------------------------------
 .env
 .env.*
+*.key
+*.private
+*.secret
+*.pem
 deployments/
+**/private-keys/
 
-# --- dependencies & tooling caches --------------------------------------------
+# --- PQC / auth private material (public keys in artifacts/provenance/public-keys/) ---
+artifacts/provenance/keys/
+
+# --- production cryptographic binaries (hash-pinned; store in secure storage) ---
+**/production.zkey
+**/production.zkey.gz
+
+# --- crypto-artifacts mirror (prefer secure storage for zkey; see allowlist during migration) ---
+# crypto-artifacts/ is currently tracked for CI reproducibility — migration planned.
+# New production.zkey commits blocked by check:sensitive-files + gitignore above.
 node_modules/
 server/node_modules/
 rapidsnark/
@@ -40,6 +54,10 @@ artifacts/hardhat/
 artifacts/*
 !artifacts/phase2/
 !artifacts/phase4/
+!artifacts/provenance/
+!artifacts/provenance/manifest.json
+!artifacts/provenance/public-keys/
+# keys/ excluded at repo root (artifacts/provenance/keys/)
 
 # Phase 2 tree: keep frozen circuit evidence + vkey + test vectors + evidence
 artifacts/phase2/*

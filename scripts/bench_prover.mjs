@@ -21,6 +21,7 @@ import {
   writeWtnsFile,
 } from "./lib/provers.mjs";
 import { getEnvironmentSummary, summarizeTimings } from "./lib/canonical-prover.mjs";
+import { buildBaselineV2 } from "./lib/bench-baseline.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPORT_DIR = path.join(ROOT, "benchmarks", "reports");
@@ -199,8 +200,11 @@ async function main() {
   console.log(`\nReport: ${path.relative(ROOT, outPath)}`);
 
   if (writeBaseline) {
-    fs.writeFileSync(BASELINE_PATH, JSON.stringify(payload, null, 2), "utf8");
-    console.log(`Baseline: ${path.relative(ROOT, BASELINE_PATH)}`);
+    const baselineDoc = buildBaselineV2(results, hashes, environment, samples, {
+      phase: "8.11",
+    });
+    fs.writeFileSync(BASELINE_PATH, JSON.stringify(baselineDoc, null, 2), "utf8");
+    console.log(`Baseline: ${path.relative(ROOT, BASELINE_PATH)} (schemaVersion=2)`);
   }
 }
 

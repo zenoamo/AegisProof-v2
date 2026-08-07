@@ -20,31 +20,39 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import {
+  ROOT,
+  artifactResolutionSummary,
+  logArtifactResolver,
+  resolveArtifacts,
+} from "./lib/resolve-artifacts.mjs";
 
 const require = createRequire(import.meta.url);
 const snarkjs = require("snarkjs");
 const { buildPoseidon } = require("circomlibjs");
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const P2 = path.join(ROOT, "artifacts", "phase2");
 const R = (p) => path.join(ROOT, p);
 const SSOT_PATH = R("specs/aegis-protocol.v2.json");
 
+const RESOLVED = resolveArtifacts({ profile: "phase2" });
+const RESOLUTION = logArtifactResolver(RESOLVED, { json: process.argv.includes("--artifact-json") });
+
 const PATHS = {
   ssot: SSOT_PATH,
-  r1cs: path.join(P2, "r1cs/aegis_commit_core_v2.r1cs"),
-  sym: path.join(P2, "r1cs/aegis_commit_core_v2.sym"),
-  wasm: path.join(P2, "r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm"),
-  witCalc: path.join(P2, "r1cs/aegis_commit_core_v2_js/witness_calculator.js"),
-  input: path.join(P2, "tests/input_v2.json"),
-  badCommit: path.join(P2, "tests/input_v2_bad_commitment.json"),
-  badNull: path.join(P2, "tests/input_v2_bad_nullifier.json"),
-  badManifest: path.join(P2, "tests/input_v2_bad_manifest.json"),
+  r1cs: RESOLVED.r1cs,
+  sym: RESOLVED.sym,
+  wasm: RESOLVED.wasm,
+  witCalc: RESOLVED.witCalc,
+  input: RESOLVED.input,
+  badCommit: RESOLVED.badCommit,
+  badNull: RESOLVED.badNull,
+  badManifest: RESOLVED.badManifest,
   ptau: path.join(P2, "setup/pot10_final.ptau"),
-  zkey: path.join(P2, "setup/aegis_v2_0000.zkey"),
-  vkey: path.join(P2, "vkey/vkey_v2.json"),
+  zkey: RESOLVED.zkey,
+  vkey: RESOLVED.vkey,
   proof: path.join(P2, "proofs/proof_v2_baseline.json"),
-  cacheDir: path.join(P2, "cache"),
+  cacheDir: RESOLVED.cacheDir,
   cache: path.join(P2, "cache/cache-manifest.json"),
   reports: path.join(P2, "reports"),
   // NOTE: per-mode evidence/log paths are resolved after MODE parsing
@@ -139,6 +147,7 @@ const EVIDENCE = {
   startedAt: new Date().toISOString(),
   protocolVersion: PROTOCOL_VERSION,
   setupVersion: SETUP_VERSION,
+  artifactResolution: RESOLUTION,
   steps: [],
   checks: {},
   artifacts: {},

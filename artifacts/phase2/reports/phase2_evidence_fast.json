@@ -1,0 +1,53 @@
+{
+  "suite": "phase2_verify.mjs (optimized)",
+  "mode": "FAST",
+  "startedAt": "2026-08-07T01:00:55.502Z",
+  "protocolVersion": 2,
+  "setupVersion": "dev-phase2-v1",
+  "artifactResolution": {
+    "source": "crypto-artifacts",
+    "profile": "phase2",
+    "wasmHash": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
+    "zkeyHash": "c80f004e9f6b26fa6ed7407a4b5c6e20991cefcb5fd24675f732ce35ac7a643d",
+    "vkHash": "6193351af0892493e3fe5f1df672519dea47f89a54be1bf5f751ab62d680034d",
+    "paths": {
+      "wasm": "C:\\workspace\\aegis-proof-copy\\crypto-artifacts\\phase2\\phase2\\r1cs\\aegis_commit_core_v2_js\\aegis_commit_core_v2.wasm",
+      "zkey": "C:\\workspace\\aegis-proof-copy\\crypto-artifacts\\phase2\\phase2\\setup\\aegis_v2_0000.zkey",
+      "vkey": "C:\\workspace\\aegis-proof-copy\\crypto-artifacts\\phase2\\phase2\\vkey\\vkey_v2.json",
+      "r1cs": "C:\\workspace\\aegis-proof-copy\\crypto-artifacts\\phase2\\phase2\\r1cs\\aegis_commit_core_v2.r1cs"
+    },
+    "sources": {
+      "wasm": "crypto-artifacts",
+      "witCalc": "crypto-artifacts",
+      "input": "crypto-artifacts",
+      "r1cs": "crypto-artifacts",
+      "sym": "crypto-artifacts",
+      "zkey": "crypto-artifacts",
+      "vkey": "crypto-artifacts",
+      "badCommit": "crypto-artifacts",
+      "badNull": "crypto-artifacts",
+      "badManifest": "crypto-artifacts",
+      "baselineProof": "artifacts/phase2"
+    }
+  },
+  "steps": [],
+  "checks": {},
+  "artifacts": {},
+  "phase0": {
+    "before": {
+      "contracts/AegisShield.sol": "MISSING",
+      "contracts/Groth16Verifier29.sol": "MISSING",
+      "circuits/aegis_commit_core.circom": "MISSING",
+      "circuits/aegis_commit_core.sym": "b9bdacdb32044e5541ea1a9a900c8430dd1a4be667e24e385bb5ed16585e8b61",
+      "build/vkey.json": "bacbfc02fc6eb75ead2400b9d55dc61139d9108c81e2a4f2b57a917ad49aa608",
+      "build/proofs/proof_29.json": "09ff51020ad8e2a839ac4c167cfd07f3f5d87eb63f0e4a1d289082ce03531ea9",
+      "build/proofs/public_29.json": "3c41a9c712036263e9672c264a856e971c47e093aba198d2c65d899b81961b83",
+      "specs/canonical-signals.json": "MISSING",
+      "test/testVerifyAndAccept.ts": "MISSING",
+      "scripts/input.json": "e443ffd89148ddf8e818747e767f5c0caef1829710a99d8dd40ac1976d1c8d5c"
+    }
+  },
+  "evidencePath": "C:\\workspace\\aegis-proof-copy\\artifacts\\phase2\\reports\\phase2_evidence_fast.json",
+  "finishedAt": "2026-08-07T01:00:55.541Z",
+  "totalElapsedSec": 0.039
+}
