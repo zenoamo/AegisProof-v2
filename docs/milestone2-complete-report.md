@@ -1,7 +1,7 @@
 # Phase 6 — Milestone 2 Completion Report
 
 **Milestone:** SDK Improvements (Enhanced Developer Experience)  
-**Authorization received:** PHASE 6 — MILESTONE 2 AUTHORIZATION  
+**Authorization received:** PHASE 6 — MILESTONE 2 AUTHORIZATION
 **Commit:** `7d81357` (latest Phase 6 commit)  
 **Verification status:** ✅ Manifest PASS | ✅ Gates PASS  
 

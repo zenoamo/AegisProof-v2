@@ -8,7 +8,7 @@
 
 ## Package Contents Overview
 
-This directory summarizes all artifacts generated during Phase 5 readiness preparation:
+This directory summarizes all artifacts generated during Phase 5 readiness preparation.
 
 ### 1. Protocol Summary
 

@@ -1,8 +1,8 @@
 # Phase 8.2 - TEE Adapter Layer Evaluation Framework
 
-## 1. Evaluation 目的
-本ドキュメントは、AegisProof Phase 8.1で設計されたTEE Adapter LayerのPoC実装（Phase 8.3以降を予定）に先立ち、その評価基準と成功基準を明確化するものです。
-何を測定し、どのような結果が得られれば機能要件およびセキュリティ要件を満たしたと判断するか（Go/No-Go）を定義します。
+## 1. 評価目的
+
+本ドキュメントは、AegisProof Phase 8.1 で設計された TEE Adapter Layer の PoC 実装（Phase 8.3 以降を予定）に先立ち、評価基準と成功基準を明確化するものです。何を測定し、どの結果が得られれば機能要件およびセキュリティ要件を満たしたと判断するか（Go/No-Go）を定義します。
 
 ## 2. 評価アーキテクチャ
 本評価フレームワークは、以下の3層で構成されます。

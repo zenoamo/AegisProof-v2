@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This report provides a comprehensive analysis of AegisProof v2's ability to operate across multiple EVM-compatible networks. All findings are based on frozen protocol specifications from Phases 0-4 with no modifications introduced.
+This report analyzes AegisProof v2's ability to operate across multiple EVM-compatible networks. Findings are based on frozen protocol specifications from Phases 0–4; no modifications were introduced.
 
 ### Core Findings
 

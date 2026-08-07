@@ -61,7 +61,7 @@
 
 **Derivation:** `Poseidon([UTF-8-BE("AEGIS_NULLIFIER_V2")])` → field element
 
-**Purpose:** Ensure nullifiers computed here are incompatible with other protocols even with same inputs
+**Purpose:** Ensure nullifiers computed here are incompatible with other protocols, even when inputs match.
 
 **Risk assessment:** LOW — standard practice; label chosen at random from available space
 

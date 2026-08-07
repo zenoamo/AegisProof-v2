@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This package provides comprehensive materials for external security auditors evaluating AegisProof v2 protocol. All components frozen per Phase 0 authorization; no modifications introduced during development lifecycle. Package includes complete source code, verification artifacts, test suites, and architectural documentation.
+This package provides materials for external security auditors evaluating AegisProof v2. All components remain frozen per Phase 0 authorization; no modifications were introduced during the development lifecycle. It includes source code, verification artifacts, test suites, and architectural documentation.
 
 ### Engagement Scope
 
@@ -202,7 +202,7 @@ npm test
 
 **Evaluation Criteria:**
 
-- Constraint count合理性 (reasonable overhead vs minimal solution)
+- Constraint count within reasonable bounds (minimal overhead relative to the problem size)
 - Signal order matching canonical specification exactly
 - Reserved signal padding (indices 8-29 set to zero correctly)
 - Input/output port naming conventions clear

@@ -9,7 +9,7 @@
 
 **Limitation:** The original `.circom` source code was lost before Phase 2. Only compiled artifacts (R1CS, WASM, SYM) exist.
 
-**Impact:** Cannot independently verify circuit logic without reverse engineering R1CS structure.
+**Impact:** Cannot independently verify circuit logic without reverse-engineering the R1CS structure.
 
 **Current mitigation:**
 - Compiled artifacts hash-pinned and immutably recorded (Phase 0 evidence)
@@ -134,7 +134,7 @@
 - Nullifier includes chainID explicitly (cannot be omitted without breaking proof)
 - Contract validates `block.chainid == pubSignals[1]` (redundant check)
 
-**Design rationale:** Defense in depth — multiple layers ensure chain binding even if one layer bypassed.
+**Design rationale:** Defense in depth — multiple layers ensure chain binding even if one layer is bypassed.
 
 **Risk level:** LOW — redundant validations make chain replay practically impossible.
 

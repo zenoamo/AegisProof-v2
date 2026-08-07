@@ -2,13 +2,13 @@
 
 > **RESEARCH_FIXTURE_ONLY** · **Not Production Credentials**
 
-Synthetic test vectors for Phase 8.9B offline DCAP/VCEK verification PoC.
+Synthetic test vectors for the Phase 8.9B offline DCAP/VCEK verification PoC.
 
 ## Origin
 
 - Generated locally by `generate-fixtures.mjs` using Node.js `crypto`
-- **Not** Intel DCAP production collateral or AMD KDS VCEK
-- **Not** for production attestation
+- Not Intel DCAP production collateral or AMD KDS VCEK
+- Not for production attestation
 
 ## Regeneration
 
@@ -16,6 +16,6 @@ Synthetic test vectors for Phase 8.9B offline DCAP/VCEK verification PoC.
 node tee/verification/fixtures/generate-fixtures.mjs
 ```
 
-## Network Policy
+## Network policy
 
-Fixtures are loaded from filesystem only. No PCCS, KDS, or HTTPS fetch.
+Fixtures load from the filesystem only. No PCCS, KDS, or HTTPS fetch.

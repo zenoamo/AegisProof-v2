@@ -6,7 +6,7 @@
 - Ethereum Sepolia testnet
 - Ethereum mainnet (read-only documentation; no deployment performed here)
 
-**IMPORTANT:** No actual contract deployments to public chains occur in this document. All commands assume a read-only planning context unless you explicitly run them locally against your own infrastructure.
+**IMPORTANT:** This document does not perform contract deployments to public chains. Commands are written for planning and local dry-runs unless you explicitly execute them against your own infrastructure.
 
 **Production readiness:** The production verifier smart contract generated from the Phase 4 production zkey is [`contracts/Groth16VerifierV2Production.sol`](../contracts/Groth16VerifierV2Production.sol). Its embedded IC constants are verified against `artifacts/phase4/final/production-vkey.json`. The final production verification key hash is:
 

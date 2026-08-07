@@ -28,7 +28,7 @@
 
 ---
 
-## Key Findings
+## Findings
 
 ### Strengths
 1. **Hardware-Rooted Trust**: Trust anchored in CPU hardware
@@ -45,10 +45,10 @@
 5. **Availability**: Limited to newer AMD processors
 
 ### Opportunities
-1. **ZK Integration**: Could simplify complex proof generation
-2. **Confidential Computing**: Enable new use cases
-3. **Multi-Cloud**: Consistent security across providers
-4. **Regulatory Compliance**: Strong security for regulated industries
+1. **ZK integration**: May simplify complex proof generation
+2. **Confidential computing**: New use cases
+3. **Multi-cloud**: Consistent security across providers
+4. **Regulatory compliance**: Strong security for regulated industries
 
 ### Threats
 1. **Hardware Vulnerabilities**: CPU bugs could compromise SEV-SNP

@@ -2,7 +2,7 @@
 
 **作成日時**: 2026 年 8 月 5 日  
 **確認者**: Zeno Amo (zenoamo <rsuke9604@gmail.com>)  
-**ステータス**: 初期化完了（確認のみ実施、変更なし）
+**ステータス:** 初期化完了（確認のみ実施、変更なし）
 
 ---
 
@@ -48,7 +48,7 @@
 | ファイル | 説明 | 最終更新 | 状態 |
 |---------|------|---------|------|
 | `artifacts/phase4/beacon/beacon-record.json` | Beacon Chain レコード | 2026/08/05 12:57:14 | ✅ 未変更 |
-| `artifacts/phase4/ceremony/ceremony-metadata.json` | Ceremomy メタデータ | 2026/08/05 12:57:14 | ✅ 未変更 |
+| `artifacts/phase4/ceremony/ceremony-metadata.json` | Ceremony メタデータ | 2026/08/05 12:57:14 | ✅ 未変更 |
 | `artifacts/phase4/hashes/hashes.json` | ハッシュ検証データ | 2026/08/05 12:57:14 | ✅ 未変更 |
 | `artifacts/phase4/reports/production_proof_baseline.json` | 本番証明ベースライン | 2026/08/05 12:57:14 | ✅ 未変更 |
 | `evidence/phase0/manifest.sha256` | 初期マニフェスト | 2026/08/05 12:57:14 | ✅ 未変更 |

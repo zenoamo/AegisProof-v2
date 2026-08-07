@@ -10,11 +10,11 @@
 
 ## Executive Summary
 
-This migration plan outlines the complete directory restructuring of the AegisProof repository from its current mixed organization to a clean OSS-ready structure. 
+This migration plan describes directory restructuring from the current mixed layout to an OSS-ready structure.
 
-**Critical Constraint:** This is a **filesystem organization operation only**. Zero modifications to cryptographic logic, circuit semantics, R1CS/WASM/SYM files, zkey/vkey artifacts, ceremony transcripts, or SSoT protocol specifications.
+**Critical constraint:** This is a filesystem organization operation only. It must not modify cryptographic logic, circuit semantics, R1CS/WASM/SYM files, zkey/vkey artifacts, ceremony transcripts, or SSoT protocol specifications.
 
-**Migration Scope:** Update paths, imports, documentation links, CI references, build configurations - nothing more.
+**Migration scope:** Update paths, imports, documentation links, CI references, and build configurations—nothing more.
 
 ---
 

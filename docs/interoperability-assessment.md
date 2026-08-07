@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This document provides a comprehensive interoperability assessment for AegisProof v2 across major EVM-compatible networks. All analysis is based on the frozen protocol specification and production artifacts generated during Phases 0-4. No actual cross-chain messaging infrastructure, bridges, or protocol modifications are implemented in this assessment.
+This document assesses AegisProof v2 interoperability across major EVM-compatible networks. Analysis is based on the frozen protocol specification and production artifacts from Phases 0–4. No cross-chain messaging infrastructure, bridges, or protocol modifications are implemented here.
 
 ### Key Findings
 

@@ -1,7 +1,8 @@
 # AMD SEV-SNP - Real Evaluation Design
 
-## 1. AMD SEV-SNP概要
-Secure Encrypted Virtualization-Secure Nested Paging (SEV-SNP) は、AMD EPYCプロセッサによるメモリ暗号化技術であり、ハイパーバイザによるメモリの不正書き込みやリプレイ攻撃からVMを保護する。
+## 1. AMD SEV-SNP 概要
+
+Secure Encrypted Virtualization-Secure Nested Paging (SEV-SNP) は、AMD EPYC プロセッサによるメモリ暗号化技術。ハイパーバイザによるメモリの不正書き込みやリプレイ攻撃から VM を保護する。
 
 ## 2. 必要ハードウェア条件
 *   AMD EPYC 7003 (Milan) 世代またはそれ以降。

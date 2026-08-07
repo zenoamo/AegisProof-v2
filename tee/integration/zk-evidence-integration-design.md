@@ -8,7 +8,7 @@
 
 ## 1. 目的
 
-TEE Adapter Layer が生成・正規化した Evidence を、AegisProof ZK Verification Layer へ接続する際の**統合境界**を設計する。
+TEE Adapter Layer が生成・正規化した Evidence を AegisProof ZK Verification Layer へ接続する際の**統合境界**を設計する。
 
 **重要**: `protocol/`, `circuits/`, `crypto-artifacts/`, `formal/` への変更は Phase 8.7 スコープ外。本設計は境界定義のみ。
 

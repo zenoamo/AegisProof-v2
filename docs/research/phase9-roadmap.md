@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This roadmap explores next-generation architecture for **distributed zero-knowledge verification systems**, expanding beyond single-TEnclave execution into multi-node collaborative proving networks with AI inference capabilities.
+This roadmap explores next-generation architecture for **distributed zero-knowledge verification systems**, extending beyond single-enclave execution into multi-node collaborative proving networks with AI inference capabilities.
 
 **Vision Statement:** Create a decentralized proving infrastructure where multiple independent TEEs collaborate to generate aggregated ZK proofs, enabling trust minimization through distribution while preserving privacy and scalability.
 

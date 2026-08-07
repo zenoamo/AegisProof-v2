@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This document extends the base threat model (`docs/threat-model.md`) with production-specific considerations, attack surface expansion analysis, and operational threat scenarios. 
+This document extends the base threat model (`docs/threat-model.md`) with production-specific considerations, attack surface expansion analysis, and operational threat scenarios.
 
 **Assessment framework:** STRIDE model adapted for ZK-SNARK systems
 

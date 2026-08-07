@@ -8,7 +8,7 @@
 
 ## Overview
 
-This directory contains the mock implementation of Intel TDX attestation for testing purposes. The mock simulates TDX behavior without requiring actual TDX hardware.
+Mock Intel TDX attestation for testing. Simulates TDX behavior without TDX hardware.
 
 ---
 
@@ -45,7 +45,7 @@ Simulates TDX quote verification:
 ### 4. Test Cases
 **File**: `test-cases.ts`
 
-Comprehensive test cases for TDX mock:
+Test cases for the TDX mock:
 - VALID_TDX_QUOTE
 - INVALID_SIGNATURE
 - INVALID_MEASUREMENT
@@ -105,7 +105,7 @@ Comprehensive test cases for TDX mock:
 - [ ] TypeScript implementation
 - [ ] Go implementation
 - [ ] Integration with Adapter Layer
-- [ ] Comprehensive testing
+- [ ] Integration testing
 
 ---
 

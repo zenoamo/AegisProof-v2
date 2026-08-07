@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This checklist covers all security-critical components of AegisProof v2. Each item should be verified independently during the security review process. Total items: 65 across 7 categories.
+This checklist covers all security-critical components of AegisProof v2. Each item should be verified independently during the security review. Total items: 65 across 7 categories.
 
 **Status:** Internal team review completed. External audit pending.
 

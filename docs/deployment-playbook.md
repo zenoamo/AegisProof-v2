@@ -9,9 +9,9 @@
 
 ## Executive Summary
 
-This playbook provides comprehensive deployment procedures for AegisProof v2 across supported EVM networks. All artifacts referenced remain frozen per Phases 0-6 authorization; no modifications introduced during deployment preparation.
+This playbook describes deployment procedures for AegisProof v2 across supported EVM networks. All referenced artifacts remain frozen per Phases 0–6 authorization; no modifications were introduced during deployment preparation.
 
-**Critical Constraint:** This document describes deployment methodology only—no actual deployments occur until explicit post-audit authorization received from stakeholders.
+**Critical constraint:** This document covers methodology only. No deployment should occur until stakeholders grant explicit post-audit authorization.
 
 ### Supported Networks (Testnet First Strategy)
 
@@ -314,7 +314,7 @@ Complete this checklist after every deployment ensuring all requirements satisfi
 
 Initiate rollback procedure if any critical issues discovered post-deployment:
 
-- **Security Vulnerability:** Zero-day exploit enabling unauthorized access fund theft
+- **Security Vulnerability:** A zero-day exploit that could enable unauthorized access or fund theft
 - **IC Constant Mismatch:** Deployed bytecode differs from production VK specification
 - **Access Control Failure:** Unauthorized parties able modify critical state
 - **Reentrancy Attack Vector:** Possibility of draining funds through recursive calls
@@ -348,7 +348,7 @@ await shield.pause();
 console.log("Contract paused – all write operations disabled");
 ```
 
-**Effect:** Prevents new session registrations deactivations until resolution achieved. Read-only verification remains functional allowing users authenticate normally.
+**Effect:** Write operations such as session registration and deactivation are blocked until the issue is resolved. Read-only verification continues to work, so users can still authenticate where policy allows.
 
 ---
 

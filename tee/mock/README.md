@@ -8,7 +8,7 @@
 
 ## Overview
 
-The TEE Mock Framework provides simulation capabilities for testing the TEE Adapter Layer without requiring actual TEE hardware. This framework enables local development and testing of attestation providers, evidence normalization, and policy enforcement.
+Simulates TEE attestation for testing the Adapter Layer without TEE hardware. Used for local development and testing of attestation providers, evidence normalization, and policy enforcement.
 
 ---
 
@@ -19,15 +19,15 @@ The TEE Mock Framework provides simulation capabilities for testing the TEE Adap
 - Works on standard development machines
 - Cross-platform compatibility
 
-### 2. Realistic Behavior
-- Simulates real TEE behavior patterns
-- Generates realistic attestation data
-- Mimics real-world failure scenarios
+### 2. Realistic behavior
+- Simulates TEE behavior patterns
+- Generates attestation data in expected formats
+- Covers common failure scenarios
 
 ### 3. Testability
 - Deterministic behavior for testing
 - Configurable success/failure scenarios
-- Comprehensive test coverage
+- Test coverage for adapter integration
 
 ### 4. Safety
 - No connection to production TEE services
@@ -863,42 +863,32 @@ console.log('SNP Test Results:', testResults);
 
 ---
 
-## Safety Guarantees
+## Safety boundaries
 
-### No Hardware Access
-- Mock framework never attempts TEE hardware access
+### No hardware access
+- Never attempts TEE hardware access
 - All operations are in-memory simulations
 - No system calls to TEE devices
 
-### No Network Access
-- Mock framework never connects to external services
+### No network access
+- Never connects to external services
 - No Intel Quote Service calls
 - No AMD certificate service calls
 
-### No Cryptographic Operations
+### No cryptographic operations
 - Mock signatures are random bytes
 - Mock certificates are randomly generated
 - No real cryptographic key operations
 
-### Isolation from Production
-- Completely separate from production systems
+### Isolation from production
+- Separate from production systems
 - No access to production keys or certificates
 - No interaction with production TEE services
 
 ---
 
-## Conclusion
+## Next steps
 
-The TEE Mock Framework provides a safe, isolated environment for testing TEE attestation without requiring actual TEE hardware. It enables comprehensive testing of the Adapter Layer design while maintaining strict separation from production systems.
-
-**Key Features**:
-- Hardware-independent testing
-- Realistic behavior simulation
-- Comprehensive test coverage
-- Complete isolation from production
-
-**Next Steps**:
 - Implement mock providers in TypeScript/Go
-- Create comprehensive test suite
-- Integrate with Adapter Layer testing
+- Add adapter integration tests
 - Validate against real TEE behavior documentation

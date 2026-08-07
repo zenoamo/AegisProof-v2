@@ -1,15 +1,17 @@
 # AegisProof Architecture
 
 **Version:** v2 (SSoT frozen)  
-**Status:** Production-ready artifacts; no deployments performed beyond testnet dry-runs  
+**Status:** Production artifacts pinned; no deployments beyond testnet dry-runs  
 
 ---
 
 ## Overview
 
-AegisProof provides a **Groth16-based zero-knowledge protocol** for proving knowledge of secret inputs that generate a commitment and nullifier, while binding public signals into the proof. The circuit is implemented in `circom` (compiled artifacts pinned), and verification occurs both off-chain (Node.js) and on-chain (Solidity verifier + shield contract).
+AegisProof v2 is a **Groth16-based zero-knowledge protocol**. A prover demonstrates knowledge of secret inputs that generate a commitment and nullifier while binding 30 public signals into the proof. The circuit is implemented in Circom (compiled artifacts are pinned). Verification runs off-chain (Node.js) and on-chain (Solidity verifier and shield contract).
 
-The production setup was completed under explicit human authorization in **Phase 4**, producing a multi-contribution chain finalized with a **Bitcoin genesis block hash beacon**.
+The production trusted setup was completed under explicit human authorization in **Phase 4**, producing a multi-contribution chain finalized with a **Bitcoin genesis block hash beacon**.
+
+**Related:** [GitHub repository boundary](./github-repository-boundary.md) · [GitHub security boundary](./github-security-boundary.md) · [Full architecture diagrams](./aegisproof-v2-full-architecture.md)
 
 ---
 
@@ -106,7 +108,7 @@ Deployment model: **immutable**; no proxies or upgradeable patterns in Phase 5.
 
 ## Security considerations
 
-See [`docs/security-model.md`](./security-model.md) and [`docs/threat-model.md`](./threat-model.md). Highlights:
+See [GitHub security boundary](./github-security-boundary.md) and [`docs/key-management-policy.md`](../key-management-policy.md). Highlights:
 
 - **IC binding**: any post-prove tampering of public signals breaks Groth16 verification.
 - **Timestamp exclusion**: circuit does not constrain timestamp; freshness ensured contract-side within window.

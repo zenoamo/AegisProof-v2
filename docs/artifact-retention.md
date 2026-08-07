@@ -1,8 +1,6 @@
 # AegisProof Artifact Retention & Git Tracking Policy
 
-Approved under Phase 3 (Git policy **C**: track sources + selected immutable
-evidence artifacts; exclude large/regenerable binaries). This document is the
-authoritative classification; `.gitignore` is its mechanical implementation.
+Approved under Phase 3 (Git policy **C**: track sources plus selected immutable evidence artifacts; exclude large or regenerable binaries). This document is the authoritative classification; `.gitignore` is its mechanical implementation.
 
 ## 1. Classification
 
@@ -24,8 +22,7 @@ Any hash mismatch is a STOP condition. Never regenerated, never overwritten.
 | `scripts/input.json` | v1 witness input |
 
 ### CANONICAL — v2 compiled circuit (hash-pinned, source lost)
-The v2 `.circom` source was lost; the frozen compiled artifacts ARE the
-circuit. Tracked in Git because they are not recoverable by recompilation.
+The v2 `.circom` source was lost; the frozen compiled artifacts **are** the circuit. They are tracked in Git because they cannot be recovered by recompilation.
 
 | Path | Hash (prefix) |
 |---|---|

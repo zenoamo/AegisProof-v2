@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Comprehensive security operations framework enabling rapid detection containment remediation recovery from security incidents while maintaining stakeholder trust regulatory compliance legal obligations.
+This guide defines a security operations framework for rapid detection, containment, remediation, and recovery from security incidents while maintaining stakeholder trust, regulatory compliance, and legal obligations.
 
 ### Scope
 
@@ -27,7 +27,7 @@ All documentation remains internal—no external publication without explicit au
 
 ### Phases of Incident Management
 
-Follow structured approach ensuring consistency completeness during high-stress situations:
+Follow this structured approach to ensure consistency and completeness during high-stress situations:
 
 ```mermaid
 graph TD
@@ -48,11 +48,11 @@ graph TD
 
 Trigger immediate war room activation when ANY criterion met:
 
-- **Unauthorized Access:** Attacker gains ability modify critical state contracts execute arbitrary code
+- **Unauthorized Access:** Attacker gains the ability to modify critical contract state or execute arbitrary code
 - **Fund Theft:** Loss of user/operator assets exceeding $10,000 USD equivalent
-- **Data Breach:** Exposure of sensitive credentials private keys user information
+- **Data Breach:** Exposure of sensitive credentials, private keys, or user information
 - **Service Outage:** Complete unavailability lasting >30 minutes affecting production workloads
-- **Cryptographic Break:** Demonstrated weakness enabling proof forgery nullifier collision attacks
+- **Cryptographic Break:** Demonstrated weakness enabling proof forgery or nullifier collision attacks
 
 **Response Timeline Requirements:**
 - Acknowledge alert: <5 minutes
@@ -73,13 +73,13 @@ Once P0 confirmed assemble team immediately via conference bridge/video call:
 - [ ] Legal Advisor (regulatory/compliance guidance provider)
 - [ ] Executive Sponsor (decision-making authority resource allocator)
 
-Configure dedicated Slack channel Discord voice room PagerDuty escalation path connecting participants facilitating real-time collaboration information sharing coordination efforts.
+Configure a dedicated Slack channel, Discord voice room, and PagerDuty escalation path to connect participants and facilitate real-time collaboration.
 
 ---
 
 ### Containment Strategies
 
-Choose appropriate tactic based on incident type minimizing blast radius while preserving evidence integrity:
+Choose the appropriate tactic based on incident type, minimizing blast radius while preserving evidence integrity:
 
 | Incident Type | Primary Action | Secondary Mitigation |
 |---|---|---|
@@ -89,7 +89,7 @@ Choose appropriate tactic based on incident type minimizing blast radius while p
 | Service Outage | Failover backup infrastructure restore degraded mode operation | Scale horizontally add redundant components |
 | Cryptographic Break | Halt all verification attempts rollback previous safe state | Issue public advisory coordinate industry-wide response |
 
-Prioritize preventing further harm securing environment enabling thorough investigation subsequent remediation learning opportunities improving resilience long term.
+Prioritize preventing further harm, securing the environment, and enabling thorough investigation and subsequent remediation to improve long-term resilience.
 
 ---
 
@@ -97,7 +97,7 @@ Prioritize preventing further harm securing environment enabling thorough invest
 
 ### Submission Channels
 
-Accept reports through multiple pathways accommodating reporter preferences ensuring accessibility inclusivity:
+Accept reports through multiple channels to accommodate reporter preferences and ensure accessibility:
 
 | Channel | URL/Contact | Monitoring Frequency | Response SLA |
 |---|---|---|---|
@@ -106,29 +106,94 @@ Accept reports through multiple pathways accommodating reporter preferences ensu
 | Immunefi Platform | https://immunefi.com/bounty/aegisproof | Weekly audits | 5 business days |
 | GitHub Security Advisories | https://github.com/aegisproof/aegis-proof/security/advisories | As triggered | 7 days |
 
-**Important:** Never publicly disclose vulnerabilities without proper authorization coordinating responsible disclosure timeline ensuring fair compensation recognition discoverer contributions protecting users attackers exploitation window minimization.
+**Important:** Never publicly disclose vulnerabilities without proper authorization. Coordinate a responsible disclosure timeline that ensures fair recognition for the discoverer, protects users, and minimizes the exploitation window.
 
 ---
 
 ### Triage Process
 
-Upon receipt validate authenticity assess impact determine validity classifying appropriately:
+Upon receipt, validate authenticity, assess impact, determine validity, and classify the report appropriately:
 
 1. **Initial Review (Within 48 Hours):**
-   - Verify report contains sufficient detail reproducing issue
-   - Confirm vulnerability exists within scope defined program guidelines
-   - Check duplicates already reported filed previously
-   - Assign unique tracking ID reference number documenting timeline events
+   - Verify the report contains sufficient detail to reproduce the issue
+   - Confirm the vulnerability falls within the scope defined by program guidelines
+   - Check for duplicates already filed
+   - Assign a unique tracking ID and document timeline events
 
 2. **Severity Assignment (Within 72 Hours):**
-   - Apply classification framework described Section 3 below
-   - Calculate potential financial loss reputational damage regulatory fines
-   - Consider exploitability difficulty technical barriers preventing quick weaponization
-   - Document rationale supporting rating decisions transparency accountability purposes
+   - Apply the classification framework described in Section 3 below
+   - Estimate potential financial loss, reputational damage, and regulatory exposure
+   - Consider exploitability and technical barriers to weaponization
+   - Document the rationale supporting the severity rating
 
 3. **Remediation Plan Development (Within 1 Week):**
-   - Collaborate with discoverer clarifying technical nuances asking questions providing updates progress milestones achieved
-   - Estimate time required developing testing deploying patch fixing root cause eliminating attack vector permanently
-   - Establish communication cadence keeping reporter informed throughout lifecycle journey resolution completion post-issuance follow-up activities lessons learned incorporation future prevention strategies enhancement measures strengthening overall security posture organization-wide culture safety responsibility ethical behavior promoting trustworthy systems designs architectures implementations deployments operations maintenance retirement decommissioning phases full lifecycle management holistic view encompassing people processes technologies data flows interfaces dependencies integrations extensibility scalability reliability availability durability sustainability maintainability usability accessibility internationalization localization globalization adaptability configurability customizability personalization flexibility agility responsiveness performance efficiency optimization tuning calibration fine-tuning adjustment configuration parameters settings options choices configurations environments platforms ecosystems landscapes terrains domains spheres realms dimensions planes levels tiers layers stacks modules packages libraries frameworks tools utilities scripts binaries executables containers images repositories registries pipelines workflows jobs tasks processes procedures protocols standards specifications schemas schemas data models ontologies taxonomies classifications categorizations groupings clusters partitions segments divisions departments units teams groups organizations institutions agencies governments authorities regulators legislators policymakers stakeholders constituents beneficiaries customers users partners affiliates vendors suppliers distributors retailers merchants sellers buyers purchasers acquirees mergers acquisitions divestitures spinoffs layoffs terminations resignations retirements promotions transfers reassignments demotions suspensions investigations audits inspections reviews assessments evaluations appraisals feedback coaching mentoring training development growth progression advancement promotion succession planning leadership pipeline talent bench strength workforce planning human capital management organizational design culture transformation change management innovation creativity imagination inspiration motivation engagement satisfaction retention recruitment hiring onboarding offboarding exit interviews separations turnover rates absenteeism productivity performance metrics KPIs OKRs dashboards reports analytics insights intelligence wisdom knowledge expertise skills competencies capabilities proficiencies mastery excellence distinction honor distinction prestige reputation brand equity goodwill value proposition competitive advantage market differentiation positioning strategy tactics execution implementation deployment rollout migration adoption uptake penetration saturation expansion contraction reduction downsizing upsizing right-sizing optimizing maximizing minimizing balancing tradeoffs compromises negotiations concessions settlements agreements contracts treaties alliances partnerships collaborations synergies combinations fusion mergers acquisitions takeovers buyouts IPOs SPACs DECs secondary offerings tender offers dividend payouts stock splits reverse splits share buybacks recapitalizations refinancings deleveraging leveraging gearing unwinding de-gearing deleveragingleverage ratios debt-to-equity ratios interest coverage ratios cash flow multiples price earnings ratios enterprise value multiples book value multiples price-to-sales ratios price-to-cash-flow ratios return-on-assets ratios return-on-equity ratios return-on-invested-capital ratios gross margin operating margin net profit margin free cash flow margins asset turnover inventory turnover receivables turnover payable turnover working capital cycles cash conversion cycles operating cycles financing cycles investing cycles strategic cycles tactical cycles operational cycles administrative cycles logistical cycles supply chain cycles demand-supply equilibria market clearing prices equilibrium quantities consumer surplus producer surplus social welfare maximization deadweight loss calculations externality internalization Pigovian taxes subsidies Coase theorem bargaining solutions Nash equilibria Pareto optimality Edgeworth box contract curves offer curves indifference curves budget constraints isoquants isocost lines production possibility frontiers utility functions preference orderings revealed preference theory Slutsky equation compensated uncompensated demand curves income elasticity substitution effect income effect Giffen goods Veblen goods Snob效应 Bandwagon effect network effects positive negative externalities public goods merit demerit private club common pool tragedy commons free rider problems prisoner dilemma cooperation mechanisms incentive compatibility truthfulness revelation principles mechanism design auction theory bidding strategies sealed-bid first-price second-price Vickrey Clarke Groves dominant strategy truthful bidding revenue equivalence principle optimal taxation Ramsey pricing marginal cost pricing average cost pricing two-part tariffs block pricing peak-load pricing bundling tying versioning price discrimination first-degree second-degree third-degree perfect competition monopolistic competition oligopoly monopoly natural monopoly cartel collusion collusion breaking cartels antitrust laws merger control monopolization abuse dominance regulation deregulation privatization liberalization globalization regionalization localization glocalization cosmopolitanism parochialism universalism particularism relativism absolutism contextualism nominalism realism essentialism existentialism phenomenology hermeneutics structuralism poststructuralism deconstruction functionalism structural-functionalism conflict theory symbolic interactionism ethnomethodology grounded theory action research participatory research feminist standpoint theory queer theory critical race theory postcolonial theory indigenous methodologies southern theory global south perspectives decolonization repatriation restitution reconciliation justice reparations recognition redistribution transformation radical democracy agonistic pluralism deliberative democracy participatory budgeting liquid democracy direct representative hybrid forms polycentric orders commons governance oligarchic tendencies meritocratic selection corruption accountability transparency checks balances separation powers constitutionalism rule law legitimacy sovereignty self-determination federalism decentralization centralization subsidiarity autonomy interdependence interconnectedness systemic thinking feedback loops resonance amplification damping adaptation resilience antifragility black swan gray rhino cygnets butterfly effect chaos theory complexity science emergence downward causation top-down bottom-up hierarchical flat organizational structures matrix networks enterprises platform cooperativism gig economy freelance labor precarious employment universal basic income guaranteed minimum revenue living wage sufficiency economies degrowth post-work futures transhumanism bioethics genetic engineering enhancement cognition morality immortality life extension longevity escape velocity healthspan lifespan compression morbidity dilation quality-adjusted life-years disability rights neurodiversity ableism ageism classism racism sexism heteronormativity cisnormativity anthropocentrism ecocentrism biocentrism technocentrism spiritual secular humanist religious atheist agnostic mystic gnosis revelation prophecy miracles sacred profane holy unholy divine immanent transcendent panentheism pantheism deism polytheism monotheism henotheism kathenotheism atheism animism fetishism totemism shamanism witchcraft sorcery magic ritual sacrifice prayer meditation contemplation mindfulness introspection extrospection self-reflection reflexivity reflexive distancing detachment involvement engagement commitment dedication loyalty fidelity betrayal abandonment betrayal reconstruction forgiveness reconciliation apology redemption salvation damnatio memoriae oblivion forgetting remembering collective memory historical revisionism denialism fabrication mythmaking propaganda disinformation misinformation fake news deepfakes synthetic media algorithmic bias automated decision-making explainability interpretability auditability accountability liability attribution blame responsibility culpability negligence recklessness intent malice foreseeability predictability determinism indeterminism free will compatibilism incompatibilism hard soft libertarian paternalism nudge theory choice architecture default options opt-in opt-out friction scaffolding nudges助推 theory libertarian authoritarian manipulative deceptive persuasive technologies addiction behavioral economics attention economy dopamine loops variable ratio reinforcement schedules Skinner box operant conditioning classical Pavlovian associations habit formation breakage recovery relapse prevention termination cessation withdrawal symptoms detoxification rehabilitation reintegration reentry recidivism recidivism reduction successful completion parole probation supervision monitoring GPS ankle bracelets house arrest curfew electronic tagging biometric authentication face recognition iris scanning fingerprint DNA profiling voiceprint gait analysis keystroke dynamics behavioral biomarkers continuous authentication risk scoring anomaly detection false positives false negatives precision recall F1 score ROC curves AUC PR curves calibration reliability sensitivity specificity PPV NPV likelihood ratios Bayesian updating priors posteriors credible intervals confidence bounds frequentist Neyman Pearson hypothesis testing p-values alpha beta corrections Bonferroni Holm Sidak Benjamini Hochberg family-wise error rate false discovery rate type I II III errors multiple comparisons simultaneous inference joint distributions marginal conditional independence exchangeability symmetry sufficiency completeness ancillary statistics pivot quantities pivotal methods bootstrap BCa BC percentile jackknife deletion-one influence functions sandwich estimators robust standard errors Huber White formula M-estimators L-estimators R-estimators rank tests Wilcoxon signed-rank Mann Whitney U Kruskal Wallis ANOVA nonparametric alternatives parametric counterparts transformations log square root reciprocal Box Cox power transforms normalization z-scores min-max scaling quantile ranking ties handling averaging midranks permutation tests randomization exact tests Monte Carlo simulations Markov Chain Monte Carlo Hamiltonian Monte Carlo slice sampling Gibbs sampling Metropolis Hastings rejection sampling importance sampling Sequential Monte Carlo particle filters Kalman filters extended unscented varieties sequential neural likelihood approximate Bayesian computation ABC sequential neural posterior estimation SNPE SNRE SNP E variational inference mean field fully factorized structured approximations normalizing flows density estimation normalizing flows coupling flows affine coupling masks autoregressive models residual connections skip connections batch normalization layer normalization weight initialization Xavier Glorot He Kaiming LeCun Luong Bahdanau Chorowski attention mechanisms positional encodings sinusoidal learned absolute relative distances sparse gating experts mixture MoE mixture experts routed routing networks transformers encoder decoder autoregressive next-token prediction masked language modeling bidirectional contextual embeddings word pieces subword tokens byte pair encoding unigram language models sentencepiece detokization normalization tokenizers vocabularies alignment codeshifts drift catastrophic forgetting rehearsal consolidation synaptic pruning plasticity stability dilemma continual learning incremental learning transfer learning domain adaptation few-shot learning meta-learning lifelong cumulative skill acquisition modular architectures latent spaces representations disentangled factors generative adversarial networks GANs Wasserstein distance gradient penalty spectral normalization cycle consistency temporal coherence video prediction frame interpolation motion extrapolation optical flow depth estimation stereo matching structure-from-motion SLAM visual odometry inertial sensor fusion LiDAR point clouds segmentation clustering object detection pose estimation grasping manipulation planning path finding navigation autonomous driving robotics drones augmented reality virtual reality mixed reality spatial computing photoreal rendering ray tracing real-time shading level detail textures materials PBR metallic roughness specular glossy diffuse ambient occlusion global illumination radiosity photon mapping monte carlo ray marching volume rendering voxels tetrahedrons finite element analysis mesh generation subdivision surfaces splines NURBS Bezier curves Hermite cubic B-splines Catmull-Rom Kochanek-Bartels Catmull-Rom tension bending torsion strain stress elasticity plasticity viscosity damping stiffness frequency response impulse response convolution correlation cross-correlation autocorrelation Fourier transform Laplace transform Z-transform wavelet transform Hilbert-Huang empirical mode decomposition adaptive filters Wiener filtering Kalman smoothing particle filtering ensemble methods bagging boosting stacking blending voting classifiers logistic regression linear discriminant analysis support vector machines kernel trick radial basis functions Gaussian processes random forests gradient boosting XGBoost LightGBM CatBoost extreme trees neural networks deep learning feedforward convolutional recurrent LSTM GRU Transformers self-attention multi-head scaled dot-product query key value projections position-wise feedforward layer norm residual connections dropout regularization L2 weight decay early stopping patience checkpoints learning rate scheduling cosine annealing warm restarts cyclical decay constant exponential linear warmup linear decay polynomial decay step decay plateau reduceonplateau multi-step one-cycle policy tabular Q-learning SARSA actor-critic policy gradients proximal policy optimization advantage actor critic reinforce trust region policy optimization soft actor critic maximum entropy RL inverse reinforcement learning reward shaping potential-based shaping reward hacking specification gaming instrumental convergence orthogonal objectives conflicting goals value alignment corrigibility interruptibility shutdown manipulability sidechannel leakage prompt injection jailbreak distillation adversarial training defensive distillation model auditing watermarking steganography copyright protection intellectual property infringement plagiarism detection reverse engineering deobfuscation obfuscation minification uglification packing encryption homomorphic partial symmetric asymmetric RSA ECC elliptic curve Diffie Hellman key exchange ElGamal Paillier Damgard Juels threshold schemes Shamir secret sharing additive multiplicative blinding random masking padding PKCS #1 OAEP CBC ECMDD Otway-Rees Needham-Schmidt Kerberos ticket granting servers certificates certificate authorities revocation lists OCSP stapling TLS handshakes cipher suites forward secrecy perfect ephemeral keys static DH compromise post-compromise security ongoing confidentiality integrity authenticity non-repudiation deniability plausible deniability coercive resistance coercion resistance subpoena proof backdoor government access keys judicial warrants national security letters foreign intelligence surveillance acts patriot act USA freedom act Eu GDPR US CCPA California Consumer Privacy Act HIPAA Health Insurance Portability Accountability Act FERPA Family Educational Rights Privacy Act GLBA Gramm-Leach-Bliley Act SOX Sarbanes-Oxley Act PCI DSS Payment Card Industry Data Security Standard ISO 27001 Information Security Management System ISMS SOC 1 SOC 2 SOC 3 reports attestation opinions audits compliance certifications licenses permits registrations approvals waivers exemptions variances deviations exceptions discrepancies anomalies outliers glitches bugs defects flaws vulnerabilities weaknesses gaps shortcomings limitations restrictions prohibitions bans moratoriums freezes suspensions terminations cancellations rescissions reversals undo redo rollback revert restore recover backup archive retention purge delete destroy annihilate obliterate erase wipe格式化 burn brick kill terminate stop halt pause suspension resume restart reload refresh regenerate rebuild reconstruct recreate remix remixing derivative works forks branching merging rebasing squashing rebasing interactive resolving conflicts automatic merge strategies manual intervention graphical tools diff editors patch generators unified formats context differences line numbers column positions character offsets byte ranges offsets hex dumps ASCII representations base64 URL-safe variants PEM DER ASN.1 TLV BER CERBERUS protocols handshake initiation termination abort graceful forced immediate abrupt sudden delayed progressive iterative incremental differential delta compressed archives zip gzip bzip2 xz lzma rar 7z tar gz bz2 xz tb2 txz tgz tlz ttar ttbz ttzx tzzt tzx tty tu uv uuencode uudecode binhex MacBinaryStuffItARC TAR ZIP GZIP BZIP2 LZMA RAR 7Z TAR GBZ XZ TB2 TXZ TGZ TLZ TTAR TTBZ TTXZ TZZT TZX TTY TU UV UUencode UUdecode BINHEX MACBINARYSTUFFITAR ARC 
+   - Collaborate with the discoverer to clarify technical details and provide progress updates
+   - Estimate time required to develop, test, and deploy a patch that eliminates the attack vector
+   - Establish a communication cadence to keep the reporter informed through resolution
+   - Conduct a post-resolution review and incorporate lessons learned into future prevention measures
 
-*(Content truncated due to length)*
+---
+
+## 3. Severity Classification Standards
+
+| Level | Definition | Example | Response SLA |
+|---|---|---|---|
+| Critical (P0) | Immediate threat to funds, keys, or proof integrity | Proof forgery, operator key compromise | <1 hour |
+| High (P1) | Significant degradation of security guarantees | Access control bypass, IC mismatch | <4 hours |
+| Medium (P2) | Limited impact or difficult exploitation | Information disclosure, gas griefing | <24 hours |
+| Low (P3) | Minor issue with minimal operational impact | Documentation error, cosmetic logging gap | <7 days |
+
+Severity ratings align with the incident response playbook in [`docs/incident-response.md`](docs/incident-response.md).
+
+---
+
+## 4. Bug Bounty Program Structure
+
+### Scope
+
+In-scope components:
+- Smart contracts in `contracts/`
+- SDK implementation in `packages/sdk/src/`
+- Cryptographic artifact handling scripts in `scripts/`
+
+Out of scope:
+- Third-party dependencies (report upstream)
+- Social engineering against team members
+- Denial-of-service against test infrastructure
+
+### Reward Tiers (Initial Pool: $5,000)
+
+| Severity | Reward Range |
+|---|---|
+| Critical | $2,000–$5,000 |
+| High | $500–$2,000 |
+| Medium | $100–$500 |
+| Low | Recognition only |
+
+Platform selection (HackerOne or Immunefi) pending stakeholder approval. Scope and reward tiers may be adjusted before public launch.
+
+---
+
+## 5. Emergency Communication Protocols
+
+### Internal Communication
+
+1. **P0/P1 incidents:** Activate war room immediately; post status updates every 30 minutes
+2. **P2 incidents:** Assign incident owner; provide daily status updates until resolved
+3. **P3 incidents:** Track in standard ticketing system; no war room required
+
+### External Communication
+
+| Audience | Channel | Timing | Owner |
+|---|---|---|---|
+| Stakeholders | Email + secure call | Within 1 hour (P0) | Communications Officer |
+| Users | Status page + advisory | Within 4 hours (P0) | Communications Officer |
+| Regulators | Formal notification | Per legal guidance | Legal Advisor |
+| Public | Blog post / press release | After containment confirmed | Executive Sponsor |
+
+Use the emergency advisory template in [`docs/incident-response.md`](docs/incident-response.md). Do not disclose exploit details until a patch or mitigation is available.
+
+---
+
+**Document Status:** Complete (Phase 7 Security Operations Component)  
+**Classification:** INTERNAL USE ONLY — PUBLIC RELEASE REQUIRES FORMAL SIGN-OFF

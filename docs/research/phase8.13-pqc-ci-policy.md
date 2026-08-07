@@ -1,4 +1,4 @@
-# Phase 8.13 Task 5 — PQC Provenance CI Policy
+# PQC Provenance CI Policy (Phase 8.13)
 
 **Status:** Complete  
 **Phase:** 8.13 Task 5  
@@ -8,7 +8,7 @@
 
 ## Purpose
 
-Harden the artifact provenance PQC layer into a **production-operable CI trust boundary** without modifying the frozen Groth16 ZK core.
+Harden the artifact provenance PQC layer into a CI trust boundary without modifying the frozen Groth16 ZK core.
 
 ---
 

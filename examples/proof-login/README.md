@@ -1,11 +1,12 @@
 # Proof-Based Login Example
 
-**Purpose:** Zero-knowledge user authentication without password transmission  
+Reference implementation of zero-knowledge user authentication without password transmission.
+
 **Status:** Reference implementation (demonstration only)  
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
 User Login Flow (Passwordless):
@@ -22,19 +23,19 @@ User Login Flow (Passwordless):
                                   └──────────────┘
 ```
 
-### Key Features
+### Features
 
-- **No passwords transmitted** over network
-- **Cryptographic proof** of credential knowledge
-- **Privacy-preserving**: server never learns actual password hash
-- **Replay-resistant**: each login uses fresh session ID
+- No passwords transmitted over the network
+- Cryptographic proof of credential knowledge
+- Privacy-preserving: server never learns the password hash
+- Replay-resistant: each login uses a fresh session ID
 
-## Setup Instructions
+## Setup
 
 ### Prerequisites
 
 - Modern web browser with JavaScript support
-- deployed AegisProof shield contract
+- Deployed AegisProof shield contract
 - Web service supporting ZK login backend
 
 ### Configuration
@@ -147,15 +148,15 @@ async function validateLogin(sessionId, proofResult) {
 }
 ```
 
-## Security Considerations
+## Security considerations
 
-✅ **Recommended:**
+Recommended:
 - Use PBKDF2/scrypt/bcrypt for password-to-key derivation (NOT raw password as secretKey)
 - Implement rate limiting to prevent brute-force attempts
 - Store challenges with short TTL (<5 minutes)
 - Validate server-side that proof corresponds to issued challenge
 
-❌ **Critical mistakes to avoid:**
+Avoid:
 - Using raw password as proof input (must derive via KDF first)
 - Skipping challenge expiration checks
 - Accepting proofs without verifying chainId matches expected network
@@ -168,9 +169,11 @@ async function validateLogin(sessionId, proofResult) {
 - Requires persistent wallet/storage for derived credentials
 - No recovery mechanism if password lost (true passwordless behavior)
 
-## Future Enhancements
+## Future work
 
-1. **Biometric Binding**: Extend circuit to include fingerprint/facial recognition hash
-2. **Multi-factor Extension**: Add backup codes alongside ZK proof
-3. **Batch Recovery**: Enable social recovery protocols through multi-party computation
-4. **Cross-Domain Sessions**: Share authenticated sessions across subdomains via bridged tokens
+Possible extensions (not implemented):
+
+1. Biometric binding: extend the circuit to include a fingerprint or facial recognition hash
+2. Multi-factor extension: backup codes alongside the ZK proof
+3. Batch recovery: social recovery via multi-party computation
+4. Cross-domain sessions: shared authenticated sessions across subdomains via bridged tokens

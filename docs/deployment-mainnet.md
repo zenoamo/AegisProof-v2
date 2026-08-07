@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This document outlines the complete deployment plan for AegisProof v2 on Ethereum mainnet. No actual deployment has been performed; this is a **readiness package** intended for stakeholder review and independent auditor verification.
+This document outlines the deployment plan for AegisProof v2 on Ethereum mainnet. No deployment has been performed; this is a **readiness package** for stakeholder review and independent auditor verification.
 
 **Critical constraint:** All deployments require explicit human authorization. This document describes procedures only.
 

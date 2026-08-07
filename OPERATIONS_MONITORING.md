@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Comprehensive monitoring framework ensuring operational visibility into deployed AegisProof infrastructure capturing key performance indicators enabling rapid anomaly detection proactive incident response.
+This guide defines a monitoring framework for operational visibility into deployed AegisProof infrastructure, capturing key performance indicators and enabling rapid anomaly detection and proactive incident response.
 
 ### Metrics Taxonomy
 
@@ -105,7 +105,7 @@ Nullifier collisions detected: 2 (investigate source IPs)
 Peak concurrency: 1,456 at 14:32 UTC
 ```
 
-Generate automatically via cron job querying blockchain indexer aggregating statistics distributing securely encrypted channel.
+Generate automatically via cron job, querying the blockchain indexer, aggregating statistics, and distributing over a secure encrypted channel.
 
 ---
 
@@ -236,7 +236,7 @@ Minimum viable monitoring stack:
 2. Grafana panel displaying basic KPIs
 3. Email alerts configured for P1/P2 conditions
 
-Expand gradually adding sophistication resources permitting budgets allowing.
+Expand gradually, adding sophistication as resources and budgets allow.
 
 ---
 

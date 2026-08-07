@@ -2,7 +2,7 @@
 
 **RESEARCH_FIXTURE_ONLY: true**
 
-Synthetic TDX Quote v4 layout for offline DCAP PoC:
+Synthetic TDX Quote v4 layout for the offline DCAP PoC:
 
 - 48-byte signed payload (version 4 header)
 - 64-byte ECDSA P-256 signature (IEEE P1363)

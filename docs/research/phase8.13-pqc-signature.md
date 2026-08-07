@@ -1,4 +1,4 @@
-# Phase 8.13 Task 4 — PQC Artifact Signature Activation
+# PQC Artifact Signature (Phase 8.13)
 
 **Status:** Complete (prototype + CI optional/strict modes)  
 **Phase:** 8.13 Task 4  
@@ -8,9 +8,9 @@
 
 ## Purpose
 
-Activate real **ML-DSA-87** signatures on the artifact provenance layer established in Phase 8.13 Tasks 1–3.
+Activate ML-DSA-87 signatures on the artifact provenance layer from Phase 8.13 Tasks 1–3.
 
-This is **not** Groth16 post-quantization. The ZK core remains frozen; PQC protects **artifact metadata authenticity** only.
+This is not Groth16 post-quantization. The ZK core remains frozen; PQC protects artifact metadata authenticity only.
 
 ```
 SHA-256 (integrity, required)  +  ML-DSA-87 (authenticity, additive)

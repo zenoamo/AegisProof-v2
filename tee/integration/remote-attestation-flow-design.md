@@ -10,9 +10,9 @@
 
 ## 1. 目的
 
-TEE Evidence の生成から Remote Verifier への伝達、および Attestation ライフサイクルの**責務境界**を固定する。
+TEE Evidence の生成から Remote Verifier への伝達、および Attestation ライフサイクルの責務境界を固定する。
 
-Phase 8.9A では**設計文書の整理のみ**。実装・ネットワーク・本番検証は対象外。
+Phase 8.9A は設計文書の整理のみ。実装・ネットワーク・本番検証は対象外。
 
 詳細設計: [Phase 8.9 Remote Attestation Design](../../docs/research/phase8.9-remote-attestation-design.md)
 

@@ -6,9 +6,9 @@
 
 ---
 
-## Attestation Overview
+## Attestation overview
 
-AMD SEV-SNP provides a remote attestation mechanism that allows a remote party to verify that a VM is running with the expected code and configuration in a genuine SEV-SNP environment.
+AMD SEV-SNP remote attestation lets a remote party verify that a VM runs expected code and configuration in genuine SEV-SNP hardware.
 
 ---
 

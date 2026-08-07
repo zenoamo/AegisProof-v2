@@ -8,7 +8,7 @@
 
 ## Overview
 
-This directory contains test evidence data for validating the Evidence Normalizer and unified AttestationEvidence model.
+Synthetic evidence for validating the Evidence Normalizer and the unified `AttestationEvidence` model.
 
 ---
 

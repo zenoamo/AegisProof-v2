@@ -46,7 +46,7 @@ This phase **does not implement** any Remote Attestation service, network transp
 
 ## 3. Existing TEE Pipeline Mapping
 
-Phase 8.9A builds on the implemented pipeline (Phases 8.6–8.8b). **Component responsibilities are frozen**; this document maps them to the Remote Attestation lifecycle.
+Phase 8.9A builds on the implemented pipeline (Phases 8.6–8.8b). **Component responsibilities are frozen**; this document maps them to the remote attestation lifecycle.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

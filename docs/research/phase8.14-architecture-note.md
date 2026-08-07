@@ -1,4 +1,4 @@
-# Phase 8.14 — Architecture Note (Pre-Implementation Review)
+# Phase 8.14 Architecture Note
 
 **Date:** 2026-08-07  
 **Prerequisite:** Phase 8.13 PQC wrapper (placeholder envelope)  

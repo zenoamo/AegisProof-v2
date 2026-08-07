@@ -8,7 +8,7 @@
 
 ## Overview
 
-The Verification Policy defines the rules and logic for determining whether a proof (with or without TEE attestation) should be accepted. This document outlines the verification modes, trust levels, and policy enforcement mechanisms for the AegisProof TEE integration.
+Rules and logic for accepting or rejecting a proof, with or without TEE attestation. Covers verification modes, trust levels, and policy enforcement for AegisProof TEE integration.
 
 ---
 
@@ -855,25 +855,6 @@ class FallbackManager {
 3. **TEE Unavailability**: Alert if TEE unavailable > 1 minute
 4. **Certificate Expiry**: Alert 30 days before certificate expiry
 5. **Security Version**: Alert if security version below minimum
-
----
-
-## Conclusion
-
-The Verification Policy design provides a flexible, secure framework for verifying proofs with optional TEE attestation. The three-tier verification mode approach allows deployment flexibility while maintaining strong security guarantees.
-
-**Key Features**:
-- Three verification modes (ZK Only, ZK + TEE, Dual Provider)
-- Flexible policy configuration
-- Automatic fallback mechanism
-- Trust level evaluation
-- Comprehensive monitoring
-
-**Next Steps**:
-- Implement policy engine
-- Develop policy management tools
-- Create monitoring dashboards
-- Conduct policy testing
 
 ---
 

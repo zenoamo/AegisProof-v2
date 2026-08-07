@@ -1,4 +1,4 @@
-# Phase 8.13 — PQC Wrapper Hardening
+# PQC Wrapper Hardening (Phase 8.13)
 
 **Status:** Task 4 complete — ML-DSA-87 signature activation  
 **Phase:** 8.13  
@@ -8,9 +8,9 @@
 
 ## Purpose
 
-Establish an **outer-layer** cryptographic boundary for quantum readiness **without modifying** the frozen Groth16 ZK core (Phase 8.10–8.11 invariants).
+Establish an outer-layer cryptographic boundary for quantum readiness without modifying the frozen Groth16 ZK core (Phase 8.10–8.11 invariants).
 
-Phase 8.13 is **not** a Groth16 post-quantization phase. It prepares:
+Phase 8.13 is not a Groth16 post-quantization phase. It adds:
 
 1. **Artifact provenance** — SHA-256 + ML-DSA-87 signature envelope (Task 4 activated)
 2. **Hybrid authentication** — ECDSA + future PQC signature research wrapper

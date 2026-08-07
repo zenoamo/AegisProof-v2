@@ -11,7 +11,7 @@
 ### 1. ✅ Deployment Planning (`docs/deployment.md`)
 
 **Status:** COMPLETE  
-**Content:** Comprehensive dry-run instructions for Local Hardhat, Sepolia testnet, and Ethereum mainnet (documentation only). Includes constructor parameters, deployment order, verification checklist, and security notes. No actual deployments performed.
+**Content:** Comprehensive dry-run instructions for Local Hardhat, Sepolia testnet, and Ethereum mainnet (documentation only). Includes constructor parameters, deployment order, verification checklist, and security notes. No deployments were performed.
 
 ### 2. ✅ Developer SDK Scaffold (`packages/sdk/`)
 

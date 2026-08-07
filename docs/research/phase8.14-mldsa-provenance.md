@@ -1,4 +1,4 @@
-# Phase 8.14 — ML-DSA Artifact Provenance Signing
+# ML-DSA Artifact Provenance Signing (Phase 8.14)
 
 **Status:** Prototype + CI verification  
 **Phase:** 8.14  
@@ -8,9 +8,9 @@
 
 ## Purpose
 
-Extend Phase 8.13 artifact provenance from SHA-256 integrity + PQC placeholder to **real ML-DSA-65 signatures** for authenticity.
+Extend Phase 8.13 artifact provenance from SHA-256 integrity plus PQC placeholder to ML-DSA-65 signatures for authenticity.
 
-**This phase does NOT post-quantize Groth16.** The frozen ZK core (circuits, R1CS, production.zkey, VK, verifier contract, publicSignals layout, `proveCanonical()`) remains unchanged.
+This phase does not post-quantize Groth16. The frozen ZK core (circuits, R1CS, production.zkey, VK, verifier contract, publicSignals layout, `proveCanonical()`) remains unchanged.
 
 ```
 Artifact file

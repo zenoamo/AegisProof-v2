@@ -8,7 +8,7 @@
 
 ## Overview
 
-Intel TDX (Trust Domain Extensions) is a hardware-based confidential computing technology that provides isolation for virtual machines (VMs). It protects guest VMs from the hypervisor and other software on the system.
+Intel TDX (Trust Domain Extensions) is a hardware confidential-computing technology that isolates virtual machines. Guest VMs are protected from the hypervisor and other software on the system.
 
 ---
 
@@ -148,7 +148,7 @@ TD                          Verifier
 
 ## Use Cases for AegisProof
 
-### Potential Applications
+### Possible applications
 - **Secure Proof Generation**: Generate ZK proofs within TDX TD
 - **Key Management**: Store private keys in encrypted memory
 - **Confidential Computation**: Process sensitive data before proof generation

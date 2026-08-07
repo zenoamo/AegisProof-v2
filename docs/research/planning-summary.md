@@ -1,31 +1,32 @@
-# AegisProof v2 - Phase 8/9 Planning Package Summary
+# AegisProof v2 — Phase 8/9 Planning Summary
 
 **Document Version:** 1.0  
-**Date:** August 5, 2026  
-**Current Commit:** `4cd2732` (Phase 7 complete)  
-**Status:** 📋 **PLANNING ONLY – AWAITING AUTHORIZATION**  
+**Date:** 2026-08-05  
+**Status:** Planning only — awaiting authorization  
 
 ---
 
-## Executive Summary
+## Summary
 
-This package contains comprehensive planning documentation for two future development phases of AegisProof:
+Planning documentation for two future development phases:
 
 ### Phase 8 — Confidential Computing Integration
-**Goal:** Integrate Intel TDX / AMD SEV-SNP trusted execution environments with existing ZK proof system to create dual-layer verification architecture combining cryptographic proofs with hardware-backed attestation.
 
-**Key Deliverable:** [`PHASE8-ARCHITECTURE.md`](file:///c:/workspace/AegisProof/PHASE8-ARCHITECTURE.md) (679 lines)
-- Complete hybrid architecture specification
-- TEE attestation integration design (Intel TDX & AMD SEV-SNP)
-- Solidity verification contract interfaces
-- Threat model extensions and security analysis
-- Migration strategy from current v2 implementation
-- Implementation prerequisites checklist
+**Goal:** Integrate Intel TDX and AMD SEV-SNP attestation with the existing ZK proof system.
+
+**Key deliverable:** [phase8-architecture.md](./phase8-architecture.md)
+
+- Hybrid architecture specification
+- TEE attestation integration (Intel TDX, AMD SEV-SNP)
+- Threat model extensions
+- Migration strategy from v2
 
 ### Phase 9 — Distributed Proof Infrastructure
-**Goal:** Build next-generation AI verification architecture using multi-TEE distributed proving networks, recursive SNARKs, and agent authentication framework.
 
-**Key Deliverable:** [`PHASE9-RESEARCH-ROADMAP.md`](file:///c:/workspace/AegisProof/PHASE9-RESEARCH-ROADMAP.md) (936 lines)
+**Goal:** Research multi-TEE distributed proving, recursive SNARKs, and agent authentication.
+
+**Key deliverable:** [phase9-roadmap.md](./phase9-roadmap.md)
+
 - Multi-node quorum-based proof generation design
 - Recursive SNARK aggregation strategies (Nova, Halo2)
 - AI inference proof system blueprint
@@ -33,7 +34,7 @@ This package contains comprehensive planning documentation for two future develo
 - Phased migration timeline (Q4 2026 – Q4 2027)
 - Security considerations and tokenomics design
 
-**Total Planning Content:** ~1,615 lines across 2 comprehensive documents
+**Total planning content:** ~1,615 lines across two documents
 
 ---
 

@@ -1,7 +1,8 @@
 # Intel TDX - Real Evaluation Design
 
-## 1. Intel TDX概要
-Intel Trust Domain Extensions (TDX) は、ハイパーバイザ等のホストソフトウェアから仮想マシン（Trust Domain: TD）のメモリとCPU状態を暗号学的に保護する機能。
+## 1. Intel TDX 概要
+
+Intel Trust Domain Extensions (TDX) は、ハイパーバイザ等のホストソフトウェアから仮想マシン（Trust Domain: TD）のメモリと CPU 状態を暗号学的に保護する機能。
 
 ## 2. 必要ハードウェア条件
 *   Intel 4th Gen Xeon Scalable Processor (Sapphire Rapids) またはそれ以降。

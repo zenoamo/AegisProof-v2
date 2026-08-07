@@ -1,5 +1,7 @@
 # AegisShield Gas Performance Report
 
+This report summarizes on-chain gas consumption for the `verifyAndAccept` function measured on a Hardhat localhost deployment.
+
 ## Gas Consumption Analysis
 
 ### verifyAndAccept Function

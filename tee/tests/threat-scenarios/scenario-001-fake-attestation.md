@@ -7,9 +7,9 @@
 
 ---
 
-## Attack Description
+## Attack description
 
-An attacker attempts to generate a fake TEE attestation that passes validation without actual TEE hardware execution. This tests the Adapter Layer's ability to detect spoofed attestations.
+An attacker attempts to generate a fake TEE attestation that passes validation without running in actual TEE hardware. This tests whether the Adapter Layer detects spoofed attestations.
 
 ---
 
@@ -191,7 +191,7 @@ This scenario validates the following mitigations from the threat model:
 
 ## Notes
 
-- This scenario tests the Adapter Layer's core security function
+- Tests the Adapter Layer's core security function
 - Mock providers should simulate realistic validation behavior
-- Test should be run with both TDX and SEV-SNP mocks
-- Results should inform production security requirements
+- Run with both TDX and SEV-SNP mocks
+- Results inform production security requirements

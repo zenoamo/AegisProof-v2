@@ -9,9 +9,9 @@
 
 ## Purpose
 
-This directory contains research, design, and PoC implementation for TEE (Trusted Execution Environment) integration with AegisProof.
+Research, design, and PoC code for TEE (Trusted Execution Environment) integration with AegisProof.
 
-**Important Constraints**:
+**Constraints**:
 - This is research and PoC evaluation only
 - No changes to existing protocol v2
 - No changes to Circom circuits

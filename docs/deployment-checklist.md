@@ -1,7 +1,7 @@
 # AegisProof Deployment Checklist
 
-**Purpose**: Ensure production readiness before any live deployment.  
-**Status**: Phase 5 ready (no deployments performed yet).
+**Purpose:** Confirm production readiness before any live deployment.  
+**Status:** Phase 5 ready (no deployments performed).
 
 ---
 
@@ -54,4 +54,4 @@
 
 ## Rollback procedures (not applicable - immutable contracts)
 
-Since contracts are **immutable**, rollback means deploying a new Shield instance with updated logic. The old verifier remains valid; coordinate deprecation through protocol versioning.
+Since contracts are **immutable**, rollback means deploying a new Shield instance with updated logic. The existing verifier remains valid; coordinate deprecation through protocol versioning.

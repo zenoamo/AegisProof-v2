@@ -1,10 +1,8 @@
 # Phase 4 Pre-Ceremony Readiness Report & Ceremony Plan
 
 **Status: `BLOCKED — AWAITING HUMAN AUTHORIZATION`**
-No production trusted setup has been performed. No production zkey or
-verification key exists. This document is a planning/readiness artifact only,
-generated under the Phase 4 review authorization (read-only inspection, hash
-verification, artifact inventory, ceremony plan generation).
+
+No production trusted setup has been performed. No production zkey or verification key exists. This document is a planning and readiness artifact only, generated under the Phase 4 review authorization (read-only inspection, hash verification, artifact inventory, ceremony plan generation).
 
 Generated: 2026-08-04 · Commit pinned: `52771c6` · Working tree: clean.
 

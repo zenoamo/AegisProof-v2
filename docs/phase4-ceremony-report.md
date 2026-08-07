@@ -47,17 +47,7 @@ block hash `000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f`,
 
 ## 3. CONTRIBUTOR DISCLOSURE (read carefully)
 
-The 3 contribution slots per chain were executed by the orchestration script
-in this environment, each with fresh `crypto.randomBytes(32)` entropy that was
-discarded immediately after the contribution (never persisted). This is a
-structurally valid multi-contribution chain, but it does NOT provide the trust
-distribution of independent human contributors on separate machines: security
-here rests on the beacon plus the non-compromise of this environment's
-randomness. **Recommendation:** before any mainnet-grade deployment holding
-real value, independent contributors should extend the chain (any
-`zkey contribute` on the final zkey remains valid), followed by a new beacon
-and re-finalization; that changes the VK and requires regenerating the
-verifier contract (re-authorized work).
+The three contribution slots per chain were executed by the orchestration script in this environment, each with fresh `crypto.randomBytes(32)` entropy discarded immediately after the contribution (never persisted). This is a structurally valid multi-contribution chain, but it does **not** provide the trust distribution of independent human contributors on separate machines. Security here rests on the beacon plus the non-compromise of this environment's randomness. **Recommendation:** Before any mainnet-grade deployment holding real value, independent contributors should extend the chain (any `zkey contribute` on the final zkey remains valid), followed by a new beacon and re-finalization; that changes the VK and requires regenerating the verifier contract (re-authorized work).
 
 ## 4. Verification results (post-ceremony)
 

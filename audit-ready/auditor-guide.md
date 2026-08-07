@@ -2,7 +2,7 @@
 
 **Purpose:** Step-by-step guide for independent security auditors reviewing AegisProof v2  
 **Status:** Production-ready artifacts; no deployments performed  
-**Audit scope:** Protocol specification, cryptographic assumptions, implementation verification  
+**Audit scope:** Protocol specification, cryptographic assumptions, and implementation verification  
 
 ---
 

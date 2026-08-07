@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This document summarizes internal security review findings for AegisProof v2 protocol as of Phase 6 completion. All cryptographic components remain frozen per original constraints; no modifications introduced since canonical specification approval. Review conducted using layered methodology combining formal verification checks, code analysis, threat modeling, and constraint validation.
+This document summarizes internal security review findings for AegisProof v2 as of Phase 6 completion. All cryptographic components remain frozen per original constraints; no modifications have been introduced since canonical specification approval. The review used a layered methodology combining formal verification checks, code analysis, threat modeling, and constraint validation.
 
 ### Key Findings
 
@@ -104,7 +104,7 @@ Security assessment conducted through four complementary lenses:
 **Ceremony Date:** January 2026 (Phase 0 ceremony completed)  
 **Participants:** 51 ceremonial contributors (minimum threshold met)  
 **Toxic Waste Disposal:** Verified complete per ceremony report  
-**Current Status:** ✅ PUBLICALLY CERTIFIED
+**Current Status:** ✅ PUBLICLY CERTIFIED
 
 **Key Artifact Hashes:**
 ```
@@ -630,7 +630,7 @@ Initiate special review processes when:
 | Event | Trigger Action |
 |---|---|
 | Major protocol change | Full re-audit required |
-| Significant funding round | IndependentDue diligence security review |
+| Significant funding round | Independent due diligence security review |
 | Public disclosure of vulnerability | Emergency incident response + patch |
 | New cryptographic breakthrough | Urgent risk assessment |
 | Cross-chain expansion | Network-specific security evaluation |

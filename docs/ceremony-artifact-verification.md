@@ -1,7 +1,7 @@
 # Ceremony Artifact Verification Guide
 
-**Purpose**: How to independently verify the Phase 4 production ceremony artifacts.  
-**Scope**: Confirm per-step hashes, beacon validation, IC cross-checks.
+**Purpose:** How to independently verify Phase 4 production ceremony artifacts.  
+**Scope:** Per-step hashes, beacon validation, and IC cross-checks.
 
 ---
 
@@ -65,7 +65,7 @@ This confirms all 31 IC points (including vk_alpha_1) are correctly embedded.
 
 ## Contribution Chain Reproducibility Note
 
-Due to disclosure, the 3 contribution slots were executed in a single environment; while structurally valid and verified, independent human contributions are recommended before mainnet-grade deployments. Extending the chain (any additional `zkey contribute`) remains valid and will produce a new VK.
+Due to disclosure, the three contribution slots were executed in a single environment. The chain is structurally valid and verified, but independent human contributions are recommended before mainnet-grade deployments. Extending the chain (any additional `zkey contribute`) remains valid and will produce a new VK.
 
 ---
 

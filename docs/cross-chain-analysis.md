@@ -8,9 +8,9 @@
 
 ## Executive Summary
 
-This analysis examines architectural considerations for deploying AegisProof v2 across multiple EVM-compatible blockchains. Key findings emphasize mathematical universality of Groth16 proofs while highlighting practical constraints around independent verifier deployment and application-layer chain separation responsibilities.
+This analysis examines architectural considerations for deploying AegisProof v2 across multiple EVM-compatible blockchains. Findings emphasize the mathematical universality of Groth16 proofs while noting practical constraints: independent verifier deployment and application-layer chain separation.
 
-**Core Thesis:** Groth16 verification operates identically regardless of blockchain network, enabling true proof portability subject only to verifier contract availability on target chain.
+**Core thesis:** Groth16 verification behaves identically on every network; proof portability holds wherever a matching verifier contract is deployed.
 
 ---
 

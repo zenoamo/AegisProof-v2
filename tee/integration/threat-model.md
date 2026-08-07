@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document analyzes the threat model for combining Zero-Knowledge (ZK) proofs with Trusted Execution Environments (TEE) in AegisProof. It identifies potential attack vectors, assesses risks, and proposes mitigation strategies.
+Threat model for combining Zero-Knowledge (ZK) proofs with Trusted Execution Environments (TEE) in AegisProof: attack vectors, risk assessment, and mitigations.
 
 ---
 
@@ -573,21 +573,6 @@ Layer 6: Operational Security
 - Performance degradation > 20%
 - Unusual authentication patterns
 - Security log anomalies
-
----
-
-## Conclusion
-
-The integration of ZK proofs with TEE technologies introduces new threat vectors but also provides defense in depth. The key risks are around TEE compromise, attestation spoofing, and integration inconsistencies. 
-
-**Key Recommendations**:
-1. Implement defense in depth across all layers
-2. Maintain ZK-only verification as fallback
-3. Regular security audits and updates
-4. Comprehensive monitoring and alerting
-5. Strong incident response procedures
-
-The combined system can be secure if proper mitigations are implemented and maintained. The trust model shifts from purely mathematical to hybrid (mathematical + hardware), but this can be managed with appropriate safeguards.
 
 ---
 

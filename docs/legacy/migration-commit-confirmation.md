@@ -9,7 +9,7 @@
 
 ## Commit Summary
 
-Successfully committed planning documentation for future AegisProof v2 development phases while strictly honoring all specified restrictions.
+Successfully committed planning documentation for future AegisProof v2 development phases while honoring all specified restrictions.
 
 ### Files Committed (6 total, ~3,225 lines added)
 

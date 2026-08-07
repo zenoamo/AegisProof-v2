@@ -8,7 +8,7 @@
 
 ## Overview
 
-The TEE Adapter Layer provides a unified abstraction interface for integrating different Trusted Execution Environment (TEE) technologies with AegisProof. This layer abstracts the differences between Intel TDX, AMD SEV-SNP, and future TEE implementations, enabling consistent attestation and verification across platforms.
+The TEE Adapter Layer is a unified abstraction for integrating TEE technologies (Intel TDX, AMD SEV-SNP, and future implementations) with AegisProof. It hides vendor differences and exposes a consistent attestation and verification interface.
 
 ---
 
@@ -964,25 +964,6 @@ describe("Adapter Integration", () => {
 - TLS for network communication
 - Certificate pinning for quote services
 - Secure credential storage
-
----
-
-## Conclusion
-
-The TEE Adapter Layer provides a unified, extensible interface for integrating multiple TEE technologies with AegisProof. The design prioritizes platform agnosticism, fallback safety, and minimal trust surface while enabling future extensibility.
-
-**Key Features**:
-- Platform-agnostic interface
-- Pluggable provider architecture
-- Unified evidence format
-- Comprehensive error handling
-- Testing-friendly design
-
-**Next Steps**:
-- Implement TypeScript/Go prototypes
-- Develop comprehensive test suite
-- Performance benchmarking
-- Security audit
 
 ---
 

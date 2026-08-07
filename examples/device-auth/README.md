@@ -1,11 +1,10 @@
 # Device Authentication Example
 
-**Purpose:** ZK-proof verification for hardware device identity validation  
-**Status:** Reference implementation (not production-ready)  
+Reference implementation for ZK-proof-based hardware device identity validation. Not production-ready.
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
 Device Identity Proof Flow:
@@ -17,14 +16,16 @@ Device Identity Proof Flow:
 └──────────────┘               └──────────────┘                 └──────────────┘
 ```
 
-## Setup Instructions
+## Setup
 
 1. **Deploy contracts to testnet** (Sepolia recommended):
+
    ```bash
    npx hardhat run scripts/deploy_sepolia.mjs --network sepolia
    ```
 
 2. **Configure environment variables**:
+
    ```env
    SEPOLIA_RPC_URL=https://rpc.sepolia.org
    VERIFIER_ADDRESS=0x... # from deployment
@@ -32,42 +33,48 @@ Device Identity Proof Flow:
    ```
 
 3. **Run device registration**:
+
    ```bash
    node device-auth/register-device.js
    ```
 
-## Execution Flow
+## Execution flow
 
-### Step 1: Generate Device Proof
-- Input: Device serial number + embedded secret key
-- Process: Compute commitment = Poseidon([serial, secret, timestamp])
-- Output: Groth16 proof + public signals
+### Step 1: Generate device proof
 
-### Step 2: Submit for Verification
-- Call `verifyAndAccept()` on shield contract
-- Contract validates chainID matches current network
-- Check timestamp within acceptable window
-- Reject if nullifier already in used-nullifiers set
+- Input: device serial number and embedded secret key
+- Process: compute commitment = Poseidon([serial, secret, timestamp])
+- Output: Groth16 proof and public signals
 
-### Step 3: Register Session
+### Step 2: Submit for verification
+
+- Call `verifyAndAccept()` on the shield contract
+- Contract validates chain ID matches the current network
+- Check timestamp is within the acceptable window
+- Reject if the nullifier is already in the used-nullifiers set
+
+### Step 3: Register session
+
 - Operator confirms device legitimacy
 - Create session mapping: deviceId → sessionId
-- Return session token for future requests
+- Return a session token for subsequent requests
 
-## Security Considerations
+## Security considerations
 
-✅ **Do:**
-- Store device secrets in secure enclave (TPM/HSM)
+Do:
+
+- Store device secrets in a secure enclave (TPM/HSM)
 - Rotate device keys annually
 - Monitor for duplicate submissions across chains
 
-❌ **Don't:**
+Do not:
+
 - Hardcode device credentials in firmware
-- Reuse same device identifier across multiple installations
-- Skip timestamp validation checks
+- Reuse the same device identifier across multiple installations
+- Skip timestamp validation
 
-## Known Limitations
+## Known limitations
 
-- Requires physical access to device for initial setup
+- Requires physical access to the device for initial setup
 - Device must have persistent storage for secret keys
-- Gas costs apply for on-chain registration (~80k gas per session)
+- On-chain registration incurs gas cost (~80k gas per session)

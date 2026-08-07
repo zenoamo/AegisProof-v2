@@ -8,7 +8,7 @@
 
 ## Overview
 
-AMD SEV-SNP (Secure Encrypted Virtualization-Secure Nested Paging) is a hardware-based confidential computing technology that provides memory encryption and integrity protection for virtual machines. It protects guest VMs from the hypervisor and other software on the system.
+AMD SEV-SNP (Secure Encrypted Virtualization-Secure Nested Paging) encrypts and integrity-protects virtual machine memory. Guest VMs are protected from the hypervisor and other software on the system.
 
 ---
 
@@ -234,7 +234,7 @@ Make trust decision
 
 ## Use Cases for AegisProof
 
-### Potential Applications
+### Possible applications
 - **Secure Proof Generation**: Generate ZK proofs within SEV-SNP VM
 - **Key Management**: Store private keys in encrypted memory
 - **Confidential Computation**: Process sensitive data before proof generation

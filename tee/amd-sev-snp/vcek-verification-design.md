@@ -8,7 +8,7 @@
 
 ## 1. 目的
 
-AMD SEV-SNP Attestation Report の VCEK 検証フローを Adapter Layer 観点で設計する。Phase 8.7 では**設計のみ**、KDS 接続・実署名検証は Phase 8.8+。
+AMD SEV-SNP Attestation Report の VCEK 検証フローを Adapter Layer 観点で設計する。Phase 8.7 では**設計のみ**；KDS 接続・実署名検証は Phase 8.8+。
 
 ## 2. 検証フロー（設計）
 

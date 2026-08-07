@@ -1,6 +1,6 @@
 # AegisProof FAQ
 
-**Frequently Asked Questions about protocol v2, deployments, and operations.**
+**Frequently asked questions about protocol v2, deployments, and day-to-day operations.**
 
 ---
 
@@ -22,7 +22,7 @@ Never use dev verifier contracts with production proofs or vice versa.
 
 ## Q: Is timestamp binding enforced in the circuit?
 
-**A:** No. Timestamps are deliberately unconstrained ("untrusted metadata"). Freshness is enforced contract-side via the timestamp window: `now ∈ [ts - MAX_AGE - SKEW, ts + SKEW]`. This design allows flexibility while maintaining security through off-chain validation.
+**A:** No. Timestamps are deliberately unconstrained in the circuit (they are treated as untrusted metadata). Freshness is enforced on-chain via the timestamp window: `now ∈ [ts - MAX_AGE - SKEW, ts + SKEW]`. This keeps the circuit flexible while contract-side checks preserve security.
 
 ---
 
@@ -52,10 +52,11 @@ Never use dev verifier contracts with production proofs or vice versa.
 
 ## Q: What if someone gains access to my operator key?
 
-**A:** Follow Severity 1 incident response procedures immediately:
-1. Notify stakeholders and suspend session registration if needed.
-2. Rotate operator key and update contract via emergency procedure.
-3. Document all actions taken and post-mortem within 24 hours.
+**A:** Treat this as a Severity 1 incident and act immediately:
+1. Notify stakeholders and suspend session registration if replay is suspected.
+2. Rotate the operator key and follow the emergency disable procedure.
+3. Document every action and complete a post-mortem within 24 hours.
+
 See [`incident-response.md`](./incident-response.md) and [`key-management-policy.md`](./key-management-policy.md).
 
 ---

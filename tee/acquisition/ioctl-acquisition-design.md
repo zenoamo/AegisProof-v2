@@ -8,7 +8,7 @@
 
 ## 1. 目的
 
-Phase 8.7 の Device Acquisition 層を、Linux guest デバイスからの**実バイナリ取得**へ拡張するための研究設計。Phase 8.8 では**設計のみ**、実 ioctl 呼び出しは Phase 8.8b（要承認）。
+Phase 8.7 の Device Acquisition 層を、Linux guest デバイスからの**実バイナリ取得**へ拡張するための研究設計。Phase 8.8 では**設計のみ**；実 ioctl 呼び出しは Phase 8.8b（要承認）。
 
 ## 2. 対象デバイス
 

@@ -40,7 +40,7 @@ AegisProof implements a Groth16-based zero-knowledge proof system for commitment
 | Production vkey | `d012bd29...` | Phase 4 finalized |
 | Phase 4 ptau | `4afdd19b...` | Multi-contributor + beacon |
 
-All hashes verified against artifact manifest. No modifications permitted without explicit authorization.
+All hashes verified against the artifact manifest. No modifications are permitted without explicit authorization.
 
 ---
 

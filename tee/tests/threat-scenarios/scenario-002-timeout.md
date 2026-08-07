@@ -7,9 +7,9 @@
 
 ---
 
-## Attack Description
+## Attack description
 
-An attacker or network condition causes TEE attestation generation or verification to timeout, testing the system's resilience and fallback behavior.
+A network condition or slow TEE service causes attestation generation or verification to time out. Tests system resilience and fallback behavior.
 
 ---
 
@@ -188,8 +188,8 @@ This scenario validates the following mitigations from the threat model:
 
 ## Notes
 
-- This scenario tests system resilience under adverse conditions
+- Tests resilience under adverse conditions
 - Mock providers should simulate various timeout scenarios
-- Test should be run with different timeout configurations
-- Results should inform production timeout settings
-- Consider implementing retry logic for transient failures
+- Run with different timeout configurations
+- Results inform production timeout settings
+- TODO: decide whether retry logic for transient failures is in scope

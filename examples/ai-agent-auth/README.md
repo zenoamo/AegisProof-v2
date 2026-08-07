@@ -1,12 +1,13 @@
 # AI Agent Authentication Example
 
-**Purpose:** Demonstrate ZK-proof-based authentication for AI agents without exposing credentials  
-**Status:** Reference implementation only (NOT FOR PRODUCTION use)  
+Reference implementation of ZK-proof-based authentication for AI agents without exposing credentials.
+
+**Status:** Reference implementation only (not for production)  
 **Proofs used:** Production verification key (`d012bd29ff6e4c44...`)  
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
 ┌─────────────────┐         ┌──────────────────┐         ┌──────────────────┐
@@ -21,15 +22,15 @@
    Never exposed           Sent via RPC                Accepts/rejects
 ```
 
-### Key Components
+### Components
 
-1. **AI Agent**: Generates ZK proof demonstrating knowledge of secret credential without revealing it
-2. **SDK Wrapper**: Handles proof generation, calldata conversion, contract interaction
-3. **Shield Contract**: Validates proof and registers authenticated session
+1. **AI Agent**: Generates a ZK proof of credential knowledge without revealing the secret
+2. **SDK wrapper**: Proof generation, calldata conversion, contract interaction
+3. **Shield contract**: Validates the proof and registers an authenticated session
 
 ---
 
-## Setup Instructions
+## Setup
 
 ### Prerequisites
 
@@ -234,9 +235,9 @@ console.log("Session ID:", signals[6]); // Signal index 6 = sessionId
 
 ---
 
-## Security Considerations
+## Security considerations
 
-### ✅ Recommended Practices
+### Recommended practices
 
 1. **Secret Key Storage:**
    - Use hardware-backed secure enclave when available
@@ -264,7 +265,7 @@ console.log("Session ID:", signals[6]); // Signal index 6 = sessionId
    - Log detailed errors server-side for debugging
    - Provide generic messages to end users ("Authentication failed")
 
-### ❌ Anti-Patterns to Avoid
+### Anti-patterns
 
 - **Hardcoding secrets in source code** → Use environment variables or secure vault
 - **Reusing same sessionId multiple times** → Each proof should use fresh sessionId
@@ -274,9 +275,9 @@ console.log("Session ID:", signals[6]); // Signal index 6 = sessionId
 
 ---
 
-## Known Limitations
+## Known limitations
 
-### Current Implementation Constraints
+### Implementation constraints
 
 1. **Reference Code Only:**
    - Example does NOT implement actual circuit proving (requires WASM integration)
@@ -338,9 +339,9 @@ Expected flow:
 
 ---
 
-## Future Enhancements
+## Future work
 
-Potential improvements for production deployment:
+Possible extensions (not implemented):
 
 1. **Batch Verification:**
    - Aggregate multiple agent authentications in single transaction
@@ -375,10 +376,10 @@ Potential improvements for production deployment:
 
 ## Disclaimer
 
-**THIS EXAMPLE IS FOR EDUCATIONAL PURPOSES ONLY.**
+This example is for educational purposes only.
 
 - Not tested for production workloads
-- No formal security audit performed on example code
-- Developers responsible for implementing their own security measures
-- Do NOT use default credentials shown in comments
-- Always conduct independent security review before deploying to mainnet
+- No formal security audit on the example code
+- Implementers are responsible for their own security measures
+- Do not use default credentials shown in comments
+- Conduct an independent security review before mainnet deployment

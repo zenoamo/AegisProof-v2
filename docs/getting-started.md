@@ -1,7 +1,7 @@
 # AegisProof Getting Started
 
-**Prerequisites**: Node.js 22+, npm/pnpm/yarn.  
-**Goal**: set up a local development environment and perform your first verification.
+**Prerequisites:** Node.js 22+, npm/pnpm/yarn.  
+**Goal:** Set up a local development environment and run your first verification end to end.
 
 ---
 
@@ -42,7 +42,7 @@ Use the canonical test vector located at [`artifacts/phase2/tests/input_v2.json`
 }
 ```
 
-These values are **public evidence**; do not commit private keys to production systems.
+These values are **public test vectors**; never commit real private keys to production systems.
 
 ### Step 2: Generate witness and prove
 

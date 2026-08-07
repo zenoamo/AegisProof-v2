@@ -1,5 +1,7 @@
 # AegisShield Deployment Information
 
+This document records the final local deployment used for verification testing.
+
 ## Final Deployment Details
 
 ### Network

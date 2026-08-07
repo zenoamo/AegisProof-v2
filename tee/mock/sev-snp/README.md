@@ -8,7 +8,7 @@
 
 ## Overview
 
-This directory contains the mock implementation of AMD SEV-SNP attestation for testing purposes. The mock simulates SEV-SNP behavior without requiring actual SEV-SNP hardware.
+Mock AMD SEV-SNP attestation for testing. Simulates SEV-SNP behavior without SEV-SNP hardware.
 
 ---
 
@@ -44,7 +44,7 @@ Simulates SEV-SNP report verification:
 ### 4. Test Cases
 **File**: `test-cases.ts`
 
-Comprehensive test cases for SEV-SNP mock:
+Test cases for the SEV-SNP mock:
 - VALID_SNP_REPORT
 - INVALID_SIGNATURE
 - INVALID_POLICY
@@ -97,7 +97,7 @@ Comprehensive test cases for SEV-SNP mock:
 - [ ] TypeScript implementation
 - [ ] Go implementation
 - [ ] Integration with Adapter Layer
-- [ ] Comprehensive testing
+- [ ] Integration testing
 
 ---
 

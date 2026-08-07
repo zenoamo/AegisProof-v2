@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-06  
 **Base HEAD:** `272edf4`  
-**Scope:** Prover Performance Optimization (Layer A) — Architecture Freeze maintained
+**Scope:** Prover Performance Optimization (Layer A) — architecture freeze maintained
 
 ---
 

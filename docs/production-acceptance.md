@@ -1,6 +1,6 @@
 # Production Acceptance Criteria
 
-**Purpose**: Stakeholder sign-off checklist before considering Phase 5 delivery complete.
+**Purpose:** Stakeholder sign-off checklist before considering Phase 5 delivery complete.
 
 ---
 
@@ -80,6 +80,6 @@
 
 ## Notes
 
-- Signing off does NOT authorize immediate production deployment; it confirms readiness.
+- Signing off confirms readiness; it does **not** authorize immediate production deployment.
 - Any outstanding items must be documented with owners and target dates.
-- Post-signoff review scheduled within 30 days of first live activity.
+- Schedule a post-signoff review within 30 days of first live activity.

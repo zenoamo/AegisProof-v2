@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document analyzes the threat model specific to the TEE Adapter Layer introduced in Phase 8.1. It identifies potential attack vectors against the abstraction layer, attestation providers, and policy enforcement mechanisms.
+Threat model for the TEE Adapter Layer (Phase 8.1): attack vectors against the abstraction layer, attestation providers, and policy enforcement.
 
 ---
 
@@ -852,21 +852,6 @@ Layer 5: Operational Security
 **Description**: Insufficient availability of TDX/SEV-SNP instances in target regions.
 **Impact**: Medium
 **Mitigation**: Adapter layer allows fallback to Mock Provider for CI/CD and ZK-only mode for production environments lacking hardware support.
-
----
-
-## Conclusion
-
-The Adapter Layer introduces new attack surfaces but also provides opportunities for enhanced security through proper design and implementation. The key risks are around evidence spoofing, provider compromise, and policy bypass.
-
-**Key Recommendations**:
-1. Implement comprehensive input validation
-2. Strong certificate and measurement validation
-3. Strict policy enforcement and fallback monitoring
-4. Configuration security and validation
-5. Comprehensive monitoring and alerting
-
-The adapter layer can be secure if proper mitigations are implemented and maintained. The design prioritizes defense in depth and fallback safety to ensure resilience even if individual components are compromised.
 
 ---
 

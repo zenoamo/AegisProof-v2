@@ -9,14 +9,9 @@
 
 ## Executive Summary
 
-This document provides a comprehensive inventory of all files in the AegisProof repository, categorizing them by type and purpose. Following the inventory, we present a proposed directory restructuring plan that maintains all cryptographic artifacts while improving maintainability and organization.
+This document inventories all files in the AegisProof repository and categorizes them by type and purpose. It also presents a proposed directory restructuring plan that preserves all cryptographic artifacts while improving maintainability.
 
-**Critical Constraint:** All reorganization activities will preserve:
-- Cryptographic hash values for all Phase 0-7 production artifacts
-- Protocol semantics and SSoT specifications
-- Circuit definitions and R1CS constraints
-- Verification key and zkey binary hashes
-- Any existing security evidence or audit materials
+**Critical constraint:** Reorganization must preserve cryptographic hash values for Phase 0–7 production artifacts, protocol semantics, SSoT specifications, circuit definitions, and verification artifacts.
 
 ---
 

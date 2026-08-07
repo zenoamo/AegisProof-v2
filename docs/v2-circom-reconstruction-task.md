@@ -1,9 +1,6 @@
 # Task Definition: v2 `.circom` Source Reconstruction
 
-**Status:** DEFINITION ONLY — this document does NOT authorize any work.
-Execution requires a separate, explicit human review and approval.
-Opened under Phase 3 scope item #11 ("open a separately reviewed v2 .circom
-reconstruction task"); approved as a *task definition*, not as implementation.
+**Status:** DEFINITION ONLY — this document does **not** authorize any work. Execution requires separate, explicit human review and approval. Opened under Phase 3 scope item #11; approved as a task definition, not as implementation.
 
 ## 1. Background
 

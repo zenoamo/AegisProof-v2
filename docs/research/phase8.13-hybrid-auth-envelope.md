@@ -1,4 +1,4 @@
-# Phase 8.13 Task 6 — Hybrid Auth Envelope
+# Hybrid Auth Envelope (Phase 8.13)
 
 **Status:** Research layer complete  
 **Phase:** 8.13 Task 6  
@@ -8,7 +8,7 @@
 
 ## Purpose
 
-Investigate and implement an **outer-layer** hybrid authentication envelope for operator/deployment authorization without modifying the frozen Groth16 ZK core or protocol contracts.
+Implement an outer-layer hybrid authentication envelope for operator and deployment authorization without modifying the frozen Groth16 ZK core or protocol contracts.
 
 ```
 Operator

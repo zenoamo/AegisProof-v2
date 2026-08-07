@@ -1,11 +1,12 @@
 # Attestation Flow Design
 
 ## 1. 目的
-Intel TDXおよびAMD SEV-SNPの実機環境から取得したハードウェア証拠（Evidence）が、AegisProofのVerification Layerへと安全に伝達され検証されるまでのデータフローおよび信頼境界（Trust Boundary）を定義する。
 
-## 2. Attestation Flow と 信頼境界
+Intel TDX および AMD SEV-SNP の実機環境から取得したハードウェア証拠（Evidence）が、AegisProof の Verification Layer まで安全に伝達・検証されるまでのデータフローと信頼境界（Trust Boundary）を定義する。
 
-以下に、全体のフローと各コンポーネント間の連携を示す。
+## 2. Attestation Flow と信頼境界
+
+全体フローとコンポーネント間の連携:
 
 ```text
 [ TEE Hardware Root of Trust ]  (Intel / AMD Hardware)
@@ -24,7 +25,8 @@ Intel TDXおよびAMD SEV-SNPの実機環境から取得したハードウェア
 ```
 
 ## 3. Adapter Layer のベンダー非依存設計
-Adapter Layerは以下の抽象化方針を厳格に維持し、Intel TDXとAMD SEV-SNPの固有ロジックを互いに直接統合・交差させない。
+
+Adapter Layer は以下の方針で Intel TDX と AMD SEV-SNP の固有ロジックを分離する。両者を直接統合・交差させない。
 
 ```text
 [ TDX Provider ] ──┐

@@ -6,9 +6,9 @@
 
 ---
 
-## Attestation Overview
+## Attestation overview
 
-Intel TDX provides a remote attestation mechanism that allows a remote party to verify that a Trust Domain (TD) is running with the expected code and configuration in a genuine TDX environment.
+Intel TDX remote attestation lets a remote party verify that a Trust Domain (TD) runs expected code and configuration in genuine TDX hardware.
 
 ---
 

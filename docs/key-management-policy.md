@@ -1,7 +1,7 @@
 # AegisProof Key Management Policy
 
-**Purpose**: Secure handling of cryptographic keys throughout their lifecycle.  
-**Scope**: Operator keys, signer keys, wallet accounts used for deployments.
+**Purpose:** Secure handling of cryptographic keys throughout their lifecycle.  
+**Scope:** Operator keys, deployment signers, and wallet accounts used for deployments.
 
 ---
 

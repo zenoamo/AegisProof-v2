@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document explores the integration model for combining Zero-Knowledge (ZK) proofs with Trusted Execution Environments (TEE) in the context of AegisProof. The goal is to understand how these technologies can complement each other to provide enhanced security and functionality.
+Integration model for combining Zero-Knowledge (ZK) proofs with Trusted Execution Environments (TEE) in AegisProof: how the two technologies can complement each other.
 
 ---
 
@@ -482,14 +482,6 @@ Verification Trust
 2. Is the investment justified by benefits?
 3. What's the competitive advantage?
 4. How does this affect market positioning?
-
----
-
-## Conclusion
-
-The integration of ZK proofs with TEE technologies offers potential benefits for AegisProof, including enhanced security, performance optimization, and new use cases. However, it also introduces complexity, hardware dependencies, and new attack surfaces.
-
-**Recommendation**: Complete thorough research and proof of concept before committing to production integration. Maintain ZK-only verification as a fallback and ensure that TEE integration provides clear, measurable benefits.
 
 ---
 

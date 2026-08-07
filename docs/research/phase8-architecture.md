@@ -3,13 +3,13 @@
 **Document Version:** 1.0  
 **Date:** August 5, 2026  
 **Purpose:** Confidential Computing Integration Architecture  
-**Authorization Level:** Planning Only – No Implementation Authorized  
+**Authorization level:** Planning only — no implementation authorized.
 
 ---
 
 ## Executive Summary
 
-This proposal outlines a hybrid privacy-preserving architecture combining Zero-Knowledge Proofs with Trusted Execution Environments (TEE), creating a multi-layered verification system that provides:
+This proposal outlines a hybrid privacy-preserving architecture combining zero-knowledge proofs with Trusted Execution Environments (TEE), yielding a multi-layered verification system that provides:
 
 - **Cryptographic assurance** via ZK proofs (Groth16)
 - **Hardware-backed attestation** via Intel TDX / AMD SEV-SNP

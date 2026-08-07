@@ -1,7 +1,7 @@
-# Phase 8.13 Task 6 — Hybrid Auth Inventory (Read-Only)
+# Hybrid Auth Inventory (Phase 8.13)
 
 **Date:** 2026-08-07  
-**Scope:** Operator authentication & deployment authorization  
+**Scope:** Operator authentication and deployment authorization  
 **Status:** Research inventory — no protocol changes  
 
 ---

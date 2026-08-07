@@ -1,11 +1,12 @@
 # API Authorization Example
 
-**Purpose:** ZK-proof-based authorization middleware for REST/GraphQL APIs  
+Reference implementation of ZK-proof-based authorization middleware for REST/GraphQL APIs.
+
 **Status:** Reference implementation only  
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
 ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
@@ -142,16 +143,16 @@ export default router;
 
 ---
 
-## Security Considerations
+## Security considerations
 
-✅ **Best Practices:**
+Recommended:
 - Use HTTPS/TLS for all HTTP endpoints
 - Implement request rate limiting per sessionId
 - Log authorization failures for audit trail
 - Rotate shield contract addresses every 6 months
 - Monitor for unusual submission patterns
 
-❌ **Anti-patterns:**
+Avoid:
 - Skip proof verification for debugging
 - Trust client-supplied sessionId without contract validation
 - Store raw credentials alongside processed proof results

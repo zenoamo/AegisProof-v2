@@ -8,19 +8,19 @@
 
 ## Overview
 
-The Dummy ZK Circuit Pipeline provides a lightweight ZK proof generation and verification pipeline for testing the TEE + ZK integration without using production AegisProof circuits.
+A lightweight ZK proof generation and verification pipeline for testing TEE + ZK integration without production AegisProof circuits.
 
 ---
 
 ## Purpose
 
-This dummy pipeline is designed to:
+The dummy pipeline is used to:
 - Validate ZK proof generation workflow
 - Test ZK verification integration
 - Demonstrate signal management
 - Enable end-to-end testing without production artifacts
 
-**Important**: This is completely separate from production AegisProof circuits and uses minimal computational resources.
+**Note**: Separate from production AegisProof circuits; uses minimal computational resources.
 
 ---
 
@@ -318,25 +318,24 @@ async function benchmarkProofGeneration() {
 
 ---
 
-## Safety Guarantees
+## Safety boundaries
 
-### Complete Isolation
+### Isolation
 - Separate from production AegisProof circuits
 - Separate cryptographic artifacts
 - No production zkey or vkey
 - No production trusted setup
 
-### Minimal Resources
+### Resource use
 - Small circuit size
 - Fast compilation
 - Low memory usage
 - Quick proof generation
 
-### No Security Claims
+### No security claims
 - Not for production use
 - No security guarantees
-- Testing only
-- Evaluation purposes only
+- Testing and evaluation only
 
 ---
 
@@ -367,7 +366,7 @@ async function benchmarkProofGeneration() {
 
 ## Notes
 
-- This pipeline is for evaluation only
+- Evaluation use only
 - Not related to production AegisProof security
 - Uses minimal cryptographic assumptions
-- Designed for testing integration workflows
+- Intended for integration workflow testing

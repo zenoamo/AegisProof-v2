@@ -23,7 +23,7 @@
 
 ### Contribution Disclosure
 
-The 3 contribution slots were executed in a single environment with orchestrated random entropy (not independent human contributors). This produces structurally valid artifacts verified at every step, but **independent human contributions are recommended before mainnet-grade deployments** holding significant value. Any additional contribution extending the chain remains valid and will produce a new VK requiring verifier contract regeneration.
+The 3 contribution slots were executed in a single environment with orchestrated random entropy (not independent human contributors). This produces structurally valid artifacts verified at every step, but independent human contributions are recommended before mainnet-grade deployments holding significant value. Any additional contribution extending the chain remains valid and will produce a new VK requiring verifier contract regeneration.
 
 ---
 

@@ -1,9 +1,9 @@
 # AegisProof Incident Response Guide
 
-**Severity Levels**:
-- **Severity 1 (Critical)**: immediate action required (minutes/hours)
-- **Severity 2 (Moderate)**: scheduled hotfix window (24-48 hours)
-- **Severity 3 (Low)**: backlog item (sprints)
+**Severity levels:**
+- **Severity 1 (Critical):** Immediate action required (minutes to hours)
+- **Severity 2 (Moderate):** Scheduled hotfix window (24–48 hours)
+- **Severity 3 (Low):** Backlog item (future sprints)
 
 ---
 

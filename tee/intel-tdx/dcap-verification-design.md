@@ -8,7 +8,7 @@
 
 ## 1. 目的
 
-Intel TDX Quote の DCAP（Data Center Attestation Primitives）検証フローを Adapter Layer 観点で設計する。Phase 8.7 では**設計のみ**、実装・PCCS 接続は Phase 8.8+。
+Intel TDX Quote の DCAP（Data Center Attestation Primitives）検証フローを Adapter Layer 観点で設計する。Phase 8.7 では**設計のみ**；実装・PCCS 接続は Phase 8.8+。
 
 ## 2. 検証フロー（設計）
 

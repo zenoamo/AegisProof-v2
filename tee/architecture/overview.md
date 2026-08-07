@@ -8,7 +8,7 @@
 
 ## What is TEE?
 
-Trusted Execution Environment (TEE) provides a secure area within a main processor where code can be executed with higher security guarantees than regular execution.
+A Trusted Execution Environment (TEE) is a secure area within a main processor where code runs with stronger isolation and integrity guarantees than normal execution.
 
 ### Key Characteristics
 
@@ -191,9 +191,9 @@ TEE                          Verifier
 
 ## Integration with AegisProof
 
-The research explores how TEE can complement ZK proofs:
+This research examines how TEE can complement ZK proofs:
 
-### Potential Benefits
+### Possible benefits
 - Offload complex computations to TEE
 - Reduce proof generation complexity
 - Add attestation layer to ZK proofs
