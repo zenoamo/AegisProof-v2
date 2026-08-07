@@ -59,18 +59,18 @@ All planning follows strict governance rules established in authorization:
 
 | # | Document | Lines | Purpose | Authorization Required For |
 |---|----------|-------|---------|---------------------------|
-| 1 | [`PHASE8-ARCHITECTURE.md`](file:///c:/workspace/AegisProof/PHASE8-ARCHITECTURE.md) | 679 | TEE integration detailed architecture | Implement hybrid smart contracts, develop TEE enclaves |
-| 2 | [`PHASE9-RESEARCH-ROADMAP.md`](file:///c:/workspace/AegisProof/PHASE9-RESEARCH-ROADMAP.md) | 936 | Multi-TEE distributed infrastructure vision | Begin Nova/Halo2 research, build prototype quorum system |
+| 1 | [`phase8-architecture.md`](phase8-architecture.md) | 679 | TEE integration detailed architecture | Implement hybrid smart contracts, develop TEE enclaves |
+| 2 | [`phase9-roadmap.md`](phase9-roadmap.md) | 936 | Multi-TEE distributed infrastructure vision | Begin Nova/Halo2 research, build prototype quorum system |
 
 ### Reference Materials (Pre-existing)
 
 | # | Document | Relevance |
 |---|----------|-----------|
-| 3 | [`FUTURE_RESEARCH_ROADMAP.md`](file:///c:/workspace/AegisProof/FUTURE_RESEARCH_ROADMAP.md) (from Phase 7) | Contains high-level overview of TEE integration concepts |
-| 4 | [`docs/threat_model.md`](file:///c:/workspace/AegisProof/docs/threat_model.md) | Baseline threat model for extension analysis |
-| 5 | [`specs/canonical-signals.json`](file:///c:/workspace/AegisProof/specs/canonical-signals.json) | Current SSoT for signal definitions |
-| 6 | [`contracts/Groth16VerifierV2Production.sol`](file:///c:/workspace/AegisProof/contracts/Groth16VerifierV2Production.sol) | Existing production verifier contract |
-| 7 | [`circuits/aegis_commit_core.circom`](file:///c:/workspace/AegisProof/circuits/aegis_commit_core.circom) | Current Circom circuit source |
+| 3 | [`FUTURE_RESEARCH_ROADMAP.md`](../../FUTURE_RESEARCH_ROADMAP.md) (from Phase 7) | Contains high-level overview of TEE integration concepts |
+| 4 | [`threat-model.md`](../security/threat-model.md) | Baseline threat model for extension analysis |
+| 5 | [`canonical-signals.json`](../../specs/canonical-signals.json) | Current SSoT for signal definitions |
+| 6 | [`Groth16VerifierV2Production.sol`](../../protocol/contracts/Groth16VerifierV2Production.sol) | Existing production verifier contract |
+| 7 | [`aegis_commit_core.circom`](../../circuits/aegis_commit_core.circom) | Current Circom circuit source |
 
 ---
 
@@ -300,8 +300,8 @@ Following successful completion of Phase 7 (operational readiness documentation)
 - Recursive SNARK aggregation for scalability
 
 **Key Documents:**
-- [`PHASE8-ARCHITECTURE.md`](file:///c:/workspace/AegisProof/PHASE8-ARCHITECTURE.md) – Detailed hybrid architecture specification
-- [`PHASE9-RESEARCH-ROADMAP.md`](file:///c:/workspace/AegisProof/PHASE9-RESEARCH-ROADMAP.md) – Long-term vision and migration path
+- [`phase8-architecture.md`](phase8-architecture.md) – Detailed hybrid architecture specification
+- [`phase9-roadmap.md`](phase9-roadmap.md) – Long-term vision and migration path
 
 Both documents emphasize:
 ✅ Strict adherence to existing Phase 0-7 immutability constraints

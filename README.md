@@ -6,8 +6,6 @@
 
 Groth16-based zero-knowledge protocol for proving knowledge of secret inputs that produce a commitment and nullifier, with **30 public signals** bound into the proof. Verification runs off-chain (Node.js) and on-chain (Solidity verifier + shield contract).
 
-**Status:** Production artifacts are hash-pinned; testnet dry-runs only. No mainnet deployment has been performed.
-
 **License:** [MIT](LICENSE)
 
 ---
@@ -15,6 +13,24 @@ Groth16-based zero-knowledge protocol for proving knowledge of secret inputs tha
 ## Overview
 
 AegisProof v2 separates a **frozen Groth16 core** (circuit, trusted setup hashes, verifier, SDK) from **additive governance layers** (artifact provenance, ML-DSA-87 metadata signing, CI security gates). External reviewers can verify integrity without trusting undocumented binaries.
+
+---
+
+## What it does
+
+Today this repository lets you:
+
+- **Prove and verify** Groth16 proofs with 30 pinned public signals (off-chain via Node.js, on-chain via Solidity verifier)
+- **Run T1–T9 regression** to confirm prover/verifier compatibility across snarkjs and optional rapidsnark
+- **Verify artifact integrity** via SHA-256 provenance manifest against live files
+- **Audit the security boundary** with sensitive-file scanning and penetration tests (PT-01–PT-10)
+- **Evaluate additive layers** — ML-DSA-87 metadata signing, hybrid auth envelope, KMS signer abstraction (mock/stub backends)
+
+What it does **not** do today:
+
+- Operate a live mainnet deployment
+- Provide production HSM/Vault signing (Phase 8.14 Task 2 is abstraction only)
+- Enforce strict PQC manifest signing on PR-tier CI (WARN-only until promotion)
 
 ---
 
@@ -122,6 +138,7 @@ Pinned hashes: zkey `ce5a3d30…6571`, VK ceremony `d012bd29…d2ec`.
 |----------|---------|---------|
 | `aegis_repro_ci.yml` | push / PR | Reproducibility + `security-boundary-check` |
 | `security.yml` | push / PR / weekly | CodeQL + dependency review |
+| `release.yml` | tag push (`v*.*.*`) | GitHub Release publish |
 
 Primary security job (`security-boundary-check`): sensitive scan, penetration tests, provenance verify, T1–T9.
 
@@ -132,6 +149,24 @@ Primary security job (`security-boundary-check`): sensitive scan, penetration te
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 Use the PR checklist: frozen core unchanged, no secrets, tests run, docs updated.
+
+Report security issues via [SECURITY.md](SECURITY.md).
+
+---
+
+## Status
+
+| Area | State |
+|------|-------|
+| Production artifacts | Hash-pinned; reproducibility CI enforced |
+| Mainnet deployment | **Not active.** Mainnet deployment is not currently active. |
+| Testnet | Sepolia dry-runs documented; no production mainnet contracts |
+| TEE layer (`tee/`) | Research-only adapter (ADR-001 isolated) |
+| PQC manifest signing | Additive; PR tier emits WARN when unsigned |
+| Phase 8.14 KMS/HSM | **Incomplete** — signer abstraction + mock/stub tests only; Vault Transit and cloud HSM backends not implemented |
+| Migration debt | 8 allowlisted binary paths (see [repository boundary report](docs/security/repository-boundary-report.md)) |
+
+This repository is provided for **review and research**, not as a production deployment artifact.
 
 ---
 

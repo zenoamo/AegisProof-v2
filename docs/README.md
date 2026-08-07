@@ -6,6 +6,8 @@ Central index for reviewers, researchers, and OSS contributors.
 
 **License:** [MIT](../LICENSE) — see [LICENSE](../LICENSE) at repository root.
 
+**Security:** [SECURITY.md](../SECURITY.md) — vulnerability reporting policy.
+
 ---
 
 ## Start Here

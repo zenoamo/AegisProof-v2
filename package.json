@@ -1,4 +1,5 @@
 {
+  "license": "MIT",
   "dependencies": {
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.7",
@@ -25,6 +26,7 @@
     "install:rapidsnark": "node scripts/install-rapidsnark.mjs",
     "evaluate:rapidsnark": "node scripts/evaluate-rapidsnark.mjs",
     "check:sensitive-files": "node scripts/run-check-sensitive-files.mjs",
+    "validate:doc-links": "node scripts/validate-doc-links.mjs",
     "check:security-boundary": "node scripts/run-security-boundary-check.mjs",
     "test": "tsx test/testVerifyAndAccept.ts",
     "test:prover-compat": "node scripts/run-prover-compat.mjs",

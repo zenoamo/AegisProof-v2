@@ -53,16 +53,16 @@
 
 | Document | Lines | Purpose |
 |---|---|---|
-| [`architecture.md`](file:///c:/workspace/AegisProof/docs/architecture.md) (updated) | +130 | Expanded with deployment topology, SDK architecture overview |
-| [`getting-started.md`](file:///c:/workspace/AegisProof/docs/getting-started.md) | 152 | Local workflow, witness generation, offline verification, Sepolia dry-run |
-| [`deployment.md`](file:///c:/workspace/AegisProof/docs/deployment.md) | 204 | Deployment planning (local/sepolia/mainnet dry-runs) |
-| [`deployment-checklist.md`](file:///c:/workspace/AegisProof/docs/deployment-checklist.md) | 58 | Pre-deployment verification checklist |
-| [`incident-response.md`](file:///c:/workspace/AegisProof/docs/incident-response.md) | 96 | Severity levels (1/2/3), communication templates, emergency procedures |
-| [`key-management-policy.md`](file:///c:/workspace/AegisProof/docs/key-management-policy.md) | 78 | Lifecycle management, rotation schedules, audit requirements |
-| [`ceremony-artifact-verification.md`](file:///c:/workspace/AegisProof/docs/ceremony-artifact-verification.md) | 78 | Hash verification, beacon validation, IC cross-check instructions |
-| [`production-acceptance.md`](file:///c:/workspace/AegisProof/docs/production-acceptance.md) | 86 | Stakeholder sign-off criteria (technical/docs/SDK/examples/op readiness) |
-| [`faq.md`](file:///c:/workspace/AegisProof/docs/faq.md) | 72 | 10 common questions answered (dev vs production, timestamp policy, upgradeability) |
-| [`phase5-status-report.md`](file:///c:/workspace/AegisProof/docs/phase5-status-report.md) | 134 | Interim status report (now superseded by this final report) |
+| [`architecture/overview.md`](architecture/overview.md) (updated) | +130 | Expanded with deployment topology, SDK architecture overview |
+| [`getting-started.md`](getting-started.md) | 152 | Local workflow, witness generation, offline verification, Sepolia dry-run |
+| [`deployment.md`](deployment.md) | 204 | Deployment planning (local/sepolia/mainnet dry-runs) |
+| [`deployment-checklist.md`](deployment-checklist.md) | 58 | Pre-deployment verification checklist |
+| [`incident-response.md`](incident-response.md) | 96 | Severity levels (1/2/3), communication templates, emergency procedures |
+| [`key-management-policy.md`](key-management-policy.md) | 78 | Lifecycle management, rotation schedules, audit requirements |
+| [`ceremony-artifact-verification.md`](ceremony-artifact-verification.md) | 78 | Hash verification, beacon validation, IC cross-check instructions |
+| [`production-acceptance.md`](production-acceptance.md) | 86 | Stakeholder sign-off criteria (technical/docs/SDK/examples/op readiness) |
+| [`faq.md`](faq.md) | 72 | 10 common questions answered (dev vs production, timestamp policy, upgradeability) |
+| [`phase5-status-report.md`](phase5-status-report.md) | 134 | Interim status report (now superseded by this final report) |
 
 **Status:** Complete. API reference auto-generation via typedoc deferred to Phase 6.
 

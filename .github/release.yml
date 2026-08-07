@@ -1,0 +1,40 @@
+# AegisProof v2 — Release Metadata
+# Used by release workflow and public release finalization audit.
+# Frozen core: do not modify hash pins without Architecture Review.
+
+version: "2.0.0"
+tag: v2.0.0
+date: "2026-08-08"
+license: MIT
+
+release_notes: docs/release/v2.0.0-release-notes.md
+audit_report: docs/security/github-public-release-audit-report.md
+
+repository:
+  url: https://github.com/zenoamo/AegisProof-v2
+  default_branch: master
+  visibility: public
+
+frozen_core:
+  immutable: true
+  zkey_hash: ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571
+  vk_hash: d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec
+  public_signals: 30
+
+verification_commands:
+  - npm run check:sensitive-files
+  - npm run verify:provenance -- --live
+  - npm run test:prover-compat
+  - npm run test:penetration
+  - npm run test:phase813
+  - npm run test:kms-signer
+
+ci_workflows:
+  - .github/workflows/aegis_repro_ci.yml
+  - .github/workflows/security.yml
+  - .github/workflows/release.yml
+
+github_release:
+  # Create manually or via .github/workflows/release.yml on tag push
+  title: "AegisProof v2.0.0 — Public Release"
+  prerelease: false
