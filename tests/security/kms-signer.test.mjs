@@ -122,7 +122,7 @@ registerMockHsmTestKey("test-provenance-kms-01", { secretKey, publicKeyHex });
   const sig = await signPayload(signer, payload);
   ok(typeof sig.signature === "string" && sig.signature.length > 0, "T-KMS-05: signPayload returns signature");
   ok(!sig.secretKey && !sig.privateKey, "T-KMS-05: signPayload no raw key material");
-  const verified = verifySignedPayload(signer, payload, sig);
+  const verified = await verifySignedPayload(signer, payload, sig);
   ok(verified.ok, "T-KMS-05: signature verification success");
 }
 
@@ -177,7 +177,7 @@ registerMockHsmTestKey("test-provenance-kms-01", { secretKey, publicKeyHex });
   ok(sig.signature.startsWith("vault-stub-"), "vault-transit stub: signature format");
 }
 
-// Cloud HSM interface — not implemented (signing blocked)
+// Cloud HSM not configured — signing blocked
 {
   const signer = createSigner({
     backend: BACKEND_CLOUD_HSM,
@@ -193,12 +193,163 @@ registerMockHsmTestKey("test-provenance-kms-01", { secretKey, publicKeyHex });
     source: "test",
   });
   await assert.rejects(() => signPayload(signer, payload), (err) => {
-    ok(err instanceof KmsSecurityError, "cloud-hsm: NOT_IMPLEMENTED on sign");
+    ok(err instanceof KmsSecurityError, "cloud-hsm: NOT_CONFIGURED on sign");
     ok(err.code === "NOT_IMPLEMENTED", "cloud-hsm: NOT_IMPLEMENTED code");
     return true;
   });
   passed += 2;
-  console.log("PASS cloud-hsm: signing not implemented");
+  console.log("PASS cloud-hsm: signing not configured");
+}
+
+// T-KMS-07: Vault Transit live sign (mocked HTTP)
+{
+  const prev = {
+    VAULT_ADDR: process.env.VAULT_ADDR,
+    VAULT_TOKEN: process.env.VAULT_TOKEN,
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
+  };
+  process.env.VAULT_ADDR = "http://vault.test:8200";
+  process.env.VAULT_TOKEN = "test-token";
+  process.env.KMS_BACKEND_MODE = "live";
+
+  const { setKmsFetchForTests, resetKmsFetchForTests } = await import("../../scripts/lib/kms-backends/http-fetch.mjs");
+  setKmsFetchForTests(async (url) => {
+    if (String(url).includes("/transit/sign/")) {
+      return new Response(JSON.stringify({ data: { signature: "vault:v1:mock-live-sig", key_version: 1 } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (String(url).includes("/transit/verify/")) {
+      return new Response(JSON.stringify({ data: { valid: true } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response("not found", { status: 404 });
+  });
+
+  const signer = createSigner({
+    backend: BACKEND_VAULT_TRANSIT,
+    keyId: "aegis-ci-mldsa87-v1",
+    role: SIGNER_ROLE_PROVENANCE,
+  });
+  const payload = entrySignPayload({
+    artifact: "live.wasm",
+    path: "artifacts/live.wasm",
+    sha256: "d".repeat(64),
+    size: 10,
+    version: "v2",
+    source: "test",
+  });
+  const sig = await signPayload(signer, payload);
+  ok(sig.live === true, "T-KMS-07: vault live sign flag");
+  ok(sig.signature === "vault:v1:mock-live-sig", "T-KMS-07: vault live signature");
+  const verified = await verifySignedPayload(signer, payload, sig);
+  ok(verified.ok, "T-KMS-07: vault live verify");
+
+  resetKmsFetchForTests();
+  if (prev.VAULT_ADDR === undefined) delete process.env.VAULT_ADDR;
+  else process.env.VAULT_ADDR = prev.VAULT_ADDR;
+  if (prev.VAULT_TOKEN === undefined) delete process.env.VAULT_TOKEN;
+  else process.env.VAULT_TOKEN = prev.VAULT_TOKEN;
+  if (prev.KMS_BACKEND_MODE === undefined) delete process.env.KMS_BACKEND_MODE;
+  else process.env.KMS_BACKEND_MODE = prev.KMS_BACKEND_MODE;
+}
+
+// T-KMS-08: Cloud HSM HTTP gateway (mocked)
+{
+  const prev = {
+    CLOUD_HSM_PROVIDER: process.env.CLOUD_HSM_PROVIDER,
+    CLOUD_HSM_SIGN_URL: process.env.CLOUD_HSM_SIGN_URL,
+    CLOUD_HSM_VERIFY_URL: process.env.CLOUD_HSM_VERIFY_URL,
+    CLOUD_HSM_KEY_ID: process.env.CLOUD_HSM_KEY_ID,
+  };
+  process.env.CLOUD_HSM_PROVIDER = "http";
+  process.env.CLOUD_HSM_SIGN_URL = "http://hsm.test/sign";
+  process.env.CLOUD_HSM_VERIFY_URL = "http://hsm.test/verify";
+  process.env.CLOUD_HSM_KEY_ID = "aegis-ci-mldsa87-v1";
+
+  const { setKmsFetchForTests, resetKmsFetchForTests } = await import("../../scripts/lib/kms-backends/http-fetch.mjs");
+  setKmsFetchForTests(async (url) => {
+    if (String(url).endsWith("/sign")) {
+      return new Response(JSON.stringify({ signature: "ab".repeat(32) }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (String(url).endsWith("/verify")) {
+      return new Response(JSON.stringify({ valid: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response("not found", { status: 404 });
+  });
+
+  const signer = createSigner({
+    backend: BACKEND_CLOUD_HSM,
+    keyId: "aegis-ci-mldsa87-v1",
+    role: SIGNER_ROLE_PROVENANCE,
+  });
+  const payload = entrySignPayload({
+    artifact: "hsm.wasm",
+    path: "artifacts/hsm.wasm",
+    sha256: "e".repeat(64),
+    size: 20,
+    version: "v2",
+    source: "test",
+  });
+  const sig = await signPayload(signer, payload);
+  ok(sig.live === true, "T-KMS-08: cloud http sign live flag");
+  ok(sig.signature === "ab".repeat(32), "T-KMS-08: cloud http signature");
+  const verified = await verifySignedPayload(signer, payload, sig);
+  ok(verified.ok, "T-KMS-08: cloud http verify");
+
+  resetKmsFetchForTests();
+  for (const [k, v] of Object.entries(prev)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+}
+
+// T-KMS-09: Cloud HSM unsupported PQC on aws-kms without http gateway
+{
+  const prev = {
+    CLOUD_HSM_PROVIDER: process.env.CLOUD_HSM_PROVIDER,
+    CLOUD_HSM_KEY_ID: process.env.CLOUD_HSM_KEY_ID,
+    AWS_KMS_KEY_ID: process.env.AWS_KMS_KEY_ID,
+    AWS_REGION: process.env.AWS_REGION,
+  };
+  process.env.CLOUD_HSM_PROVIDER = "aws";
+  process.env.AWS_KMS_KEY_ID = "arn:aws:kms:us-east-1:123456789012:key/00000000-0000-0000-0000-000000000000";
+  process.env.AWS_REGION = "us-east-1";
+
+  const signer = createSigner({
+    backend: BACKEND_CLOUD_HSM,
+    keyId: "aegis-ci-mldsa87-v1",
+    role: SIGNER_ROLE_PROVENANCE,
+  });
+  const payload = entrySignPayload({
+    artifact: "aws.wasm",
+    path: "artifacts/aws.wasm",
+    sha256: "f".repeat(64),
+    size: 30,
+    version: "v2",
+    source: "test",
+  });
+  await assert.rejects(() => signPayload(signer, payload), (err) => {
+    ok(err instanceof KmsSecurityError, "T-KMS-09: aws-kms ML-DSA reject");
+    ok(err.code === "UNSUPPORTED_ALGORITHM", "T-KMS-09: UNSUPPORTED_ALGORITHM code");
+    return true;
+  });
+  passed += 2;
+  console.log("PASS T-KMS-09: aws-kms rejects ML-DSA provenance role");
+
+  for (const [k, v] of Object.entries(prev)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
 }
 
 clearMockHsmSlots();

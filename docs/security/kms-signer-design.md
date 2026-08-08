@@ -1,9 +1,9 @@
 # KMS Signer Design — Phase 8.14 Task 2
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** 2026-08-08  
-**Module:** `scripts/lib/kms-signer.mjs`  
-**Prerequisite:** [kms-hsm-architecture.md](./kms-hsm-architecture.md)
+**Module:** `scripts/lib/kms-signer.mjs` + `scripts/lib/kms-backends/*`  
+**Phase:** 8.14 Task 3 (live backend hardening)
 
 > Groth16 core frozen. KMS signer operates on provenance and operator auth layers only.
 
@@ -47,18 +47,56 @@ Operator payloads use `createDeploymentAuthPayload()` + `buildAuthSignMessage()`
 - Uses `@noble/post-quantum` ML-DSA-87 or Node ECDSA internally
 - Private key never returned from public API
 
-### 2. `vault-transit` (stub)
+### 2. `vault-transit` (live + stub)
 
-- No network calls to Vault
-- Requires `keyId` in committed public key registry
-- Returns deterministic `vault-stub-<digest>` signature for testing adapter wiring
-- Production Task 3+ will replace stub with OIDC-authenticated Vault client
+- **Live:** `VAULT_ADDR` + `VAULT_TOKEN` with `KMS_BACKEND_MODE=live` (or `VAULT_TRANSIT_FORCE_LIVE=1`)
+- Calls Vault `transit/sign` and `transit/verify` over HTTP
+- **Stub:** When Vault is not configured, returns deterministic `vault-stub-*` signatures (CI default)
 
-### 3. `cloud-hsm` (interface only)
+Environment:
 
-- `CloudHsmAdapter` export defines interface
-- `createSigner()` validates config against registry
-- `signPayload()` throws `NOT_IMPLEMENTED`
+| Variable | Purpose |
+|----------|---------|
+| `VAULT_ADDR` | Vault API base URL |
+| `VAULT_TOKEN` | Vault token (never commit) |
+| `VAULT_TRANSIT_MOUNT` | Transit mount (default `transit`) |
+| `VAULT_TRANSIT_KEY_PREFIX` | Optional prefix for key names |
+| `VAULT_TRANSIT_HASH_ALGORITHM` | Override hash algorithm (default `sha2-256`) |
+| `KMS_BACKEND_MODE` | `stub` (default) or `live` |
+
+### 3. `cloud-hsm` (live)
+
+Providers via `CLOUD_HSM_PROVIDER`:
+
+| Provider | Env | Algorithms |
+|----------|-----|------------|
+| `http` | `CLOUD_HSM_SIGN_URL`, optional `CLOUD_HSM_VERIFY_URL` | ML-DSA via HSM gateway |
+| `aws` / `aws-kms` | `AWS_KMS_KEY_ID`, `AWS_REGION` | ECDSA (`operator-classical` only) |
+| `gcp` / `gcp-kms` | `GCP_KMS_KEY_NAME` | ECDSA (`operator-classical` only) |
+| `azure` / `azure-keyvault` | `AZURE_KEY_VAULT_URL`, `AZURE_KEY_NAME` | ECDSA (`operator-classical` only) |
+
+ML-DSA provenance signing on cloud KMS: use `vault-transit` or `http` HSM gateway — native AWS/GCP/Azure KMS do not expose ML-DSA-87 yet.
+
+When not configured, `signPayload()` throws `NOT_IMPLEMENTED` (stub mode).
+
+### Live vs stub mode
+
+| `KMS_BACKEND_MODE` | Vault Transit | Cloud HSM |
+|--------------------|---------------|-----------|
+| `stub` (default, CI) | deterministic stub if Vault unset | throws unless provider env set |
+| `live` | requires `VAULT_ADDR` + `VAULT_TOKEN`; **no stub fallback** | requires full provider config; **no stub fallback** |
+
+CI default: `KMS_BACKEND_MODE=stub` via `run-kms-signer.mjs`. PR CI does not connect to live Vault/HSM.
+
+### ML-DSA-87 boundary
+
+| Role | Algorithm | Supported backends |
+|------|-----------|-------------------|
+| `provenance` | ML-DSA-87 | `mock-hsm`, `vault-transit`, `cloud-hsm`/`http` gateway |
+| `operator-pqc` | ML-DSA-87 | same |
+| `operator-classical` | ECDSA secp256k1 | all backends including aws/gcp/azure native KMS |
+
+Native AWS/GCP/Azure KMS APIs document ECDSA/RSA/Ed25519 — not ML-DSA-87 in this adapter. Use Vault Transit or HTTP HSM gateway for ML-DSA provenance.
 
 ---
 
@@ -98,6 +136,10 @@ Operator payloads use `createDeploymentAuthPayload()` + `buildAuthSignMessage()`
 | T-KMS-04 | Private key export reject | same |
 | T-KMS-05 | Signature verification success | same |
 | T-KMS-06 | Domain separation mismatch | same |
+| T-KMS-07 | Vault Transit live sign (mocked HTTP) | same |
+| T-KMS-08 | Cloud HSM HTTP gateway sign/verify | same |
+| T-KMS-09 | AWS KMS rejects ML-DSA provenance role | same |
+| T-KMS-10–18 | Live mode, auth, timeout, validation, redaction | `kms-backend-hardening.test.mjs` |
 
 Run: `npm run test:kms-signer`
 
@@ -109,13 +151,12 @@ Run: `npm run test:kms-signer`
 
 ---
 
-## Out of Scope (Task 2)
+## Out of Scope (Task 4+)
 
-- Live Vault / Cloud HSM connections
-- OIDC workflow wiring
-- Manifest signing automation (Task 3+)
-- Private key generation for production keyIds
-- Groth16 / protocol / SDK changes
+- GitHub OIDC → Vault production signing in CI
+- Manifest auto-sign on release tag
+- Hybrid auth → `deploy.ts` integration
+- PR-tier `--require-pqc` promotion
 
 ---
 

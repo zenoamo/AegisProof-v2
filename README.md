@@ -29,7 +29,7 @@ Today this repository lets you:
 What it does **not** do today:
 
 - Operate a live mainnet deployment
-- Provide production HSM/Vault signing (Phase 8.14 Task 2 is abstraction only)
+- Provide production HSM/Vault signing (Phase 8.14 Task 3+ — OIDC CI wiring pending)
 - Enforce strict PQC manifest signing on PR-tier CI (WARN-only until promotion)
 
 ---
@@ -163,7 +163,7 @@ Report security issues via [SECURITY.md](SECURITY.md).
 | Testnet | Sepolia dry-runs documented; no production mainnet contracts |
 | TEE layer (`tee/`) | Research-only adapter (ADR-001 isolated) |
 | PQC manifest signing | Additive; PR tier emits WARN when unsigned |
-| Phase 8.14 KMS/HSM | **Incomplete** — signer abstraction + mock/stub tests only; Vault Transit and cloud HSM backends not implemented |
+| Phase 8.14 KMS/HSM | **Partial** — live Vault Transit + cloud HSM backends hardened (Task 3); GitHub OIDC CI wiring pending (Task 4) |
 | Migration debt | 8 allowlisted binary paths (see [repository boundary report](docs/security/repository-boundary-report.md)) |
 
 This repository is provided for **review and research**, not as a production deployment artifact.

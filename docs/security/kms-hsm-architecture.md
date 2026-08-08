@@ -340,23 +340,24 @@ Existing workflow reference: `provenance-pqc-hardening` job uses ephemeral local
 | Audit | Every sign operation logged with requester identity |
 | HA | Multi-AZ replication |
 
-### 10.3 Signing adapter (future Task 2)
+### 10.3 Signing adapter (Task 2–3 implemented)
 
-Phase 8.14 Task 1 defines the interface; implementation deferred:
+`scripts/lib/kms-signer.mjs` implements the adapter with pluggable backends:
 
-```javascript
-// scripts/lib/kms-signer.mjs (Task 2 — not implemented in Task 1)
-// signProvenancePayload(payload) → { signature, publicKeyId, signedAt }
-// signAuthEnvelope(payload) → { classicalSignature, pqcSignature }
-```
+| Backend | Mode | ML-DSA-87 provenance | ECDSA operator |
+|---------|------|----------------------|----------------|
+| `mock-hsm` | test-only | yes (in-memory) | yes |
+| `vault-transit` | live + stub | yes (via Vault key type) | yes |
+| `cloud-hsm` / `http` | live | yes (HSM gateway) | yes |
+| `cloud-hsm` / aws/gcp/azure | live | **no** (native API) | yes |
+
+**Live mode policy (`KMS_BACKEND_MODE=live`):** backend must be configured and reachable. Stub fallback is forbidden.
 
 Adapter responsibilities:
 
 1. Canonicalize payload (`entrySignPayload` / `buildAuthSignMessage`)
-2. Send digest to HSM (never send raw private key to Node process)
-3. Return envelope fields compatible with existing `verifyEnvelope()` / `verifyHybridAuthEnvelope()`
-
-**No adapter code in Task 1** — design only.
+2. Send digest to HSM/Vault (never expose private key to Node)
+3. Return envelope fields compatible with `verifyEnvelope()` / `verifyHybridAuthEnvelope()`
 
 ### 10.4 Native vs software fallback
 
@@ -443,14 +444,14 @@ KMS/HSM signing produces signatures consumed by these existing verify functions.
 
 ---
 
-## 13. Out of Scope (Phase 8.14 Task 1)
+## 13. Out of Scope (Phase 8.14 Task 3)
 
 | Item | Phase |
 |------|-------|
-| `scripts/lib/kms-signer.mjs` implementation | Task 2+ |
-| GitHub OIDC workflow wiring | Task 2+ |
-| PR-tier `--require-pqc` promotion | Task 3+ (after review period) |
+| GitHub OIDC workflow wiring for production HSM | Task 4+ |
+| PR-tier `--require-pqc` promotion | Task 4+ |
 | Hybrid auth → `deploy.ts` integration | Task 4+ |
+| Provenance manifest auto-sign in CI release | Task 4+ |
 | Groth16 / ZK modifications | **Never** |
 | Private key generation in repo | **Never** |
 

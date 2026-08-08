@@ -29,6 +29,21 @@ import {
   REGISTRY_ALGORITHM,
   REGISTRY_VERSION,
 } from "./public-key-registry.mjs";
+import {
+  isVaultTransitConfigured,
+  vaultTransitSign,
+  vaultTransitVerify,
+  vaultTransitStubSignature,
+  resolveTransitKeyNameForKeyId,
+  inferVaultHashAlgorithm,
+} from "./kms-backends/vault-transit.mjs";
+import {
+  isCloudHsmConfigured,
+  cloudHsmSign,
+  cloudHsmVerifyHttp,
+  CloudHsmError,
+} from "./kms-backends/cloud-hsm.mjs";
+import { isExplicitLiveMode, isVaultForceLive, validateCloudHsmEnv } from "./kms-backends/env.mjs";
 
 export const BACKEND_MOCK_HSM = "mock-hsm";
 export const BACKEND_VAULT_TRANSIT = "vault-transit";
@@ -256,11 +271,30 @@ export function getPublicKeyMetadata(signer) {
       publicKey: record.publicKey,
       purpose: record.purpose,
       exportAllowed: false,
-      stub: true,
+      live: shouldUseVaultLive(),
     };
   }
 
-  throw new KmsSecurityError("NOT_IMPLEMENTED", `cloud-hsm adapter not implemented for keyId ${signer.keyId}`);
+  if (signer.backend === BACKEND_CLOUD_HSM) {
+    const record = loadRegistryPublicKey(signer.keyId);
+    if (!record) {
+      throw new KmsSecurityError("UNKNOWN_KEY", `unknown keyId: ${signer.keyId}`);
+    }
+    return {
+      keyId: signer.keyId,
+      backend: signer.backend,
+      role: signer.role,
+      algorithm: signer.algorithm,
+      domain: signer.domain,
+      version: record.version,
+      publicKey: record.publicKey,
+      purpose: record.purpose,
+      exportAllowed: false,
+      live: isCloudHsmConfigured(),
+    };
+  }
+
+  throw new KmsSecurityError("INVALID_SIGNER", `unsupported backend: ${signer.backend}`);
 }
 
 /**
@@ -281,10 +315,14 @@ export async function signPayload(signer, payload) {
   }
 
   if (signer.backend === BACKEND_VAULT_TRANSIT) {
-    return signWithVaultTransitStub(signer, message);
+    return signWithVaultTransit(signer, message);
   }
 
-  throw new KmsSecurityError("NOT_IMPLEMENTED", "cloud-hsm signing not implemented");
+  if (signer.backend === BACKEND_CLOUD_HSM) {
+    return signWithCloudHsm(signer, message);
+  }
+
+  throw new KmsSecurityError("NOT_IMPLEMENTED", `unsupported backend: ${signer.backend}`);
 }
 
 /**
@@ -329,13 +367,59 @@ function signWithMockHsm(signer, message) {
 }
 
 /**
- * Vault Transit stub — no network calls. Returns deterministic stub signature.
+ * Resolve Vault backend mode. Live mode never falls back to stub.
+ * @returns {"live" | "stub"}
+ */
+function resolveVaultBackendMode() {
+  const wantsLive = isExplicitLiveMode() || isVaultForceLive();
+  if (!wantsLive) return "stub";
+
+  if (!isVaultTransitConfigured()) {
+    throw new KmsSecurityError(
+      "VAULT_NOT_CONFIGURED",
+      "live Vault Transit requires VAULT_ADDR and VAULT_TOKEN; stub fallback is forbidden in live mode"
+    );
+  }
+  return "live";
+}
+
+/** @returns {boolean} */
+function shouldUseVaultLive() {
+  return resolveVaultBackendMode() === "live";
+}
+
+/**
+ * Vault Transit — live API when configured, deterministic stub otherwise.
  * @param {object} signer
  * @param {Uint8Array} message
  */
-function signWithVaultTransitStub(signer, message) {
+async function signWithVaultTransit(signer, message) {
   getPublicKeyMetadata(signer);
-  const digest = crypto.createHash("sha256").update(message).digest("hex");
+  const mode = resolveVaultBackendMode();
+
+  if (mode === "live") {
+    const keyName = resolveTransitKeyNameForKeyId(signer.keyId);
+    const hashAlgorithm = inferVaultHashAlgorithm(signer.algorithm, signer.role);
+    try {
+      const result = await vaultTransitSign({ keyName, message, hashAlgorithm });
+      return {
+        keyId: signer.keyId,
+        backend: signer.backend,
+        role: signer.role,
+        algorithm: signer.algorithm,
+        domain: signer.domain,
+        version: PQC_VERSION,
+        signature: result.signature,
+        publicKeyId: signer.keyId,
+        signedAt: new Date().toISOString(),
+        vaultKeyName: result.vaultKeyName,
+        live: true,
+      };
+    } catch (err) {
+      throw new KmsSecurityError("VAULT_SIGN_FAILED", err instanceof Error ? err.message : String(err));
+    }
+  }
+
   return {
     keyId: signer.keyId,
     backend: signer.backend,
@@ -343,11 +427,62 @@ function signWithVaultTransitStub(signer, message) {
     algorithm: signer.algorithm,
     domain: signer.domain,
     version: PQC_VERSION,
-    signature: `vault-stub-${digest.slice(0, 32)}`,
+    signature: vaultTransitStubSignature(message),
     publicKeyId: signer.keyId,
     signedAt: new Date().toISOString(),
     stub: true,
   };
+}
+
+/**
+ * Cloud HSM / KMS — live when provider env configured.
+ * @param {object} signer
+ * @param {Uint8Array} message
+ */
+async function signWithCloudHsm(signer, message) {
+  if (isExplicitLiveMode()) {
+    const validation = validateCloudHsmEnv();
+    if (!validation.ok) {
+      throw new KmsSecurityError(
+        "CLOUD_HSM_NOT_CONFIGURED",
+        validation.errors.join("; ") || "live cloud-hsm requires provider configuration; stub fallback forbidden"
+      );
+    }
+  } else if (!isCloudHsmConfigured()) {
+    throw new KmsSecurityError(
+      "NOT_IMPLEMENTED",
+      "cloud-hsm signing not configured (set CLOUD_HSM_PROVIDER and credentials)"
+    );
+  }
+
+  try {
+    const result = await cloudHsmSign({
+      message,
+      role: signer.role,
+      algorithm: signer.algorithm,
+      keyId: signer.keyId,
+    });
+    const meta = getPublicKeyMetadata(signer);
+    return {
+      keyId: signer.keyId,
+      backend: signer.backend,
+      role: signer.role,
+      algorithm: signer.algorithm,
+      domain: signer.domain,
+      version: meta.version,
+      signature: result.signature,
+      publicKeyId: signer.keyId,
+      signedAt: new Date().toISOString(),
+      provider: result.provider,
+      live: true,
+      encoding: result.encoding,
+    };
+  } catch (err) {
+    if (err instanceof CloudHsmError) {
+      throw new KmsSecurityError(err.code, err.message);
+    }
+    throw new KmsSecurityError("CLOUD_HSM_SIGN_FAILED", err instanceof Error ? err.message : String(err));
+  }
 }
 
 /**
@@ -364,7 +499,7 @@ export function exportPrivateKeyMaterial(_signer) {
  * @param {Record<string, unknown>} payload
  * @param {object} signatureResult
  */
-export function verifySignedPayload(signer, payload, signatureResult) {
+export async function verifySignedPayload(signer, payload, signatureResult) {
   const domainCheck = validatePayloadDomain(signer, payload);
   if (!domainCheck.ok) {
     return { ok: false, error: domainCheck.error };
@@ -380,7 +515,11 @@ export function verifySignedPayload(signer, payload, signatureResult) {
         type: "spki",
         format: "der",
       });
-      return { ok: verifyClassical(message, signatureResult.signature, pk) };
+      let signatureHex = signatureResult.signature;
+      if (signatureResult.encoding === "base64") {
+        signatureHex = bytesToHex(Buffer.from(signatureResult.signature, "base64"));
+      }
+      return { ok: verifyClassical(message, signatureHex, pk) };
     } catch (err) {
       return { ok: false, error: err.message };
     }
@@ -393,6 +532,29 @@ export function verifySignedPayload(signer, payload, signatureResult) {
       ok: signatureResult.signature === expected,
       error: signatureResult.signature === expected ? undefined : "vault stub signature mismatch",
     };
+  }
+
+  if (signer.backend === BACKEND_VAULT_TRANSIT && signatureResult.live) {
+    try {
+      const keyName = resolveTransitKeyNameForKeyId(signer.keyId);
+      const hashAlgorithm = inferVaultHashAlgorithm(signer.algorithm, signer.role);
+      const valid = await vaultTransitVerify({
+        keyName,
+        message,
+        signature: signatureResult.signature,
+        hashAlgorithm,
+      });
+      return valid ? { ok: true } : { ok: false, error: "vault transit verify rejected signature" };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  if (signer.backend === BACKEND_CLOUD_HSM && signatureResult.live) {
+    const httpVerify = await cloudHsmVerifyHttp(message, signatureResult.signature);
+    if (httpVerify.ok || httpVerify.error !== "HTTP verify URL not configured") {
+      return httpVerify.ok ? { ok: true } : { ok: false, error: httpVerify.error };
+    }
   }
 
   const envelope = {
@@ -408,24 +570,22 @@ export function verifySignedPayload(signer, payload, signatureResult) {
   return verifyEnvelope(payload, envelope, meta.publicKey);
 }
 
-/** Cloud HSM adapter interface (definition only — Task 3+). */
-export const CloudHsmAdapter = {
-  backend: BACKEND_CLOUD_HSM,
-  /** @throws {KmsSecurityError} */
-  async sign(_keyId, _message) {
-    throw new KmsSecurityError("NOT_IMPLEMENTED", "cloud-hsm signing not implemented");
-  },
-  /** @throws {KmsSecurityError} */
-  async getPublicKey(_keyId) {
-    throw new KmsSecurityError("NOT_IMPLEMENTED", "cloud-hsm getPublicKey not implemented");
-  },
-};
-
-/** Vault Transit adapter interface (stub — no live Vault connection). */
+/** Vault Transit adapter — live when VAULT_ADDR + VAULT_TOKEN configured. */
 export const VaultTransitAdapter = {
   backend: BACKEND_VAULT_TRANSIT,
-  sign: signWithVaultTransitStub,
+  sign: signWithVaultTransit,
+  verify: verifySignedPayload,
   getPublicKeyMetadata,
+  isLive: shouldUseVaultLive,
+};
+
+/** Cloud HSM adapter — live when CLOUD_HSM_PROVIDER configured. */
+export const CloudHsmAdapter = {
+  backend: BACKEND_CLOUD_HSM,
+  sign: signWithCloudHsm,
+  verify: verifySignedPayload,
+  getPublicKeyMetadata,
+  isConfigured: isCloudHsmConfigured,
 };
 
 /** Test helper — clear mock HSM slots between tests. */
