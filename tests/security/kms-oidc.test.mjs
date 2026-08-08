@@ -352,7 +352,10 @@ function basePayload(suffix) {
   delete process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
 
   await assert.rejects(() => fetchGitHubOidcJwt(), (err) => {
-    ok(err.code === "OIDC_NOT_CONFIGURED", "T-KMS-OIDC-14: OIDC fetch not configured");
+    ok(
+      err.code === "LOCAL_OIDC_CONTEXT" || err.code === "OIDC_NOT_CONFIGURED",
+      "T-KMS-OIDC-14: OIDC fetch not configured"
+    );
     return true;
   });
   passed++;
@@ -403,6 +406,34 @@ function basePayload(suffix) {
   ok(env.configured && env.oidcCapable, "T-KMS-OIDC-16: OIDC env configured");
   restoreEnv(prev);
   console.log("PASS T-KMS-OIDC-16: OIDC environment detection");
+}
+
+// T-KMS-OIDC-17: local runner without OIDC → LOCAL_OIDC_CONTEXT
+{
+  const prev = {
+    GITHUB_ACTIONS: process.env.GITHUB_ACTIONS,
+    VAULT_OIDC_JWT: process.env.VAULT_OIDC_JWT,
+    ACTIONS_ID_TOKEN_REQUEST_URL: process.env.ACTIONS_ID_TOKEN_REQUEST_URL,
+    ACTIONS_ID_TOKEN_REQUEST_TOKEN: process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN,
+  };
+  delete process.env.GITHUB_ACTIONS;
+  delete process.env.VAULT_OIDC_JWT;
+  delete process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+  delete process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+
+  const { diagnoseOidcContext } = await import("../../scripts/lib/kms-backends/vault-auth.mjs");
+  const d = diagnoseOidcContext();
+  ok(!d.ok, "T-KMS-OIDC-17: local context not ok");
+  ok(d.code === "LOCAL_OIDC_CONTEXT", "T-KMS-OIDC-17: LOCAL_OIDC_CONTEXT code");
+
+  await assert.rejects(() => fetchGitHubOidcJwt(), (err) => {
+    ok(err.code === "LOCAL_OIDC_CONTEXT", "T-KMS-OIDC-17: fetch rejects locally");
+    return true;
+  });
+  passed += 3;
+  console.log("PASS T-KMS-OIDC-17: local OIDC context rejected cleanly");
+
+  restoreEnv(prev);
 }
 
 console.log(`\nKMS OIDC tests: ${passed} checks PASS`);

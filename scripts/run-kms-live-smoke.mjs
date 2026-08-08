@@ -7,6 +7,8 @@ import {
   validateOidcClaimBindings,
   decodeJwtPayload,
   VaultAuthError,
+  diagnoseOidcContext,
+  reportOidcEnvPresence,
 } from "./lib/kms-backends/vault-auth.mjs";
 import {
   createProvenanceKmsSigner,
@@ -16,10 +18,27 @@ import {
 import { entrySignPayload } from "./lib/pqc-signature.mjs";
 import { isExplicitLiveMode } from "./lib/kms-backends/env.mjs";
 
+function printOidcPresence() {
+  const presence = reportOidcEnvPresence();
+  for (const [key, state] of Object.entries(presence)) {
+    console.log(`  ${key}: ${state}`);
+  }
+}
+
 async function main() {
   if (!isExplicitLiveMode()) {
     console.error("FAIL KMS_BACKEND_MODE must be live for smoke test");
     process.exit(1);
+  }
+
+  console.log("OIDC context (presence only):");
+  printOidcPresence();
+
+  const diagnosis = diagnoseOidcContext();
+  if (!diagnosis.ok && diagnosis.code === "LOCAL_OIDC_CONTEXT") {
+    console.error(`FAIL ${diagnosis.message}`);
+    console.error(`Hint: ${diagnosis.hint}`);
+    process.exit(2);
   }
 
   const testEntry = {
@@ -60,6 +79,10 @@ async function main() {
 }
 
 main().catch((err) => {
+  if (err instanceof VaultAuthError && err.code === "LOCAL_OIDC_CONTEXT") {
+    console.error(`FAIL ${err.message}`);
+    process.exit(2);
+  }
   console.error(`FAIL ${err instanceof Error ? err.message : err}`);
   process.exit(1);
 });

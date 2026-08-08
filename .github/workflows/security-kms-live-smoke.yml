@@ -14,6 +14,9 @@ jobs:
     name: OIDC → Vault → sign → verify
     runs-on: ubuntu-latest
     environment: kms-live-smoke
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +27,21 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: OIDC context preflight (presence only)
+        run: |
+          node --input-type=module -e "
+          import { reportOidcEnvPresence, diagnoseOidcContext } from './scripts/lib/kms-backends/vault-auth.mjs';
+          const presence = reportOidcEnvPresence();
+          for (const [k, v] of Object.entries(presence)) console.log(k + ': ' + v);
+          const d = diagnoseOidcContext();
+          if (!d.ok) {
+            console.error('OIDC preflight: ' + d.code);
+            console.error(d.hint ?? '');
+            process.exit(1);
+          }
+          console.log('OIDC preflight: context ready');
+          "
 
       - name: KMS live smoke (OIDC → Vault Transit)
         env:

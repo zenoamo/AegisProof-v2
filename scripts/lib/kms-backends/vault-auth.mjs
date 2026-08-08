@@ -137,10 +137,86 @@ export function validateOidcClaimBindings(claims, bindings = readOidcClaimBindin
   return { ok: true, claims };
 }
 
+/** Whether code is running on a GitHub Actions runner. */
+export function isGitHubActionsRunner() {
+  return (process.env.GITHUB_ACTIONS ?? "").trim().toLowerCase() === "true";
+}
+
+/**
+ * Report OIDC-related env presence only — never values.
+ * @returns {Record<string, "SET" | "NOT_SET">}
+ */
+export function reportOidcEnvPresence() {
+  const keys = [
+    "GITHUB_ACTIONS",
+    "ACTIONS_ID_TOKEN_REQUEST_URL",
+    "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
+    "ACTIONS_ID_TOKEN_REQUEST_AUDIENCE",
+    "VAULT_OIDC_JWT",
+    "VAULT_ADDR",
+    "VAULT_JWT_ROLE",
+    "VAULT_TOKEN",
+    "KMS_BACKEND_MODE",
+  ];
+  /** @type {Record<string, "SET" | "NOT_SET">} */
+  const out = {};
+  for (const key of keys) {
+    out[key] = (process.env[key] ?? "").trim() ? "SET" : "NOT_SET";
+  }
+  return out;
+}
+
+/**
+ * Diagnose OIDC acquisition context without exposing secrets.
+ */
+export function diagnoseOidcContext() {
+  const presence = reportOidcEnvPresence();
+  const onGha = isGitHubActionsRunner();
+  const hasRequestPair =
+    presence.ACTIONS_ID_TOKEN_REQUEST_URL === "SET" &&
+    presence.ACTIONS_ID_TOKEN_REQUEST_TOKEN === "SET";
+  const hasInjectedJwt = presence.VAULT_OIDC_JWT === "SET";
+
+  if (!onGha && !hasInjectedJwt) {
+    return {
+      ok: false,
+      code: "LOCAL_OIDC_CONTEXT",
+      message: "LOCAL OIDC CONTEXT: NOT AVAILABLE",
+      presence,
+      onGha,
+      hint: "OIDC JWT acquisition requires a GitHub Actions runner (id-token: write) or VAULT_OIDC_JWT for controlled testing",
+    };
+  }
+
+  if (onGha && !hasRequestPair && !hasInjectedJwt) {
+    return {
+      ok: false,
+      code: "OIDC_RUNNER_NOT_CONFIGURED",
+      message: "GitHub Actions runner missing OIDC request environment",
+      presence,
+      onGha,
+      hint: "Ensure workflow/job permissions include id-token: write and the job uses a GitHub-hosted runner",
+    };
+  }
+
+  return { ok: true, presence, onGha, hasRequestPair, hasInjectedJwt };
+}
+
 /**
  * Fetch GitHub Actions OIDC JWT (runtime only — never commit).
  */
 export async function fetchGitHubOidcJwt() {
+  const diagnosis = diagnoseOidcContext();
+  if (!diagnosis.ok) {
+    if (diagnosis.code === "LOCAL_OIDC_CONTEXT") {
+      throw new VaultAuthError("LOCAL_OIDC_CONTEXT", diagnosis.message);
+    }
+    throw new VaultAuthError(
+      "OIDC_NOT_CONFIGURED",
+      `${diagnosis.message}; ${diagnosis.hint ?? "check id-token permission"}`
+    );
+  }
+
   const env = readVaultOidcEnv();
 
   if (env.injectedJwt) {
@@ -150,7 +226,7 @@ export async function fetchGitHubOidcJwt() {
   if (!env.oidcRequestUrl || !env.oidcRequestToken) {
     throw new VaultAuthError(
       "OIDC_NOT_CONFIGURED",
-      "OIDC JWT unavailable: set ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN or VAULT_OIDC_JWT"
+      "OIDC JWT unavailable: ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN not injected on runner"
     );
   }
 
