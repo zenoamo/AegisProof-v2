@@ -1,4 +1,5 @@
 # Create GitHub Release when a version tag is pushed.
+# Phase 8.14 Task 4: OIDC → Vault Transit → live provenance signing before release.
 name: Release
 
 on:
@@ -7,12 +8,14 @@ on:
       - "v*.*.*"
 
 permissions:
+  id-token: write
   contents: write
 
 jobs:
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
+    environment: release-signing
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +30,37 @@ jobs:
           npm run check:sensitive-files
           npm run test:phase813-gate
 
+      - name: Generate provenance manifest (live KMS / Vault Transit)
+        env:
+          KMS_BACKEND_MODE: live
+          AEGIS_PROVENANCE_SIGNING: kms
+          AEGIS_PROVENANCE_BACKEND: vault-transit
+          AEGIS_PROVENANCE_KEY_ID: aegis-provenance-prod-v1
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_JWT_ROLE: ci-provenance-signer
+          VAULT_TRANSIT_MOUNT: transit
+          KMS_OIDC_EXPECT_REPOSITORY: ${{ github.repository }}
+          KMS_OIDC_EXPECT_OWNER: ${{ github.repository_owner }}
+          KMS_OIDC_EXPECT_REF: ${{ github.ref }}
+          KMS_OIDC_EXPECT_WORKFLOW: Release
+          KMS_OIDC_EXPECT_ENVIRONMENT: release-signing
+        run: npm run generate:provenance
+
+      - name: Verify provenance manifest (strict PQC + KMS)
+        env:
+          KMS_BACKEND_MODE: live
+          AEGIS_PROVENANCE_BACKEND: vault-transit
+          AEGIS_PROVENANCE_KEY_ID: aegis-provenance-prod-v1
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_JWT_ROLE: ci-provenance-signer
+          VAULT_TRANSIT_MOUNT: transit
+          KMS_OIDC_EXPECT_REPOSITORY: ${{ github.repository }}
+          KMS_OIDC_EXPECT_OWNER: ${{ github.repository_owner }}
+          KMS_OIDC_EXPECT_REF: ${{ github.ref }}
+          KMS_OIDC_EXPECT_WORKFLOW: Release
+          KMS_OIDC_EXPECT_ENVIRONMENT: release-signing
+        run: npm run verify:provenance -- --manifest artifacts/provenance/manifest.json --pqc
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -35,5 +69,6 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: false
+          files: artifacts/provenance/manifest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

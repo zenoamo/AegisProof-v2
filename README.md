@@ -29,7 +29,7 @@ Today this repository lets you:
 What it does **not** do today:
 
 - Operate a live mainnet deployment
-- Provide production HSM/Vault signing (Phase 8.14 Task 3+ — OIDC CI wiring pending)
+- **Wire GitHub OIDC → Vault Transit** for release provenance signing (Phase 8.14 Task 4 — workflow + docs; live Vault required for PASS)
 - Enforce strict PQC manifest signing on PR-tier CI (WARN-only until promotion)
 
 ---
@@ -98,6 +98,7 @@ npm run check:sensitive-files       # secret boundary
 npm run test:penetration            # PT-01–PT-10
 npm run test:phase813               # unified Phase 8.13 gate
 npm run test:kms-signer             # KMS abstraction (Phase 8.14)
+npm run test:kms-oidc               # OIDC → Vault auth tests (mocked, no live Vault)
 ```
 
 Full guide: [docs/getting-started.md](docs/getting-started.md)
@@ -163,7 +164,7 @@ Report security issues via [SECURITY.md](SECURITY.md).
 | Testnet | Sepolia dry-runs documented; no production mainnet contracts |
 | TEE layer (`tee/`) | Research-only adapter (ADR-001 isolated) |
 | PQC manifest signing | Additive; PR tier emits WARN when unsigned |
-| Phase 8.14 KMS/HSM | **Partial** — live Vault Transit + cloud HSM backends hardened (Task 3); GitHub OIDC CI wiring pending (Task 4) |
+| Phase 8.14 KMS/HSM | **Partial** — Task 3 hardened; Task 4 OIDC→Vault workflows + docs (live Vault/HSM not connected in CI PR tier) |
 | Migration debt | 8 allowlisted binary paths (see [repository boundary report](docs/security/repository-boundary-report.md)) |
 
 This repository is provided for **review and research**, not as a production deployment artifact.

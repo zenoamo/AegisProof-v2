@@ -377,7 +377,7 @@ function resolveVaultBackendMode() {
   if (!isVaultTransitConfigured()) {
     throw new KmsSecurityError(
       "VAULT_NOT_CONFIGURED",
-      "live Vault Transit requires VAULT_ADDR and VAULT_TOKEN; stub fallback is forbidden in live mode"
+      "live Vault Transit requires VAULT_ADDR and VAULT_TOKEN or OIDC auth (VAULT_JWT_ROLE); stub fallback is forbidden in live mode"
     );
   }
   return "live";

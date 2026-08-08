@@ -39,6 +39,7 @@
     "test:phase813": "node scripts/run-phase813-regression.mjs",
     "test:penetration": "node scripts/run-penetration.mjs",
     "test:kms-signer": "node scripts/run-kms-signer.mjs",
+    "test:kms-oidc": "node scripts/run-kms-oidc.mjs",
     "generate:provenance": "node scripts/generate-provenance-manifest.mjs",
     "generate:pqc-dev-keys": "node scripts/generate-pqc-dev-keys.mjs",
     "export:pqc-public-key": "node scripts/export-pqc-public-key.mjs",

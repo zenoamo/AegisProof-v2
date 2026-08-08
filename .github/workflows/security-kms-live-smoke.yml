@@ -1,0 +1,42 @@
+# Protected live KMS smoke test — workflow_dispatch only (Phase 8.14 Task 4).
+# Does NOT run on PR. Requires protected environment secrets (VAULT_ADDR, etc.).
+name: KMS Live Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  kms-live-smoke:
+    name: OIDC → Vault → sign → verify
+    runs-on: ubuntu-latest
+    environment: kms-live-smoke
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: KMS live smoke (OIDC → Vault Transit)
+        env:
+          KMS_BACKEND_MODE: live
+          AEGIS_PROVENANCE_SIGNING: kms
+          AEGIS_PROVENANCE_BACKEND: vault-transit
+          AEGIS_PROVENANCE_KEY_ID: aegis-ci-mldsa87-v1
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_JWT_ROLE: ci-provenance-signer
+          VAULT_TRANSIT_MOUNT: transit
+          KMS_OIDC_EXPECT_REPOSITORY: ${{ github.repository }}
+          KMS_OIDC_EXPECT_OWNER: ${{ github.repository_owner }}
+          KMS_OIDC_EXPECT_REF: ${{ github.ref }}
+          KMS_OIDC_EXPECT_WORKFLOW: KMS Live Smoke
+          KMS_OIDC_EXPECT_ENVIRONMENT: kms-live-smoke
+        run: node scripts/run-kms-live-smoke.mjs

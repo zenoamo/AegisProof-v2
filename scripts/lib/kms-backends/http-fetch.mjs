@@ -83,6 +83,10 @@ export function redactKmsSecrets(message) {
   if (token.length >= 8) {
     out = out.split(token).join("[REDACTED_VAULT_TOKEN]");
   }
+  const oidcJwt = (process.env.VAULT_OIDC_JWT ?? "").trim();
+  if (oidcJwt.length >= 16) {
+    out = out.split(oidcJwt).join("[REDACTED_OIDC_JWT]");
+  }
   const authHeader = (process.env.CLOUD_HSM_AUTH_HEADER ?? "").trim();
   if (authHeader.length >= 8) {
     out = out.split(authHeader).join("[REDACTED_AUTH_HEADER]");

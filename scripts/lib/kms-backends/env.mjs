@@ -95,8 +95,18 @@ export function readVaultTransitEnv() {
   const token = (process.env.VAULT_TOKEN ?? process.env.VAULT_TRANSIT_TOKEN ?? "").trim();
   const namespace = (process.env.VAULT_NAMESPACE ?? "").trim();
   const mount = (process.env.VAULT_TRANSIT_MOUNT ?? "transit").trim() || "transit";
-  const configured = Boolean(addr && token);
-  return configured ? { configured: true, addr, token, namespace, mount } : { configured: false, mount };
+  const jwtRole = (process.env.VAULT_JWT_ROLE ?? process.env.VAULT_OIDC_ROLE ?? "").trim();
+  const hasOidcRequest =
+    Boolean(
+      (process.env.ACTIONS_ID_TOKEN_REQUEST_URL ?? "").trim() &&
+        (process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN ?? "").trim()
+    );
+  const hasInjectedJwt = Boolean((process.env.VAULT_OIDC_JWT ?? "").trim());
+  const hasOidc = Boolean(jwtRole) && (hasOidcRequest || hasInjectedJwt);
+  const configured = Boolean(addr && (token || hasOidc));
+  return configured
+    ? { configured: true, addr, token: token || null, namespace, mount, authMethod: token ? "token" : "oidc" }
+    : { configured: false, mount };
 }
 
 /**
@@ -108,8 +118,15 @@ export function validateVaultTransitEnv() {
 
   if (!env.configured) {
     if (!(process.env.VAULT_ADDR ?? "").trim()) errors.push("VAULT_ADDR missing");
-    if (!(process.env.VAULT_TOKEN ?? process.env.VAULT_TRANSIT_TOKEN ?? "").trim()) {
-      errors.push("VAULT_TOKEN missing");
+    const hasToken = Boolean((process.env.VAULT_TOKEN ?? process.env.VAULT_TRANSIT_TOKEN ?? "").trim());
+    const hasOidc = Boolean((process.env.VAULT_JWT_ROLE ?? "").trim()) &&
+      (Boolean((process.env.VAULT_OIDC_JWT ?? "").trim()) ||
+        Boolean(
+          (process.env.ACTIONS_ID_TOKEN_REQUEST_URL ?? "").trim() &&
+            (process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN ?? "").trim()
+        ));
+    if (!hasToken && !hasOidc) {
+      errors.push("VAULT_TOKEN or OIDC auth (VAULT_JWT_ROLE + OIDC JWT source) missing");
     }
     return { ok: false, errors, env };
   }

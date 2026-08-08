@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================================
-// Verify artifact provenance manifest (Phase 8.13 Task 5)
+// Verify artifact provenance manifest (Phase 8.13 Task 5, Phase 8.14 Task 4 KMS)
 // Usage:
 //   npm run verify:provenance [-- --live] [-- --manifest path] [-- --pqc]
 //   --live: regenerate manifest from resolveArtifacts() and verify (CI default)
@@ -17,6 +17,8 @@ import {
   writeManifest,
 } from "./lib/artifact-provenance.mjs";
 import { resolveArtifacts } from "./lib/resolve-artifacts.mjs";
+import { verifyManifestKmsEntries } from "./lib/kms-provenance.mjs";
+import { isExplicitLiveMode } from "./lib/kms-backends/env.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -26,7 +28,18 @@ const manifestArg = args.indexOf("--manifest");
 const manifestPath =
   manifestArg >= 0 ? path.resolve(args[manifestArg + 1]) : DEFAULT_MANIFEST_PATH;
 
-function main() {
+async function verifyKmsLayer(manifest) {
+  const hasKms = (manifest.entries ?? []).some((e) => e.pqcSignatureEnvelope?.kmsBackend);
+  if (!hasKms) return { ok: true, errors: [], verifiedCount: 0 };
+
+  const kmsResult = await verifyManifestKmsEntries(manifest);
+  if (!kmsResult.ok) {
+    return kmsResult;
+  }
+  return kmsResult;
+}
+
+async function main() {
   const t0 = Date.now();
 
   if (live) {
@@ -57,11 +70,26 @@ function main() {
   const liveManifest = createManifest(paths);
   const result = verifyManifest(manifest, {
     allowMissingOptional: true,
-    pqcRequired,
+    pqcRequired: pqcRequired && !(manifest.entries ?? []).some((e) => e.pqcSignatureEnvelope?.kmsBackend),
   });
 
   console.log(`Provenance manifest verify — file: ${path.relative(ROOT, manifestPath)}`);
   if (pqcRequired) console.log("Mode: --pqc (ML-DSA required)");
+
+  const kmsResult = await verifyKmsLayer(manifest);
+  if (!kmsResult.ok) {
+    for (const e of kmsResult.errors) result.errors.push(e);
+    result.ok = false;
+  } else if (kmsResult.verifiedCount > 0) {
+    console.log(`KMS verify: ${kmsResult.verifiedCount} entries`);
+  }
+
+  if (pqcRequired && isExplicitLiveMode() && kmsResult.verifiedCount === 0 &&
+      (manifest.entries ?? []).some((e) => e.pqcSignatureEnvelope?.kmsBackend)) {
+    result.errors.push("live KMS verification produced zero verified entries");
+    result.ok = false;
+  }
+
   for (const w of result.warnings) console.log(`WARN ${w}`);
 
   if (!result.ok) {
@@ -77,4 +105,7 @@ function main() {
   console.log(`PASS artifact provenance check (${Date.now() - t0}ms overhead)`);
 }
 
-main();
+main().catch((err) => {
+  console.error(`FAIL ${err instanceof Error ? err.message : err}`);
+  process.exit(1);
+});

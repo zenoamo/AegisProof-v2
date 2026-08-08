@@ -8,6 +8,7 @@ import {
   validateTransitKeyName,
   validateTransitMount,
 } from "./env.mjs";
+import { resolveVaultAuthToken } from "./vault-auth.mjs";
 
 export class VaultTransitError extends Error {
   /**
@@ -78,7 +79,7 @@ function buildTransitUrl(env, keyName, operation) {
 }
 
 /**
- * Assert Vault is ready for live operations.
+ * Assert Vault is ready for live operations (sync — address/mount only).
  */
 export function assertVaultTransitLiveReady() {
   const validation = validateVaultTransitEnv();
@@ -92,13 +93,25 @@ export function assertVaultTransitLiveReady() {
 }
 
 /**
+ * Resolve live Vault credentials including OIDC-acquired token.
+ */
+export async function resolveVaultTransitLiveEnv() {
+  const env = assertVaultTransitLiveReady();
+  if (env.token) {
+    return { ...env, token: env.token, authSource: "static" };
+  }
+  const auth = await resolveVaultAuthToken();
+  return { ...env, token: auth.token, authSource: auth.source };
+}
+
+/**
  * @param {object} opts
  * @param {string} opts.keyName
  * @param {Uint8Array} opts.message
  * @param {string} [opts.hashAlgorithm]
  */
 export async function vaultTransitSign(opts) {
-  const env = assertVaultTransitLiveReady();
+  const env = await resolveVaultTransitLiveEnv();
   const url = buildTransitUrl(env, opts.keyName, "sign");
   const headers = {
     "X-Vault-Token": env.token,
@@ -147,7 +160,7 @@ export async function vaultTransitSign(opts) {
  * @param {string} [opts.hashAlgorithm]
  */
 export async function vaultTransitVerify(opts) {
-  const env = assertVaultTransitLiveReady();
+  const env = await resolveVaultTransitLiveEnv();
   const url = buildTransitUrl(env, opts.keyName, "verify");
   const headers = {
     "X-Vault-Token": env.token,
