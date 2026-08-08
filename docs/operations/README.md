@@ -43,6 +43,9 @@ Deployment, key management, and incident response guides for AegisProof v2 opera
 
 | Document | Description |
 |----------|-------------|
+| [kms-live-operator-checklist.md](./kms-live-operator-checklist.md) | **Phase 8.14** — OIDC → Vault live integration operator checklist |
 | [../.github/workflows/aegis_repro_ci.yml](../../.github/workflows/aegis_repro_ci.yml) | Primary CI workflow |
+| [../.github/workflows/security-kms-live-smoke.yml](../../.github/workflows/security-kms-live-smoke.yml) | Protected KMS live smoke (workflow_dispatch) |
+| [../.github/workflows/release.yml](../../.github/workflows/release.yml) | Release with live KMS provenance |
 | [../.github/workflows/security.yml](../../.github/workflows/security.yml) | CodeQL and dependency review |
 | [RELEASE_ENGINEERING.md](../../RELEASE_ENGINEERING.md) | Release process |
