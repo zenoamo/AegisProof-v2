@@ -69,4 +69,4 @@ See [`incident-response.md`](./incident-response.md) and [`key-management-policy
 
 ## Q: Where can I find the full list of 30 signal names?
 
-**A:** In the SSoT JSON at [`specs/aegis-protocol.v2.json`](../specs/aegis-protocol.v2.json). Signal indices 0–29 correspond to wire numbers 1–30 in the circuit's .sym file. The SDK uses these names for typed mappings.
+**A:** In the canonical protocol SSoT at [`protocol/specs`](../protocol/specs). Signal indices 0–29 correspond to wire numbers 1–30 in the circuit's `.sym` file. The SDK uses these names for typed mappings (see also `generated/AegisSignals.ts`).

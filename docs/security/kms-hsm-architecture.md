@@ -5,7 +5,7 @@
 **Status:** Design (Task 1)  
 **Scope:** ML-DSA-87 provenance keys and operator authentication keys only  
 
-> **Groth16 core is permanently frozen.** This design does not generate private keys, does not modify `protocol/`, `packages/sdk/`, `tee/`, verifier contracts, `production.zkey`, VK, `proveCanonical()`, or `publicSignals(30)`. KMS/HSM applies exclusively to the **outer governance layer** established in Phase 8.13.
+> **Groth16 core semantics are frozen** (Architecture Review required to change cryptographic/protocol meaning). This design does not generate private keys, does not modify `protocol/`, `packages/sdk/`, `tee/`, verifier contracts, `production.zkey`, VK, `proveCanonical()`, or `publicSignals(30)`. KMS/HSM applies exclusively to the **outer governance layer** established in Phase 8.13.
 
 ---
 

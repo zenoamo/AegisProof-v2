@@ -48,7 +48,7 @@ Do not deploy a different verifier that does not match these IC constants.
 
    ```bash
    node scripts/deploy_local.mjs --network default \
-     --verifier contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production \
+     --verifier protocol/contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production \
      --operator <OPERATOR_ADDRESS>
    ```
 
@@ -97,7 +97,7 @@ The `hardhat.config.ts` file configures:
 
    ```bash
    node scripts/deploy_sepolia.mjs --network sepolia \
-     --verifier contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production \
+     --verifier protocol/contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production \
      --deployer-wallet $PRIVATE_KEY
    ```
 

@@ -10,8 +10,8 @@
 1. Clone the repository and install dependencies:
 
    ```bash
-   git clone https://github.com/aegisproof/aegis-proof.git
-   cd aegis-proof
+   git clone https://github.com/zenoamo/AegisProof-v2.git
+   cd AegisProof-v2
    npm install
    ```
 
@@ -107,7 +107,7 @@ Deploy verifier + shield:
 
 ```bash
 node scripts/deploy_sepolia.mjs --network sepolia \
-  --verifier contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production
+  --verifier protocol/contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production
 npx hardhat run test/Groth16VerifierV2Production.ts --network sepolia
 ```
 

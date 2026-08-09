@@ -236,10 +236,10 @@ Once deployment completes successfully:
 
 ## References
 
-- Full protocol spec: [`specs/aegis-protocol.v2.json`](../specs/aegis-protocol.v2.json)
-- Security model: [`docs/security-model.md`](./security-model.md)
-- Incident response: [`docs/incident-response.md`](../docs/incident-response.md)
-- Key management policy: [`docs/key-management-policy.md`](../docs/key-management-policy.md)
+- Full protocol spec: [`protocol/specs`](../protocol/specs)
+- Security model: [`architecture/github-security-boundary.md`](./architecture/github-security-boundary.md)
+- Incident response: [`incident-response.md`](../incident-response.md)
+- Key management policy: [`key-management-policy.md`](../key-management-policy.md)
 
 ---
 

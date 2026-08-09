@@ -38,7 +38,7 @@ What it does **not** do today:
 
 | Layer | Location | Role |
 |-------|----------|------|
-| Frozen ZK core | `circuits/`, `contracts/`, `protocol/`, `packages/sdk/` | Groth16 prove/verify |
+| Frozen ZK core | `protocol/` (contracts, specs), `packages/sdk/` | Groth16 prove/verify |
 | Provenance | `artifacts/provenance/`, `scripts/lib/artifact-provenance.mjs` | SHA-256 + optional ML-DSA-87 |
 | Security gates | `scripts/check-sensitive-files.mjs`, CI | Repository boundary |
 | TEE research | `tee/` (ADR-001 isolated) | Research adapter only |
