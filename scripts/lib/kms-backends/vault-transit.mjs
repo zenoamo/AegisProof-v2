@@ -8,7 +8,7 @@ import {
   validateTransitKeyName,
   validateTransitMount,
 } from "./env.mjs";
-import { resolveVaultAuthToken } from "./vault-auth.mjs";
+import { resolveVaultAuthToken, assertStaticTokenForbiddenInLiveMode } from "./vault-auth.mjs";
 
 export class VaultTransitError extends Error {
   /**
@@ -98,6 +98,7 @@ export function assertVaultTransitLiveReady() {
 export async function resolveVaultTransitLiveEnv() {
   const env = assertVaultTransitLiveReady();
   if (env.token) {
+    assertStaticTokenForbiddenInLiveMode(env.token);
     return { ...env, token: env.token, authSource: "static" };
   }
   const auth = await resolveVaultAuthToken();

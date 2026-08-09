@@ -17,6 +17,76 @@ import {
 
 export const DEFAULT_PROVENANCE_KMS_KEY_ID = "aegis-ci-mldsa87-v1";
 
+/** @param {unknown} signature */
+export function isVaultStubSignature(signature) {
+  return typeof signature === "string" && signature.startsWith("vault-stub-");
+}
+
+/**
+ * Validate KMS envelope metadata consistency before verification.
+ * Manifest-supplied kmsStub/kmsLive/signature must agree.
+ * @param {object} env
+ * @returns {{ ok: true } | { ok: false, code: string, error: string }}
+ */
+export function validateKmsEnvelopeMetadata(env) {
+  const stubSig = isVaultStubSignature(env?.signature);
+  const kmsStub = Boolean(env?.kmsStub);
+  const kmsLive = Boolean(env?.kmsLive);
+
+  if (kmsStub && kmsLive) {
+    return {
+      ok: false,
+      code: "KMS_ENVELOPE_METADATA_CONFLICT",
+      error: "kmsStub and kmsLive cannot both be true",
+    };
+  }
+
+  if (stubSig && kmsLive) {
+    return {
+      ok: false,
+      code: "KMS_ENVELOPE_METADATA_CONFLICT",
+      error: "vault-stub signature cannot accompany kmsLive=true",
+    };
+  }
+
+  if (kmsStub && !stubSig) {
+    return {
+      ok: false,
+      code: "KMS_STUB_METADATA_MISMATCH",
+      error: "kmsStub=true requires vault-stub-* signature format",
+    };
+  }
+
+  if (stubSig && !kmsStub) {
+    return {
+      ok: false,
+      code: "KMS_STUB_METADATA_MISMATCH",
+      error: "vault-stub-* signature requires kmsStub=true",
+    };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Stub KMS provenance envelopes are forbidden when the verifier runs in live mode.
+ * @param {object} env
+ * @returns {{ ok: true } | { ok: false, code: string, error: string }}
+ */
+export function rejectKmsStubInLiveMode(env) {
+  if (!isExplicitLiveMode()) {
+    return { ok: true };
+  }
+  if (env?.kmsStub || isVaultStubSignature(env?.signature)) {
+    return {
+      ok: false,
+      code: "KMS_STUB_FORBIDDEN_IN_LIVE_MODE",
+      error: "stub KMS provenance forbidden when KMS_BACKEND_MODE=live",
+    };
+  }
+  return { ok: true };
+}
+
 /**
  * Whether manifest generation should use KMS signing instead of local private key.
  */
@@ -138,16 +208,41 @@ export async function verifyEntryKms(entry, signer) {
     return { ok: false, error: "not a KMS envelope" };
   }
 
+  const metaCheck = validateKmsEnvelopeMetadata(env);
+  if (!metaCheck.ok) {
+    return { ok: false, error: metaCheck.error, code: metaCheck.code };
+  }
+
+  const liveStubCheck = rejectKmsStubInLiveMode(env);
+  if (!liveStubCheck.ok) {
+    return { ok: false, error: liveStubCheck.error, code: liveStubCheck.code };
+  }
+
   const payload = entrySignPayload(entry);
+  const stubSig = isVaultStubSignature(env.signature);
   const signatureResult = {
     signature: env.signature,
     signedAt: env.signedAt,
-    live: env.kmsLive,
-    stub: env.kmsStub,
+    live: Boolean(env.kmsLive),
+    stub: stubSig && Boolean(env.kmsStub),
     backend: env.kmsBackend,
   };
 
   return verifySignedPayload(signer, payload, signatureResult);
+}
+
+/**
+ * Verify KMS layer when manifest entries carry kmsBackend envelopes.
+ * No-op when no KMS envelopes present (hash-only manifests).
+ * @param {object} manifest
+ * @param {object} [signer]
+ */
+export async function verifyManifestKmsLayer(manifest, signer = createProvenanceKmsSigner()) {
+  const hasKms = (manifest.entries ?? []).some((e) => e.pqcSignatureEnvelope?.kmsBackend);
+  if (!hasKms) {
+    return { ok: true, errors: [], verifiedCount: 0 };
+  }
+  return verifyManifestKmsEntries(manifest, signer);
 }
 
 /**

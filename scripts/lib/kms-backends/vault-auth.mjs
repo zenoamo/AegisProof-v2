@@ -1,6 +1,6 @@
 // GitHub OIDC → Vault JWT auth for KMS signer (Phase 8.14 Task 4).
 import { kmsFetch, redactKmsSecrets } from "./http-fetch.mjs";
-import { validateHttpUrl } from "./env.mjs";
+import { validateHttpUrl, isExplicitLiveMode } from "./env.mjs";
 
 export class VaultAuthError extends Error {
   /**
@@ -106,11 +106,52 @@ export function decodeJwtPayload(jwt) {
 }
 
 /**
+ * Claim bindings required when KMS_BACKEND_MODE=live (matches release/smoke workflows).
+ */
+export const LIVE_REQUIRED_OIDC_CLAIM_BINDINGS = [
+  "repository",
+  "repository_owner",
+  "ref",
+  "workflow",
+  "environment",
+];
+
+/**
+ * Fail closed in live mode when required OIDC claim bindings are unset.
+ * @param {ReturnType<typeof readOidcClaimBindings>} bindings
+ */
+export function assertRequiredOidcClaimBindingsForLive(bindings = readOidcClaimBindings()) {
+  if (!isExplicitLiveMode()) {
+    return { ok: true };
+  }
+
+  const fieldMap = {
+    repository: bindings.repository,
+    repository_owner: bindings.repository_owner,
+    ref: bindings.ref,
+    workflow: bindings.workflow,
+    environment: bindings.environment,
+  };
+
+  const missing = LIVE_REQUIRED_OIDC_CLAIM_BINDINGS.filter((key) => !fieldMap[key]);
+  if (missing.length > 0) {
+    throw new VaultAuthError(
+      "OIDC_BINDINGS_REQUIRED",
+      `live mode requires OIDC claim bindings: ${missing.join(", ")}`
+    );
+  }
+
+  return { ok: true };
+}
+
+/**
  * Validate JWT claims against restrictive bindings. Fail closed.
  * @param {Record<string, unknown>} claims
  * @param {ReturnType<typeof readOidcClaimBindings>} bindings
  */
 export function validateOidcClaimBindings(claims, bindings = readOidcClaimBindings()) {
+  assertRequiredOidcClaimBindingsForLive(bindings);
+
   const errors = [];
 
   const checks = [
@@ -349,6 +390,19 @@ export async function vaultJwtLogin(jwt) {
 }
 
 /**
+ * Static env tokens bypass OIDC claim binding — forbidden in live mode.
+ * @param {string} staticToken
+ */
+export function assertStaticTokenForbiddenInLiveMode(staticToken) {
+  if (staticToken && isExplicitLiveMode()) {
+    throw new VaultAuthError(
+      "VAULT_STATIC_TOKEN_FORBIDDEN_IN_LIVE_MODE",
+      "static VAULT_TOKEN/VAULT_TRANSIT_TOKEN is forbidden when KMS_BACKEND_MODE=live; use OIDC auth"
+    );
+  }
+}
+
+/**
  * Resolve Vault token: static env token or OIDC → JWT login.
  * Fail closed — no stub fallback in live mode.
  */
@@ -356,6 +410,7 @@ export async function resolveVaultAuthToken() {
   const env = readVaultOidcEnv();
 
   if (env.staticToken) {
+    assertStaticTokenForbiddenInLiveMode(env.staticToken);
     return {
       token: env.staticToken,
       source: "static",

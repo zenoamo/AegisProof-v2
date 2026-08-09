@@ -201,19 +201,55 @@ registerMockHsmTestKey("test-provenance-kms-01", { secretKey, publicKeyHex });
   console.log("PASS cloud-hsm: signing not configured");
 }
 
-// T-KMS-07: Vault Transit live sign (mocked HTTP)
+// T-KMS-07: Vault Transit live sign (mocked HTTP via OIDC)
 {
   const prev = {
     VAULT_ADDR: process.env.VAULT_ADDR,
     VAULT_TOKEN: process.env.VAULT_TOKEN,
+    VAULT_TRANSIT_TOKEN: process.env.VAULT_TRANSIT_TOKEN,
     KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
+    VAULT_JWT_ROLE: process.env.VAULT_JWT_ROLE,
+    VAULT_OIDC_JWT: process.env.VAULT_OIDC_JWT,
+    KMS_OIDC_EXPECT_REPOSITORY: process.env.KMS_OIDC_EXPECT_REPOSITORY,
+    KMS_OIDC_EXPECT_OWNER: process.env.KMS_OIDC_EXPECT_OWNER,
+    KMS_OIDC_EXPECT_REF: process.env.KMS_OIDC_EXPECT_REF,
+    KMS_OIDC_EXPECT_WORKFLOW: process.env.KMS_OIDC_EXPECT_WORKFLOW,
+    KMS_OIDC_EXPECT_ENVIRONMENT: process.env.KMS_OIDC_EXPECT_ENVIRONMENT,
   };
   process.env.VAULT_ADDR = "http://vault.test:8200";
-  process.env.VAULT_TOKEN = "test-token";
   process.env.KMS_BACKEND_MODE = "live";
 
+  function makeJwt(payload) {
+    const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
+    const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    return `${header}.${body}.fakesignature`;
+  }
+  delete process.env.VAULT_TOKEN;
+  delete process.env.VAULT_TRANSIT_TOKEN;
+  process.env.VAULT_JWT_ROLE = "ci-provenance-signer";
+  process.env.VAULT_OIDC_JWT = makeJwt({
+    repository: "zenoamo/AegisProof-v2",
+    repository_owner: "zenoamo",
+    ref: "refs/tags/v2.0.1",
+    workflow: "Release",
+    environment: "release-signing",
+  });
+  process.env.KMS_OIDC_EXPECT_REPOSITORY = "zenoamo/AegisProof-v2";
+  process.env.KMS_OIDC_EXPECT_OWNER = "zenoamo";
+  process.env.KMS_OIDC_EXPECT_REF = "refs/tags/v*";
+  process.env.KMS_OIDC_EXPECT_WORKFLOW = "Release";
+  process.env.KMS_OIDC_EXPECT_ENVIRONMENT = "release-signing";
+
   const { setKmsFetchForTests, resetKmsFetchForTests } = await import("../../scripts/lib/kms-backends/http-fetch.mjs");
+  const { clearVaultAuthCacheForTests } = await import("../../scripts/lib/kms-backends/vault-auth.mjs");
+  clearVaultAuthCacheForTests();
   setKmsFetchForTests(async (url) => {
+    if (String(url).includes("/login")) {
+      return new Response(
+        JSON.stringify({ auth: { client_token: "mock-vault-token", lease_duration: 3600 } }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
     if (String(url).includes("/transit/sign/")) {
       return new Response(JSON.stringify({ data: { signature: "vault:v1:mock-live-sig", key_version: 1 } }), {
         status: 200,
@@ -249,22 +285,41 @@ registerMockHsmTestKey("test-provenance-kms-01", { secretKey, publicKeyHex });
   ok(verified.ok, "T-KMS-07: vault live verify");
 
   resetKmsFetchForTests();
+  clearVaultAuthCacheForTests();
   if (prev.VAULT_ADDR === undefined) delete process.env.VAULT_ADDR;
   else process.env.VAULT_ADDR = prev.VAULT_ADDR;
   if (prev.VAULT_TOKEN === undefined) delete process.env.VAULT_TOKEN;
   else process.env.VAULT_TOKEN = prev.VAULT_TOKEN;
+  if (prev.VAULT_TRANSIT_TOKEN === undefined) delete process.env.VAULT_TRANSIT_TOKEN;
+  else process.env.VAULT_TRANSIT_TOKEN = prev.VAULT_TRANSIT_TOKEN;
   if (prev.KMS_BACKEND_MODE === undefined) delete process.env.KMS_BACKEND_MODE;
   else process.env.KMS_BACKEND_MODE = prev.KMS_BACKEND_MODE;
+  if (prev.VAULT_JWT_ROLE === undefined) delete process.env.VAULT_JWT_ROLE;
+  else process.env.VAULT_JWT_ROLE = prev.VAULT_JWT_ROLE;
+  if (prev.VAULT_OIDC_JWT === undefined) delete process.env.VAULT_OIDC_JWT;
+  else process.env.VAULT_OIDC_JWT = prev.VAULT_OIDC_JWT;
+  for (const k of [
+    "KMS_OIDC_EXPECT_REPOSITORY",
+    "KMS_OIDC_EXPECT_OWNER",
+    "KMS_OIDC_EXPECT_REF",
+    "KMS_OIDC_EXPECT_WORKFLOW",
+    "KMS_OIDC_EXPECT_ENVIRONMENT",
+  ]) {
+    if (prev[k] === undefined) delete process.env[k];
+    else process.env[k] = prev[k];
+  }
 }
 
-// T-KMS-08: Cloud HSM HTTP gateway (mocked)
+// T-KMS-08: Cloud HSM HTTP gateway (mocked, explicit live mode)
 {
   const prev = {
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
     CLOUD_HSM_PROVIDER: process.env.CLOUD_HSM_PROVIDER,
     CLOUD_HSM_SIGN_URL: process.env.CLOUD_HSM_SIGN_URL,
     CLOUD_HSM_VERIFY_URL: process.env.CLOUD_HSM_VERIFY_URL,
     CLOUD_HSM_KEY_ID: process.env.CLOUD_HSM_KEY_ID,
   };
+  process.env.KMS_BACKEND_MODE = "live";
   process.env.CLOUD_HSM_PROVIDER = "http";
   process.env.CLOUD_HSM_SIGN_URL = "http://hsm.test/sign";
   process.env.CLOUD_HSM_VERIFY_URL = "http://hsm.test/verify";
@@ -316,11 +371,13 @@ registerMockHsmTestKey("test-provenance-kms-01", { secretKey, publicKeyHex });
 // T-KMS-09: Cloud HSM unsupported PQC on aws-kms without http gateway
 {
   const prev = {
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
     CLOUD_HSM_PROVIDER: process.env.CLOUD_HSM_PROVIDER,
     CLOUD_HSM_KEY_ID: process.env.CLOUD_HSM_KEY_ID,
     AWS_KMS_KEY_ID: process.env.AWS_KMS_KEY_ID,
     AWS_REGION: process.env.AWS_REGION,
   };
+  process.env.KMS_BACKEND_MODE = "live";
   process.env.CLOUD_HSM_PROVIDER = "aws";
   process.env.AWS_KMS_KEY_ID = "arn:aws:kms:us-east-1:123456789012:key/00000000-0000-0000-0000-000000000000";
   process.env.AWS_REGION = "us-east-1";
@@ -346,6 +403,146 @@ registerMockHsmTestKey("test-provenance-kms-01", { secretKey, publicKeyHex });
   passed += 2;
   console.log("PASS T-KMS-09: aws-kms rejects ML-DSA provenance role");
 
+  for (const [k, v] of Object.entries(prev)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+}
+
+// T-EXP-009A: stub mode + configured cloud HSM → hard reject
+{
+  const prev = {
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
+    CLOUD_HSM_PROVIDER: process.env.CLOUD_HSM_PROVIDER,
+    CLOUD_HSM_SIGN_URL: process.env.CLOUD_HSM_SIGN_URL,
+    CLOUD_HSM_KEY_ID: process.env.CLOUD_HSM_KEY_ID,
+  };
+  process.env.KMS_BACKEND_MODE = "stub";
+  process.env.CLOUD_HSM_PROVIDER = "http";
+  process.env.CLOUD_HSM_SIGN_URL = "http://hsm.test/sign";
+  process.env.CLOUD_HSM_KEY_ID = "aegis-ci-mldsa87-v1";
+
+  const signer = createSigner({
+    backend: BACKEND_CLOUD_HSM,
+    keyId: "aegis-ci-mldsa87-v1",
+    role: SIGNER_ROLE_PROVENANCE,
+  });
+  const payload = entrySignPayload({
+    artifact: "stub-block.wasm",
+    path: "artifacts/stub-block.wasm",
+    sha256: "1".repeat(64),
+    size: 10,
+    version: "v2",
+    source: "test",
+  });
+  await assert.rejects(() => signPayload(signer, payload), (err) => {
+    ok(err instanceof KmsSecurityError, "T-EXP-009A: KmsSecurityError on stub cloud-hsm");
+    ok(err.code === "CLOUD_HSM_FORBIDDEN_IN_STUB_MODE", "T-EXP-009A: CLOUD_HSM_FORBIDDEN_IN_STUB_MODE");
+    return true;
+  });
+  passed += 2;
+  console.log("PASS T-EXP-009A: stub mode rejects configured cloud-hsm");
+
+  for (const [k, v] of Object.entries(prev)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+}
+
+// T-EXP-009B: stub mode → cloud HSM HTTP fetch NOT called
+{
+  const prev = {
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
+    CLOUD_HSM_PROVIDER: process.env.CLOUD_HSM_PROVIDER,
+    CLOUD_HSM_SIGN_URL: process.env.CLOUD_HSM_SIGN_URL,
+    CLOUD_HSM_KEY_ID: process.env.CLOUD_HSM_KEY_ID,
+  };
+  process.env.KMS_BACKEND_MODE = "stub";
+  process.env.CLOUD_HSM_PROVIDER = "http";
+  process.env.CLOUD_HSM_SIGN_URL = "http://hsm.test/sign";
+  process.env.CLOUD_HSM_KEY_ID = "aegis-ci-mldsa87-v1";
+
+  const { setKmsFetchForTests, resetKmsFetchForTests } = await import("../../scripts/lib/kms-backends/http-fetch.mjs");
+  let fetchCalled = false;
+  setKmsFetchForTests(async () => {
+    fetchCalled = true;
+    return new Response(JSON.stringify({ signature: "00".repeat(32) }), { status: 200 });
+  });
+
+  const signer = createSigner({
+    backend: BACKEND_CLOUD_HSM,
+    keyId: "aegis-ci-mldsa87-v1",
+    role: SIGNER_ROLE_PROVENANCE,
+  });
+  const payload = entrySignPayload({
+    artifact: "stub-fetch.wasm",
+    path: "artifacts/stub-fetch.wasm",
+    sha256: "2".repeat(64),
+    size: 10,
+    version: "v2",
+    source: "test",
+  });
+
+  await assert.rejects(() => signPayload(signer, payload), KmsSecurityError);
+  ok(!fetchCalled, "T-EXP-009B: cloud HSM HTTP fetch not called in stub mode");
+
+  resetKmsFetchForTests();
+  for (const [k, v] of Object.entries(prev)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+}
+
+// T-EXP-009C: explicit live mode preserves mocked cloud HSM signing
+{
+  const prev = {
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
+    CLOUD_HSM_PROVIDER: process.env.CLOUD_HSM_PROVIDER,
+    CLOUD_HSM_SIGN_URL: process.env.CLOUD_HSM_SIGN_URL,
+    CLOUD_HSM_VERIFY_URL: process.env.CLOUD_HSM_VERIFY_URL,
+    CLOUD_HSM_KEY_ID: process.env.CLOUD_HSM_KEY_ID,
+  };
+  process.env.KMS_BACKEND_MODE = "live";
+  process.env.CLOUD_HSM_PROVIDER = "http";
+  process.env.CLOUD_HSM_SIGN_URL = "http://hsm.test/sign";
+  process.env.CLOUD_HSM_VERIFY_URL = "http://hsm.test/verify";
+  process.env.CLOUD_HSM_KEY_ID = "aegis-ci-mldsa87-v1";
+
+  const { setKmsFetchForTests, resetKmsFetchForTests } = await import("../../scripts/lib/kms-backends/http-fetch.mjs");
+  let fetchCalled = false;
+  setKmsFetchForTests(async (url) => {
+    fetchCalled = true;
+    if (String(url).endsWith("/sign")) {
+      return new Response(JSON.stringify({ signature: "cd".repeat(32) }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (String(url).endsWith("/verify")) {
+      return new Response(JSON.stringify({ valid: true }), { status: 200 });
+    }
+    return new Response("not found", { status: 404 });
+  });
+
+  const signer = createSigner({
+    backend: BACKEND_CLOUD_HSM,
+    keyId: "aegis-ci-mldsa87-v1",
+    role: SIGNER_ROLE_PROVENANCE,
+  });
+  const payload = entrySignPayload({
+    artifact: "live-cloud.wasm",
+    path: "artifacts/live-cloud.wasm",
+    sha256: "3".repeat(64),
+    size: 10,
+    version: "v2",
+    source: "test",
+  });
+  const sig = await signPayload(signer, payload);
+  ok(fetchCalled, "T-EXP-009C: live mode calls cloud HSM HTTP fetch");
+  ok(sig.live === true, "T-EXP-009C: live cloud-hsm signature flag");
+  ok(sig.signature === "cd".repeat(32), "T-EXP-009C: live cloud-hsm signature returned");
+
+  resetKmsFetchForTests();
   for (const [k, v] of Object.entries(prev)) {
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;

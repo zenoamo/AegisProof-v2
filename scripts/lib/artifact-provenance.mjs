@@ -353,6 +353,58 @@ export function loadManifest(manifestPath = DEFAULT_MANIFEST_PATH) {
 }
 
 /**
+ * Whether an envelope carries a KMS-signed provenance layer worth preserving.
+ * @param {object | null | undefined} env
+ */
+export function isPreservableKmsEnvelope(env) {
+  return Boolean(
+    env?.kmsBackend &&
+      env.status === "signed" &&
+      typeof env.signature === "string" &&
+      env.signature.length > 0
+  );
+}
+
+/**
+ * After --live regeneration, copy KMS envelopes from the committed manifest onto
+ * regenerated entries only when artifact identity (name + sha256) is unchanged.
+ * Prevents cross-artifact signature reuse and drops envelopes when content changed.
+ * @param {object} regenerated
+ * @param {object} committed
+ */
+export function preserveVerifiedKmsEnvelopes(regenerated, committed) {
+  const committedByArtifact = new Map((committed.entries ?? []).map((e) => [e.artifact, e]));
+  let preservedCount = 0;
+
+  const entries = (regenerated.entries ?? []).map((entry) => {
+    const prev = committedByArtifact.get(entry.artifact);
+    const env = prev?.pqcSignatureEnvelope;
+    if (!isPreservableKmsEnvelope(env)) {
+      return entry;
+    }
+    if (!prev.sha256 || !entry.sha256 || prev.sha256 !== entry.sha256) {
+      return entry;
+    }
+    preservedCount++;
+    return {
+      ...entry,
+      pqcSignatureEnvelope: structuredClone(env),
+    };
+  });
+
+  const out = { ...regenerated, entries };
+  if (preservedCount > 0 && committed.pqcPolicy) {
+    out.pqcPolicy = {
+      ...out.pqcPolicy,
+      ...(committed.pqcPolicy.signingKeyId ? { signingKeyId: committed.pqcPolicy.signingKeyId } : {}),
+      ...(committed.pqcPolicy.signingBackend ? { signingBackend: committed.pqcPolicy.signingBackend } : {}),
+      ...(committed.pqcPolicy.kmsLive != null ? { kmsLive: committed.pqcPolicy.kmsLive } : {}),
+    };
+  }
+  return out;
+}
+
+/**
  * End-to-end: resolve → create → verify (measures overhead).
  */
 export function verifyLiveArtifacts(opts = {}) {

@@ -440,18 +440,24 @@ async function signWithVaultTransit(signer, message) {
  * @param {Uint8Array} message
  */
 async function signWithCloudHsm(signer, message) {
-  if (isExplicitLiveMode()) {
-    const validation = validateCloudHsmEnv();
-    if (!validation.ok) {
+  if (!isExplicitLiveMode()) {
+    if (isCloudHsmConfigured()) {
       throw new KmsSecurityError(
-        "CLOUD_HSM_NOT_CONFIGURED",
-        validation.errors.join("; ") || "live cloud-hsm requires provider configuration; stub fallback forbidden"
+        "CLOUD_HSM_FORBIDDEN_IN_STUB_MODE",
+        "cloud-hsm outbound signing is forbidden when KMS_BACKEND_MODE=stub"
       );
     }
-  } else if (!isCloudHsmConfigured()) {
     throw new KmsSecurityError(
       "NOT_IMPLEMENTED",
       "cloud-hsm signing not configured (set CLOUD_HSM_PROVIDER and credentials)"
+    );
+  }
+
+  const validation = validateCloudHsmEnv();
+  if (!validation.ok) {
+    throw new KmsSecurityError(
+      "CLOUD_HSM_NOT_CONFIGURED",
+      validation.errors.join("; ") || "live cloud-hsm requires provider configuration; stub fallback forbidden"
     );
   }
 
@@ -526,6 +532,12 @@ export async function verifySignedPayload(signer, payload, signatureResult) {
   }
 
   if (signer.backend === BACKEND_VAULT_TRANSIT && signatureResult.stub) {
+    if (isExplicitLiveMode()) {
+      return {
+        ok: false,
+        error: "KMS_STUB_FORBIDDEN_IN_LIVE_MODE: stub KMS verification forbidden in live mode",
+      };
+    }
     const digest = crypto.createHash("sha256").update(message).digest("hex");
     const expected = `vault-stub-${digest.slice(0, 32)}`;
     return {

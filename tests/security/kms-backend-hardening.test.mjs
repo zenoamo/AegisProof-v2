@@ -54,6 +54,30 @@ function basePayload(suffix) {
   });
 }
 
+function makeJwt(payload) {
+  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${header}.${body}.fakesignature`;
+}
+
+function setupLiveOidcVaultEnv() {
+  delete process.env.VAULT_TOKEN;
+  delete process.env.VAULT_TRANSIT_TOKEN;
+  process.env.VAULT_JWT_ROLE = "ci-provenance-signer";
+  process.env.VAULT_OIDC_JWT = makeJwt({
+    repository: "zenoamo/AegisProof-v2",
+    repository_owner: "zenoamo",
+    ref: "refs/tags/v2.0.1",
+    workflow: "Release",
+    environment: "release-signing",
+  });
+  process.env.KMS_OIDC_EXPECT_REPOSITORY = "zenoamo/AegisProof-v2";
+  process.env.KMS_OIDC_EXPECT_OWNER = "zenoamo";
+  process.env.KMS_OIDC_EXPECT_REF = "refs/tags/v*";
+  process.env.KMS_OIDC_EXPECT_WORKFLOW = "Release";
+  process.env.KMS_OIDC_EXPECT_ENVIRONMENT = "release-signing";
+}
+
 // T-KMS-10: live mode requires Vault config — no stub fallback
 {
   const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE, VAULT_ADDR: process.env.VAULT_ADDR, VAULT_TOKEN: process.env.VAULT_TOKEN };
@@ -106,14 +130,32 @@ function basePayload(suffix) {
 
 // T-KMS-12: Vault auth failure (403)
 {
-  const prev = { VAULT_ADDR: process.env.VAULT_ADDR, VAULT_TOKEN: process.env.VAULT_TOKEN, KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE };
+  const prev = {
+    VAULT_ADDR: process.env.VAULT_ADDR,
+    VAULT_TOKEN: process.env.VAULT_TOKEN,
+    VAULT_TRANSIT_TOKEN: process.env.VAULT_TRANSIT_TOKEN,
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
+    VAULT_JWT_ROLE: process.env.VAULT_JWT_ROLE,
+    VAULT_OIDC_JWT: process.env.VAULT_OIDC_JWT,
+    KMS_OIDC_EXPECT_REPOSITORY: process.env.KMS_OIDC_EXPECT_REPOSITORY,
+    KMS_OIDC_EXPECT_OWNER: process.env.KMS_OIDC_EXPECT_OWNER,
+    KMS_OIDC_EXPECT_REF: process.env.KMS_OIDC_EXPECT_REF,
+    KMS_OIDC_EXPECT_WORKFLOW: process.env.KMS_OIDC_EXPECT_WORKFLOW,
+    KMS_OIDC_EXPECT_ENVIRONMENT: process.env.KMS_OIDC_EXPECT_ENVIRONMENT,
+  };
   process.env.VAULT_ADDR = "http://vault.test:8200";
-  process.env.VAULT_TOKEN = "placeholder-token-not-real";
   process.env.KMS_BACKEND_MODE = "live";
+  setupLiveOidcVaultEnv();
 
-  setKmsFetchForTests(async () =>
-    new Response(JSON.stringify({ errors: ["permission denied"] }), { status: 403 })
-  );
+  setKmsFetchForTests(async (url) => {
+    if (String(url).includes("/login")) {
+      return new Response(
+        JSON.stringify({ auth: { client_token: "mock-vault-token", lease_duration: 3600 } }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    return new Response(JSON.stringify({ errors: ["permission denied"] }), { status: 403 });
+  });
 
   await assert.rejects(
     () => vaultTransitSign({ keyName: "aegis-ci-mldsa87-v1", message: new TextEncoder().encode("x") }),
@@ -176,12 +218,30 @@ function basePayload(suffix) {
 
 // T-KMS-15: Vault verify rejection
 {
-  const prev = { VAULT_ADDR: process.env.VAULT_ADDR, VAULT_TOKEN: process.env.VAULT_TOKEN, KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE };
+  const prev = {
+    VAULT_ADDR: process.env.VAULT_ADDR,
+    VAULT_TOKEN: process.env.VAULT_TOKEN,
+    VAULT_TRANSIT_TOKEN: process.env.VAULT_TRANSIT_TOKEN,
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
+    VAULT_JWT_ROLE: process.env.VAULT_JWT_ROLE,
+    VAULT_OIDC_JWT: process.env.VAULT_OIDC_JWT,
+    KMS_OIDC_EXPECT_REPOSITORY: process.env.KMS_OIDC_EXPECT_REPOSITORY,
+    KMS_OIDC_EXPECT_OWNER: process.env.KMS_OIDC_EXPECT_OWNER,
+    KMS_OIDC_EXPECT_REF: process.env.KMS_OIDC_EXPECT_REF,
+    KMS_OIDC_EXPECT_WORKFLOW: process.env.KMS_OIDC_EXPECT_WORKFLOW,
+    KMS_OIDC_EXPECT_ENVIRONMENT: process.env.KMS_OIDC_EXPECT_ENVIRONMENT,
+  };
   process.env.VAULT_ADDR = "http://vault.test:8200";
-  process.env.VAULT_TOKEN = "placeholder-token-not-real";
   process.env.KMS_BACKEND_MODE = "live";
+  setupLiveOidcVaultEnv();
 
   setKmsFetchForTests(async (url) => {
+    if (String(url).includes("/login")) {
+      return new Response(
+        JSON.stringify({ auth: { client_token: "mock-vault-token", lease_duration: 3600 } }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
     if (String(url).includes("/transit/sign/")) {
       return new Response(JSON.stringify({ data: { signature: "vault:v1:bad", key_version: 1 } }), { status: 200 });
     }

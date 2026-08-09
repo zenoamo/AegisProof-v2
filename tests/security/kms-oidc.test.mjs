@@ -62,6 +62,39 @@ function basePayload(suffix) {
   });
 }
 
+function setFullOidcBindings() {
+  process.env.KMS_OIDC_EXPECT_REPOSITORY = "zenoamo/AegisProof-v2";
+  process.env.KMS_OIDC_EXPECT_OWNER = "zenoamo";
+  process.env.KMS_OIDC_EXPECT_REF = "refs/tags/v*";
+  process.env.KMS_OIDC_EXPECT_WORKFLOW = "Release";
+  process.env.KMS_OIDC_EXPECT_ENVIRONMENT = "release-signing";
+}
+
+function clearOidcBindings() {
+  delete process.env.KMS_OIDC_EXPECT_REPOSITORY;
+  delete process.env.KMS_OIDC_EXPECT_OWNER;
+  delete process.env.KMS_OIDC_EXPECT_REPOSITORY_OWNER;
+  delete process.env.KMS_OIDC_EXPECT_REF;
+  delete process.env.KMS_OIDC_EXPECT_WORKFLOW;
+  delete process.env.KMS_OIDC_EXPECT_ENVIRONMENT;
+  delete process.env.KMS_OIDC_EXPECT_SUBJECT;
+  delete process.env.KMS_OIDC_EXPECT_SUB;
+}
+
+function setupLiveOidcEnv() {
+  delete process.env.VAULT_TOKEN;
+  delete process.env.VAULT_TRANSIT_TOKEN;
+  process.env.VAULT_JWT_ROLE = "ci-provenance-signer";
+  process.env.VAULT_OIDC_JWT = makeJwt({
+    repository: "zenoamo/AegisProof-v2",
+    repository_owner: "zenoamo",
+    ref: "refs/tags/v2.0.1",
+    workflow: "Release",
+    environment: "release-signing",
+  });
+  setFullOidcBindings();
+}
+
 // T-KMS-OIDC-01: missing OIDC configuration → reject
 {
   const prev = {
@@ -242,18 +275,32 @@ function basePayload(suffix) {
   restoreEnv(prev);
 }
 
-// T-KMS-OIDC-10: signing failure → reject (live, vault bad response)
+// T-KMS-OIDC-10: signing failure → reject (live, vault bad response via OIDC)
 {
   const prev = {
     KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
     VAULT_ADDR: process.env.VAULT_ADDR,
     VAULT_TOKEN: process.env.VAULT_TOKEN,
+    VAULT_TRANSIT_TOKEN: process.env.VAULT_TRANSIT_TOKEN,
+    VAULT_JWT_ROLE: process.env.VAULT_JWT_ROLE,
+    VAULT_OIDC_JWT: process.env.VAULT_OIDC_JWT,
+    KMS_OIDC_EXPECT_REPOSITORY: process.env.KMS_OIDC_EXPECT_REPOSITORY,
+    KMS_OIDC_EXPECT_OWNER: process.env.KMS_OIDC_EXPECT_OWNER,
+    KMS_OIDC_EXPECT_REF: process.env.KMS_OIDC_EXPECT_REF,
+    KMS_OIDC_EXPECT_WORKFLOW: process.env.KMS_OIDC_EXPECT_WORKFLOW,
+    KMS_OIDC_EXPECT_ENVIRONMENT: process.env.KMS_OIDC_EXPECT_ENVIRONMENT,
   };
   process.env.KMS_BACKEND_MODE = "live";
   process.env.VAULT_ADDR = "https://vault.example.com";
-  process.env.VAULT_TOKEN = "hvs.test-token-oidc-sign-fail";
+  setupLiveOidcEnv();
 
   setKmsFetchForTests(async (url) => {
+    if (String(url).includes("/login")) {
+      return new Response(
+        JSON.stringify({ auth: { client_token: "mock-vault-token", lease_duration: 3600 } }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
     if (String(url).includes("/transit/sign/")) {
       return new Response(JSON.stringify({ errors: ["unknown key"] }), { status: 404 });
     }
@@ -275,6 +322,7 @@ function basePayload(suffix) {
   console.log("PASS T-KMS-OIDC-10: signing failure rejected");
 
   restoreEnv(prev);
+  clearOidcBindings();
 }
 
 // T-KMS-OIDC-11: verification failure path (stub mismatch)
@@ -434,6 +482,291 @@ function basePayload(suffix) {
   console.log("PASS T-KMS-OIDC-17: local OIDC context rejected cleanly");
 
   restoreEnv(prev);
+}
+
+// T-EXP-006A: live + all required bindings unset → reject
+{
+  const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE };
+  process.env.KMS_BACKEND_MODE = "live";
+  clearOidcBindings();
+  const jwt = makeJwt({
+    repository: "evil/evil-repo",
+    repository_owner: "evil",
+    ref: "refs/heads/main",
+    workflow: "evil.yml",
+    environment: "production",
+  });
+  try {
+    assert.throws(
+      () => validateOidcClaimBindings(decodeJwtPayload(jwt)),
+      (err) => {
+        ok(err instanceof VaultAuthError, "T-EXP-006A: VaultAuthError thrown");
+        ok(err.code === "OIDC_BINDINGS_REQUIRED", "T-EXP-006A: OIDC_BINDINGS_REQUIRED");
+        return true;
+      }
+    );
+    passed += 2;
+    console.log("PASS T-EXP-006A: live mode rejects missing bindings");
+  } finally {
+    restoreEnv(prev);
+    clearOidcBindings();
+  }
+}
+
+// T-EXP-006B: live + one required binding missing → reject
+{
+  const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE };
+  process.env.KMS_BACKEND_MODE = "live";
+  clearOidcBindings();
+  process.env.KMS_OIDC_EXPECT_REPOSITORY = "zenoamo/AegisProof-v2";
+  process.env.KMS_OIDC_EXPECT_OWNER = "zenoamo";
+  process.env.KMS_OIDC_EXPECT_REF = "refs/tags/v*";
+  process.env.KMS_OIDC_EXPECT_WORKFLOW = "Release";
+  const jwt = makeJwt({ repository: "zenoamo/AegisProof-v2", ref: "refs/tags/v2.0.1" });
+  try {
+    assert.throws(
+      () => validateOidcClaimBindings(decodeJwtPayload(jwt)),
+      (err) => {
+        ok(err.code === "OIDC_BINDINGS_REQUIRED", "T-EXP-006B: OIDC_BINDINGS_REQUIRED");
+        ok(err.message.includes("environment"), "T-EXP-006B: missing environment reported");
+        return true;
+      }
+    );
+    passed += 2;
+    console.log("PASS T-EXP-006B: live mode rejects partial bindings");
+  } finally {
+    restoreEnv(prev);
+    clearOidcBindings();
+  }
+}
+
+// T-EXP-006C: live + all required bindings + matching JWT → PASS
+{
+  const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE };
+  process.env.KMS_BACKEND_MODE = "live";
+  setFullOidcBindings();
+  const jwt = makeJwt({
+    repository: "zenoamo/AegisProof-v2",
+    repository_owner: "zenoamo",
+    ref: "refs/tags/v2.0.1",
+    workflow: "Release",
+    environment: "release-signing",
+  });
+  try {
+    const result = validateOidcClaimBindings(decodeJwtPayload(jwt));
+    ok(result.ok, "T-EXP-006C: valid live bindings accepted");
+    console.log("PASS T-EXP-006C: live mode accepts matching claims");
+  } finally {
+    restoreEnv(prev);
+    clearOidcBindings();
+  }
+}
+
+// T-EXP-006D: live + mismatched repository → reject
+{
+  const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE };
+  process.env.KMS_BACKEND_MODE = "live";
+  setFullOidcBindings();
+  const jwt = makeJwt({
+    repository: "evil/evil-repo",
+    repository_owner: "zenoamo",
+    ref: "refs/tags/v2.0.1",
+    workflow: "Release",
+    environment: "release-signing",
+  });
+  try {
+    assert.throws(
+      () => validateOidcClaimBindings(decodeJwtPayload(jwt)),
+      (err) => {
+        ok(err.code === "OIDC_CLAIM_REJECTED", "T-EXP-006D: OIDC_CLAIM_REJECTED");
+        return true;
+      }
+    );
+    passed++;
+    console.log("PASS T-EXP-006D: live mode rejects mismatched repository");
+  } finally {
+    restoreEnv(prev);
+    clearOidcBindings();
+  }
+}
+
+// T-EXP-006E: live + mismatched workflow/environment → reject
+{
+  const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE };
+  process.env.KMS_BACKEND_MODE = "live";
+  setFullOidcBindings();
+  const jwtBadWorkflow = makeJwt({
+    repository: "zenoamo/AegisProof-v2",
+    repository_owner: "zenoamo",
+    ref: "refs/tags/v2.0.1",
+    workflow: "malicious.yml",
+    environment: "release-signing",
+  });
+  const jwtBadEnv = makeJwt({
+    repository: "zenoamo/AegisProof-v2",
+    repository_owner: "zenoamo",
+    ref: "refs/tags/v2.0.1",
+    workflow: "Release",
+    environment: "staging",
+  });
+  try {
+    assert.throws(() => validateOidcClaimBindings(decodeJwtPayload(jwtBadWorkflow)), (err) => {
+      ok(err.code === "OIDC_CLAIM_REJECTED", "T-EXP-006E: wrong workflow rejected");
+      return true;
+    });
+    assert.throws(() => validateOidcClaimBindings(decodeJwtPayload(jwtBadEnv)), (err) => {
+      ok(err.code === "OIDC_CLAIM_REJECTED", "T-EXP-006E: wrong environment rejected");
+      return true;
+    });
+    passed += 2;
+    console.log("PASS T-EXP-006E: live mode rejects mismatched workflow/environment");
+  } finally {
+    restoreEnv(prev);
+    clearOidcBindings();
+  }
+}
+
+// T-EXP-006F: stub mode + missing bindings → existing fail-open preserved
+{
+  const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE };
+  process.env.KMS_BACKEND_MODE = "stub";
+  clearOidcBindings();
+  const jwt = makeJwt({
+    repository: "evil/evil-repo",
+    repository_owner: "evil",
+    ref: "refs/heads/main",
+    workflow: "evil.yml",
+    environment: "production",
+  });
+  try {
+    const result = validateOidcClaimBindings(decodeJwtPayload(jwt));
+    ok(result.ok, "T-EXP-006F: stub mode preserves fail-open when bindings unset");
+    console.log("PASS T-EXP-006F: stub mode behavior preserved");
+  } finally {
+    restoreEnv(prev);
+    clearOidcBindings();
+  }
+}
+
+// T-EXP-007A: live + VAULT_TOKEN → reject
+{
+  const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE, VAULT_TOKEN: process.env.VAULT_TOKEN, VAULT_ADDR: process.env.VAULT_ADDR };
+  process.env.KMS_BACKEND_MODE = "live";
+  process.env.VAULT_ADDR = "https://vault.example.com";
+  process.env.VAULT_TOKEN = "fixture-not-a-real-token";
+  try {
+    await assert.rejects(() => resolveVaultAuthToken(), (err) => {
+      ok(err instanceof VaultAuthError, "T-EXP-007A: VaultAuthError thrown");
+      ok(err.code === "VAULT_STATIC_TOKEN_FORBIDDEN_IN_LIVE_MODE", "T-EXP-007A: forbidden code");
+      return true;
+    });
+    passed += 2;
+    console.log("PASS T-EXP-007A: live mode rejects VAULT_TOKEN");
+  } finally {
+    restoreEnv(prev);
+  }
+}
+
+// T-EXP-007B: live + VAULT_TRANSIT_TOKEN → reject
+{
+  const prev = {
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
+    VAULT_TOKEN: process.env.VAULT_TOKEN,
+    VAULT_TRANSIT_TOKEN: process.env.VAULT_TRANSIT_TOKEN,
+    VAULT_ADDR: process.env.VAULT_ADDR,
+  };
+  process.env.KMS_BACKEND_MODE = "live";
+  process.env.VAULT_ADDR = "https://vault.example.com";
+  delete process.env.VAULT_TOKEN;
+  process.env.VAULT_TRANSIT_TOKEN = "fixture-not-a-real-token";
+  try {
+    await assert.rejects(() => resolveVaultAuthToken(), (err) => {
+      ok(err.code === "VAULT_STATIC_TOKEN_FORBIDDEN_IN_LIVE_MODE", "T-EXP-007B: forbidden code");
+      return true;
+    });
+    passed++;
+    console.log("PASS T-EXP-007B: live mode rejects VAULT_TRANSIT_TOKEN");
+  } finally {
+    restoreEnv(prev);
+  }
+}
+
+// T-EXP-007C: live + no static token + valid OIDC bindings → OIDC path selected
+{
+  const prev = {
+    KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE,
+    VAULT_ADDR: process.env.VAULT_ADDR,
+    VAULT_TOKEN: process.env.VAULT_TOKEN,
+    VAULT_TRANSIT_TOKEN: process.env.VAULT_TRANSIT_TOKEN,
+    VAULT_JWT_ROLE: process.env.VAULT_JWT_ROLE,
+    VAULT_OIDC_JWT: process.env.VAULT_OIDC_JWT,
+    KMS_OIDC_EXPECT_REPOSITORY: process.env.KMS_OIDC_EXPECT_REPOSITORY,
+    KMS_OIDC_EXPECT_OWNER: process.env.KMS_OIDC_EXPECT_OWNER,
+    KMS_OIDC_EXPECT_REF: process.env.KMS_OIDC_EXPECT_REF,
+    KMS_OIDC_EXPECT_WORKFLOW: process.env.KMS_OIDC_EXPECT_WORKFLOW,
+    KMS_OIDC_EXPECT_ENVIRONMENT: process.env.KMS_OIDC_EXPECT_ENVIRONMENT,
+  };
+  process.env.KMS_BACKEND_MODE = "live";
+  process.env.VAULT_ADDR = "https://vault.example.com";
+  setupLiveOidcEnv();
+
+  setKmsFetchForTests(async (url) => {
+    if (String(url).includes("/login")) {
+      return new Response(
+        JSON.stringify({ auth: { client_token: "mock-oidc-vault-token", lease_duration: 3600 } }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    return new Response("not found", { status: 404 });
+  });
+
+  try {
+    const result = await resolveVaultAuthToken();
+    ok(result.source === "oidc", "T-EXP-007C: OIDC path selected");
+    ok(result.token === "mock-oidc-vault-token", "T-EXP-007C: mocked Vault token returned");
+    console.log("PASS T-EXP-007C: live OIDC path preserved");
+  } finally {
+    restoreEnv(prev);
+    clearOidcBindings();
+  }
+}
+
+// T-EXP-007D: live + static token → reject before Vault login (no fetch)
+{
+  const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE, VAULT_TOKEN: process.env.VAULT_TOKEN, VAULT_ADDR: process.env.VAULT_ADDR };
+  process.env.KMS_BACKEND_MODE = "live";
+  process.env.VAULT_ADDR = "https://vault.example.com";
+  process.env.VAULT_TOKEN = "fixture-not-a-real-token";
+
+  let fetchCalled = false;
+  setKmsFetchForTests(async () => {
+    fetchCalled = true;
+    return new Response("unexpected", { status: 500 });
+  });
+
+  try {
+    await assert.rejects(() => resolveVaultAuthToken(), VaultAuthError);
+    ok(!fetchCalled, "T-EXP-007D: no Vault fetch before static token rejection");
+    console.log("PASS T-EXP-007D: reject before Vault login");
+  } finally {
+    resetKmsFetchForTests();
+    restoreEnv(prev);
+  }
+}
+
+// T-EXP-007E: stub mode + static token → existing behavior preserved
+{
+  const prev = { KMS_BACKEND_MODE: process.env.KMS_BACKEND_MODE, VAULT_TOKEN: process.env.VAULT_TOKEN, VAULT_ADDR: process.env.VAULT_ADDR };
+  process.env.KMS_BACKEND_MODE = "stub";
+  process.env.VAULT_ADDR = "https://vault.example.com";
+  process.env.VAULT_TOKEN = "fixture-not-a-real-token";
+  try {
+    const result = await resolveVaultAuthToken();
+    ok(result.source === "static", "T-EXP-007E: stub mode allows static token");
+    console.log("PASS T-EXP-007E: stub mode behavior preserved");
+  } finally {
+    restoreEnv(prev);
+  }
 }
 
 console.log(`\nKMS OIDC tests: ${passed} checks PASS`);

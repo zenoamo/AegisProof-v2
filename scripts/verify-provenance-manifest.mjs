@@ -15,9 +15,10 @@ import {
   verifyManifest,
   createManifest,
   writeManifest,
+  preserveVerifiedKmsEnvelopes,
 } from "./lib/artifact-provenance.mjs";
 import { resolveArtifacts } from "./lib/resolve-artifacts.mjs";
-import { verifyManifestKmsEntries } from "./lib/kms-provenance.mjs";
+import { verifyManifestKmsLayer } from "./lib/kms-provenance.mjs";
 import { isExplicitLiveMode } from "./lib/kms-backends/env.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,17 +28,6 @@ const pqcRequired = args.includes("--pqc") || args.includes("--require-pqc");
 const manifestArg = args.indexOf("--manifest");
 const manifestPath =
   manifestArg >= 0 ? path.resolve(args[manifestArg + 1]) : DEFAULT_MANIFEST_PATH;
-
-async function verifyKmsLayer(manifest) {
-  const hasKms = (manifest.entries ?? []).some((e) => e.pqcSignatureEnvelope?.kmsBackend);
-  if (!hasKms) return { ok: true, errors: [], verifiedCount: 0 };
-
-  const kmsResult = await verifyManifestKmsEntries(manifest);
-  if (!kmsResult.ok) {
-    return kmsResult;
-  }
-  return kmsResult;
-}
 
 async function main() {
   const t0 = Date.now();
@@ -52,7 +42,31 @@ async function main() {
       console.error("\nFAIL artifact provenance check");
       process.exit(1);
     }
-    writeManifest(result.manifest, manifestPath);
+
+    let committedManifest = null;
+    try {
+      committedManifest = loadManifest(manifestPath);
+    } catch {
+      // No committed manifest yet — hash-only gate applies until first write.
+    }
+
+    if (committedManifest) {
+      const kmsResult = await verifyManifestKmsLayer(committedManifest);
+      if (!kmsResult.ok) {
+        for (const e of kmsResult.errors) console.error(`FAIL ${e}`);
+        console.error("\nFAIL artifact provenance check (committed manifest KMS layer)");
+        process.exit(1);
+      }
+      if (kmsResult.verifiedCount > 0) {
+        console.log(`KMS verify: ${kmsResult.verifiedCount} entries (committed manifest)`);
+      }
+    }
+
+    const manifestToWrite = committedManifest
+      ? preserveVerifiedKmsEnvelopes(result.manifest, committedManifest)
+      : result.manifest;
+
+    writeManifest(manifestToWrite, manifestPath);
     console.log(`Updated manifest: ${path.relative(ROOT, manifestPath)}`);
     console.log(`PASS artifact provenance check (${Date.now() - t0}ms overhead)`);
     process.exit(0);
@@ -76,7 +90,7 @@ async function main() {
   console.log(`Provenance manifest verify — file: ${path.relative(ROOT, manifestPath)}`);
   if (pqcRequired) console.log("Mode: --pqc (ML-DSA required)");
 
-  const kmsResult = await verifyKmsLayer(manifest);
+  const kmsResult = await verifyManifestKmsLayer(manifest);
   if (!kmsResult.ok) {
     for (const e of kmsResult.errors) result.errors.push(e);
     result.ok = false;

@@ -13,8 +13,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SUITES = [
   "tests/security/penetration-boundary.test.mjs",
   "tests/security/provenance-security.test.mjs",
+  "tests/security/provenance-live-kms.test.mjs",
   "tests/security/pqc-security.test.mjs",
   "tests/security/hybrid-auth-security.test.mjs",
+  "tests/security/elliptic-supply-chain.test.mjs",
 ];
 
 let failed = 0;
