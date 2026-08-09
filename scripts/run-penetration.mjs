@@ -17,6 +17,7 @@ const SUITES = [
   "tests/security/pqc-security.test.mjs",
   "tests/security/hybrid-auth-security.test.mjs",
   "tests/security/elliptic-supply-chain.test.mjs",
+  "tests/security/research-negative.test.mjs",
 ];
 
 let failed = 0;

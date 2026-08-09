@@ -68,6 +68,27 @@ Central index for reviewers, researchers, and OSS contributors.
 
 Phase 8.x research documents: PQC wrapper, hybrid auth, TEE evaluation, Phase 9 roadmap.
 
+### Research Expansion (SSoT)
+
+| Document | Topic |
+|----------|-------|
+| [implementation-status-matrix.md](./research/implementation-status-matrix.md) | **SSoT** — Implemented / Tested / Mocked / Live Verified |
+| [cryptographic-specification.md](./research/cryptographic-specification.md) | Consolidated crypto spec |
+| [public-signal-security-rationale.md](./research/public-signal-security-rationale.md) | 30-signal security semantics |
+| [threat-model.md](./research/threat-model.md) | Cross-layer threat model |
+| [supply-chain-security.md](./research/supply-chain-security.md) | Supply chain research pack |
+| [reproducible-builds.md](./research/reproducible-builds.md) | Reproducibility strategy |
+| [release-provenance.md](./research/release-provenance.md) | Release signing chain |
+| [pqc-readiness.md](./research/pqc-readiness.md) | PQC readiness |
+| [hybrid-authentication.md](./research/hybrid-authentication.md) | Hybrid auth research |
+| [key-rotation.md](./research/key-rotation.md) | Key rotation / revocation |
+| [tee-attestation.md](./research/tee-attestation.md) | TEE attestation research |
+| [dcap-vcek.md](./research/dcap-vcek.md) | DCAP / VCEK offline vs online |
+| [attestation-to-zk.md](./research/attestation-to-zk.md) | TEE → ZK research pipeline |
+| [security-test-catalog.md](./research/security-test-catalog.md) | Negative test threat catalog |
+
+### Phase 8.x Reports
+
 | Document | Topic |
 |----------|-------|
 | [phase8.13-architecture-summary.md](./research/phase8.13-architecture-summary.md) | Phase 8.13 closure |
