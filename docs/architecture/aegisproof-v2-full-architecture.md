@@ -5,17 +5,31 @@
 **Format:** Mermaid (SVG-exportable)  
 **Scope:** ZK core, operational extensions, PQC layers, CI security, TEE boundary, future migration  
 
+### Status
+
+| Area | State |
+|------|-------|
+| Production artifacts | **PINNED** (zkey, VK, R1CS, WASM hash pins; T1–T9 regression) |
+| Mainnet deployment | **NOT ACTIVE / NOT VERIFIED** |
+| Live Vault / OIDC / Cloud HSM | **NOT VERIFIED** (mock/stub/fixture tests only) |
+| Production TEE | **NOT VERIFIED** (offline/mock/fixture research scope) |
+| Research demo / pipeline scripts | **RESEARCH_DEMO_ONLY** |
+
+Pinned production artifacts do **not** imply live mainnet deployment or live infrastructure verification.
+
 ---
 
 ## Legend
 
 | Symbol | Meaning |
 |--------|---------|
-| 🔴 **Frozen Boundary** | Immutable without Architecture Review — circuits, zkey, VK, verifier, protocol, SDK, `proveCanonical()` |
+| 🔴 **Frozen Boundary** | Cryptographic / protocol **semantics** and security boundaries immutable without Architecture Review — not “files never edited” |
 | 🔵 **Extension Layer** | Additive, rollback-safe — resolver, provenance, PQC, hybrid auth, CI tooling |
 | 🟡 **Trust Boundary** | Explicit security isolation line |
 | ➡️ **Data Flow** | Artifact / proof / signal movement |
 | 🔒 **Trust Flow** | Verification / authorization / attestation |
+
+> **Frozen principle:** Frozen means `publicSignals(30)`, `proveCanonical()`, verifier/protocol semantics, and ADR-001 TEE isolation cannot change without Architecture Review. Operational implementation (scripts, CI, adapters, provenance) may evolve additively within those boundaries.
 
 ```mermaid
 flowchart LR
@@ -50,7 +64,7 @@ flowchart TB
 
   subgraph PROTO["AegisProof Protocol Layer 🔴 FROZEN"]
     SHIELD["AegisShieldV2.sol<br/>session · replay · timestamp policy"]
-    SPEC["specs/aegis-protocol.v2.json<br/>30 publicSignals layout"]
+    SPEC["protocol/specs<br/>30 publicSignals layout"]
   end
 
   subgraph FROZEN_CORE["🔴 FROZEN SECURITY CORE BOUNDARY"]
@@ -151,33 +165,35 @@ flowchart TB
 
 ### Frozen vs Mutable Summary
 
-| 🔴 Frozen (Architecture Review required) | 🔵 Mutable / Extension |
-|----------------------------------------|------------------------|
-| `circuits/` compiled artifacts | Prover backend (snarkjs / rapidsnark) |
-| R1CS | `resolveArtifacts()` profiles |
-| Trusted setup / `production.zkey` | Provenance manifest |
-| Verification key (ceremony hash pinned) | ML-DSA-87 provenance layer |
-| `publicSignals` layout (30) | Hybrid auth envelope (research) |
-| `Groth16VerifierV2Production.sol` | CI tooling & benchmarks |
-| `protocol/contracts/` | Public key registry (public keys only) |
-| `packages/sdk/` API semantics | TEE research adapter |
-| `proveCanonical()` return semantics | — |
-| `tee/` ADR-001 boundary | — |
+> **Semantics frozen, implementation may evolve additively** within the boundaries below.
+
+| 🔴 Frozen semantics (Architecture Review required) | 🔵 Mutable / extension (additive only) |
+|----------------------------------------------------|----------------------------------------|
+| Canonical compiled circuit artifacts (WASM, R1CS) | Prover backend (snarkjs / rapidsnark) |
+| Trusted setup / `production.zkey` / ceremony hash pins | `resolveArtifacts()` profiles |
+| Production verification key (ceremony hash pinned) | Provenance manifest + SHA-256 verification |
+| `publicSignals` layout (**30**, canonical order) | ML-DSA-87 provenance metadata layer |
+| `Groth16VerifierV2Production.sol` semantics | Hybrid auth envelope (research) |
+| `protocol/contracts/` semantics | CI tooling, benchmarks, research demo scripts |
+| `packages/sdk/` API + **`proveCanonical()`** return semantics | Public key registry (public keys only) |
+| ADR-001 **TEE isolation boundary** (no protocol merge) | TEE provider adapters / parsers / offline fixtures |
+
+**Not frozen:** editing operational scripts, docs, CI, or research adapters — **provided** Groth16/protocol/public-signal semantics and security boundaries remain unchanged.
 
 ---
 
 ## 2. ZK Proof Flow Diagram
 
-Groth16 proof generation and verification. The entire path below is inside the 🔴 Frozen Core.
+Groth16 proof generation and verification. Cryptographic semantics on this path are 🔴 **Frozen** (implementation tooling around it may evolve additively).
 
 ```mermaid
 flowchart LR
-  subgraph INPUTS["Private Inputs"]
+  subgraph INPUTS["Private Inputs 🔴"]
     SK["secretKey"]
     DID["deviceId"]
   end
 
-  subgraph PUBLIC["Public Inputs / Metadata"]
+  subgraph PUBLIC["Public Metadata (30-signal layout) 🔴"]
     META["prediction · confidence · chainId<br/>sessionId · timestamp · …"]
   end
 
@@ -221,7 +237,14 @@ flowchart LR
   class WASM,R1CS,ZKEY,VKEY,PROV,OUT,G16,SHIELD frozen
 ```
 
-**Invariant checks (T1–T9):** Proof verifies off-chain and on-chain; `publicSignals` 30/30; zkey and VK hashes pinned; tampered proof or commitment rejected.
+**Invariant checks (T1–T9):** Proof verifies off-chain and on-chain; **`publicSignals` 30/30**; zkey and VK hashes pinned; tampered proof or commitment rejected.
+
+**Timestamp / binding split (frozen semantics):**
+
+| Field | Circuit | Contract |
+|-------|---------|----------|
+| `chainId`, `sessionId`, nullifier | Bound in-circuit | Enforced on-chain |
+| `timestamp` | **Not constrained** (untrusted metadata) | Freshness via `MAX_AGE` / `CLOCK_SKEW` window only |
 
 ---
 
@@ -466,13 +489,15 @@ flowchart TB
 
 ## 7. TEE Boundary (ADR-001)
 
+**Isolation boundary is frozen.** TEE implementation is research/PoC — **production TEE NOT VERIFIED.**
+
 ```mermaid
 flowchart LR
-  subgraph PROTO_V2["🔴 Protocol v2 — FROZEN"]
-    PV2["contracts · SDK · Groth16"]
+  subgraph PROTO_V2["🔴 Protocol v2 — FROZEN semantics"]
+    PV2["contracts · SDK · Groth16 · publicSignals(30)"]
   end
 
-  subgraph TEE_LAYER["🟡 tee/ — Isolated Layer B"]
+  subgraph TEE_LAYER["🟡 tee/ — Isolated Layer B (research)"]
     PIPE["AttestationPipeline<br/>compose-only orchestrator"]
     GATE["ClaimsGate<br/>verificationLevel ≥ OFFLINE_FIXTURE"]
     MOCK["Mock normalizer ⊥ Real normalizer<br/>SB-01 frozen"]
@@ -483,7 +508,7 @@ flowchart LR
   end
 
   PIPE --> GATE --> CLAIMS
-  CLAIMS -.->|"no merge in 8.x"| PROTO_V2
+  CLAIMS -.->|"no semantic merge in 8.x"| PROTO_V2
 
   classDef frozen fill:#ffe6e6,stroke:#cc0000,stroke-width:3px
   classDef tee fill:#fff8e6,stroke:#cc9900,stroke-width:3px
@@ -492,9 +517,19 @@ flowchart LR
   class PIPE,GATE,MOCK,CLAIMS tee
 ```
 
+**Explicit non-guarantees:**
+
+- DCAP / VCEK **online** verification: **NOT VERIFIED**
+- Intel PCCS / AMD KDS live integration: **NOT VERIFIED**
+- Production TEE deployment: **NOT VERIFIED**
+- `ClaimsGate` / `AttestationPipeline` do **not** silently alter Groth16 or protocol contract semantics
+- Fixture/mock CI PASS ≠ hardware-rooted production attestation
+
 ---
 
 ## 8. Future Migration Boundary (Phase 9+)
+
+**Research / evaluation only** — no implicit migration from Groth16 v2.
 
 ```mermaid
 flowchart TB
@@ -520,6 +555,8 @@ flowchart TB
   class PQ,ST,NP,PAR future
 ```
 
+Future PQ-ZK / STARK / new verifier designs are **parallel architecture decisions** — not committed upgrades. Groth16 v2 remains the production baseline until an explicit new version is authorized.
+
 ---
 
 ## Quick Audit Checklist
@@ -527,7 +564,7 @@ flowchart TB
 1. **Is Groth16 touched by PQC?** No — separate domains, separate modules; see dashed boundary in §4.
 2. **What fails closed?** Artifact resolver, SHA-256 mismatch, `--pqc` strict mode, T1–T9 regression.
 3. **What is WARN-only?** Unsigned PQC on the PR path; hybrid auth research mode.
-4. **What is frozen?** Red-boxed nodes in §1 table — changes require Architecture Review.
+4. **What is frozen?** Red-boxed **semantics** in §1 table — changes require Architecture Review (not “no file edits ever”).
 5. **TEE vs Protocol?** ADR-001 isolation — claims only, no contract merge.
 6. **Future PQ?** Parallel version only — v2 Groth16 baseline preserved.
 7. **GitHub vs Vault?** GitHub holds code and public metadata; secrets in external storage — see [GitHub Security Boundary](./github-security-boundary.md).
@@ -562,7 +599,7 @@ Or paste individual fenced `mermaid` blocks into [Mermaid Live Editor](https://m
 - [Architecture Overview](./overview.md)
 - [GitHub Repository Boundary](./github-repository-boundary.md) — inventory A/B/C/D classification
 - [GitHub Security Boundary](./github-security-boundary.md) — trust model, key lifecycle, CI gate
-- [ADR-001 Architecture Hardening Freeze](./adr/001-architecture-hardening-freeze.md)
+- [ADR-001 Architecture Hardening Freeze](../adr/001-architecture-hardening-freeze.md)
 - [Prover Regression Contract](../perf/prover-regression-contract.md)
 - [Phase 8.13 PQC CI Policy](../research/phase8.13-pqc-ci-policy.md)
 - [Phase 8.13 Hybrid Auth Envelope](../research/phase8.13-hybrid-auth-envelope.md)

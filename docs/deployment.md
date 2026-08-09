@@ -4,11 +4,11 @@
 
 - Local development (Hardhat fork / node)
 - Ethereum Sepolia testnet
-- Ethereum mainnet (read-only documentation; no deployment performed here)
+- Ethereum mainnet (read-only documentation; **no deployment performed**)
 
-**IMPORTANT:** This document does not perform contract deployments to public chains. Commands are written for planning and local dry-runs unless you explicitly execute them against your own infrastructure.
+**Status:** Production artifacts are **pinned**; **mainnet deployment is NOT ACTIVE / NOT VERIFIED**. Documented commands are planning/dry-run procedures unless you explicitly execute them on your own infrastructure with separate authorization.
 
-**Production readiness:** The production verifier smart contract generated from the Phase 4 production zkey is [`contracts/Groth16VerifierV2Production.sol`](../contracts/Groth16VerifierV2Production.sol). Its embedded IC constants are verified against `artifacts/phase4/final/production-vkey.json`. The final production verification key hash is:
+**Production readiness:** The production verifier smart contract generated from the Phase 4 production zkey is [`protocol/contracts/Groth16VerifierV2Production.sol`](../protocol/contracts/Groth16VerifierV2Production.sol). Its embedded IC constants are verified against `artifacts/phase4/final/production-vkey.json`. The final production verification key hash is:
 
 ```text
 d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec
@@ -173,7 +173,7 @@ Additional constants baked into `AegisShieldV2.sol`:
 
 Before running any live commands (even on Sepolia), verify:
 
-1. [ ] Production verifier contract source matches `contracts/Groth16VerifierV2Production.sol`.
+1. [ ] Production verifier contract source matches `protocol/contracts/Groth16VerifierV2Production.sol`.
 2. [ ] IC constants count equals 31 (Groth16, nPublic=30).
 3. [ ] IC x-coordinates in the Solidity constant definitions equal the production vkey's IC array.
 4. [ ] No secret keys or private keys committed.

@@ -12,7 +12,7 @@ Groth16-based zero-knowledge protocol for proving knowledge of secret inputs tha
 
 ## Overview
 
-AegisProof v2 separates a **frozen Groth16 core** (circuit, trusted setup hashes, verifier, SDK) from **additive governance layers** (artifact provenance, ML-DSA-87 metadata signing, CI security gates). External reviewers can verify integrity without trusting undocumented binaries.
+AegisProof v2 separates a **frozen Groth16 core** (circuit semantics, trusted setup hashes, verifier, SDK API, **30 public signals**, `proveCanonical()`) from **additive governance layers** (artifact provenance, ML-DSA-87 metadata signing, CI security gates). **Frozen** means cryptographic/protocol semantics require Architecture Review to change — not that operational files are never edited.
 
 ---
 
@@ -67,11 +67,12 @@ See [docs/security/repository-boundary-report.md](docs/security/repository-bound
 
 ## Frozen Core
 
-The following require **Architecture Review** before modification:
+The following require **Architecture Review** before **semantic** change (operational tooling may still evolve additively within these boundaries):
 
-- `circuits/`, R1CS, `production.zkey` hash, verification key hash
-- `Groth16VerifierV2Production.sol`, `protocol/contracts/`, `packages/sdk/`
-- `publicSignals` layout (30), `proveCanonical()` semantics
+- Canonical circuit artifacts, R1CS, `production.zkey` hash, verification key hash
+- `Groth16VerifierV2Production.sol`, `protocol/contracts/`, `packages/sdk/` API semantics
+- **`publicSignals` layout (30)**, **`proveCanonical()`** return semantics
+- ADR-001 TEE isolation boundary (no protocol merge)
 - T1–T9 regression invariants
 
 ADR: [docs/adr/0001-frozen-core.md](docs/adr/0001-frozen-core.md)
@@ -160,10 +161,12 @@ Report security issues via [SECURITY.md](SECURITY.md).
 | Area | State |
 |------|-------|
 | Production artifacts | Hash-pinned; reproducibility CI enforced |
-| Mainnet deployment | **Not active.** Mainnet deployment is not currently active. |
+| Mainnet deployment | **NOT ACTIVE / NOT VERIFIED** |
 | Testnet | Sepolia dry-runs documented; no production mainnet contracts |
-| TEE layer (`tee/`) | Research-only adapter (ADR-001 isolated) |
+| TEE layer (`tee/`) | Research-only adapter (ADR-001 isolated); **production TEE NOT VERIFIED** |
+| Live Vault / OIDC / Cloud HSM | **NOT VERIFIED** (mock/stub tests only) |
 | PQC manifest signing | Additive; PR tier emits WARN when unsigned |
+| Research demo pipeline | **RESEARCH_DEMO_ONLY** |
 | Phase 8.14 KMS/HSM | **Partial** — Task 3 hardened; Task 4 OIDC→Vault workflows + docs (live Vault/HSM not connected in CI PR tier) |
 | Migration debt | 8 allowlisted binary paths (see [repository boundary report](docs/security/repository-boundary-report.md)) |
 

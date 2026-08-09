@@ -1,8 +1,10 @@
 # AegisProof v2 — Cryptographic Specification (Research Consolidation)
 
 **Status:** Documentation consolidation (Phase A) — does not modify Frozen Core
-**Version:** v2 (frozen)
+**Version:** v2 (frozen semantics)
 **Proof system:** Groth16 over BN128 (bn128 curve)
+
+> **Frozen semantics:** Layout of **30 public signals**, `proveCanonical()` entry semantics, and hash-pinned artifacts are frozen. This document describes them; it does not authorize semantic change.
 
 ---
 

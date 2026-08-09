@@ -1,7 +1,7 @@
 # AegisProof v2 — Public Signal Security Rationale
 
 **Status:** Documentation consolidation (Phase A)
-**Scope:** 30-signal layout semantics — **layout itself is frozen and unchanged**
+**Scope:** 30-signal layout **semantics** — **layout itself is frozen** (Architecture Review required to change order/count/meaning)
 **SSoT:** [protocol/specs](../../protocol/specs)
 
 ---

@@ -1,14 +1,29 @@
 # TEE Attestation Pipeline Architecture
 
-**Status:** Frozen (ADR-001)  
+**Status:** ADR-001 isolation boundary **frozen**; TEE implementation **research/PoC**
+**Verification scope:** offline / mock / fixture — **production TEE NOT VERIFIED**
 **HEAD reference:** `9d8b7d0`  
-**Last updated:** 2026-08-06
+**Last updated:** 2026-08-09
 
 ---
 
 ## Overview
 
 The TEE Adapter Layer (Layer B) uses a **compose-only pipeline** introduced in Phase 8.9C-pre.4. Business logic lives in individual components; `AttestationPipeline` orchestrates call order and error conversion only.
+
+**Boundary (frozen per ADR-001):**
+
+- TEE is **isolated from protocol v2** — no semantic merge into Groth16, `publicSignals(30)`, or shield/verifier contracts
+- `ClaimsGate` / `AttestationPipeline` do **not** silently alter protocol semantics
+- TEE claims are **research context only** — not production cryptographic guarantees
+
+**Not verified today:**
+
+- DCAP / VCEK **online** paths
+- Intel PCCS / AMD KDS live integration
+- Production TEE hardware deployment
+
+Mock / fixture regression PASS must **not** be described as live production TEE verification.
 
 See [ADR-001: Architecture Hardening Freeze](../adr/001-architecture-hardening-freeze.md) for binding decisions.
 

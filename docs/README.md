@@ -1,8 +1,10 @@
 # AegisProof v2 Documentation Index
 
-**Last updated:** 2026-08-08
+**Last updated:** 2026-08-09
 
 Central index for reviewers, researchers, and OSS contributors.
+
+> **Frozen semantics:** *Frozen* means cryptographic / protocol semantics and security boundaries (30 public signals, `proveCanonical()`, verifier/protocol behavior, ADR-001 TEE isolation) require Architecture Review to change. Operational, CI, provenance, and research layers may evolve additively within those boundaries. See [architecture/overview.md](./architecture/overview.md#frozen-vs-mutable-boundary).
 
 **License:** [MIT](../LICENSE) — see [LICENSE](../LICENSE) at repository root.
 

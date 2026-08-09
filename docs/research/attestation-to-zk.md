@@ -26,7 +26,7 @@ Artifact provenance (SHA-256)
 PQC metadata signature (ML-DSA-87)
 ```
 
-**Critical:** TEE layer provides **research context** for claims — it does not replace Groth16 soundness proof.
+**Critical:** TEE layer provides **research context** for claims — it does not replace Groth16 soundness proof. TEE → protocol v2 semantic merge is **forbidden** (ADR-001). Fixture/mock verification PASS is **not** live production TEE verification.
 
 ---
 
