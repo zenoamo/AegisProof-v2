@@ -1,7 +1,7 @@
 # AegisProof v2 — Implementation Status Matrix
 
-**Status:** SSoT for research expansion (Phase A)  
-**Last updated:** 2026-08-09  
+**Status:** SSoT for research expansion (Phase A)
+**Last updated:** 2026-08-09
 **Scope:** Repository state at security remediation closeout (`9562d22`)
 
 > **Legend:** `IMPLEMENTED ≠ LIVE VERIFIED` · `TESTED ≠ PRODUCTION VERIFIED` · `MOCKED ≠ LIVE` · `FIXTURE ≠ HARDWARE ROOTED`

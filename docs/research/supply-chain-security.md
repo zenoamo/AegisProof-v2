@@ -1,7 +1,7 @@
 # AegisProof v2 — Supply Chain Security (Research)
 
-**Status:** Research documentation (Phase B)  
-**Scope:** Dependency integrity, artifact pinning, provenance, migration debt  
+**Status:** Research documentation (Phase B)
+**Scope:** Dependency integrity, artifact pinning, provenance, migration debt
 **Live infrastructure:** NOT VERIFIED
 
 ---

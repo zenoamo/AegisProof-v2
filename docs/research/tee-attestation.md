@@ -1,7 +1,7 @@
 # AegisProof v2 — TEE Attestation Research
 
-**Status:** RESEARCH-ONLY (ADR-001)  
-**Scope:** Intel TDX, AMD SEV-SNP, attestation adapter layer  
+**Status:** RESEARCH-ONLY (ADR-001)
+**Scope:** Intel TDX, AMD SEV-SNP, attestation adapter layer
 **Production TEE:** NOT VERIFIED · NOT CONNECTED
 
 ---

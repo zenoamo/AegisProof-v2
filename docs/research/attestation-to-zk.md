@@ -1,6 +1,6 @@
 # AegisProof v2 — Attestation to ZK Research Pipeline
 
-**Status:** RESEARCH-ONLY design — **NOT production verified**  
+**Status:** RESEARCH-ONLY design — **NOT production verified**
 **Scope:** TEE evidence → claims → Groth16 (conceptual integration)
 
 ---

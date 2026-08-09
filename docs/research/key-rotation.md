@@ -1,7 +1,7 @@
 # AegisProof v2 — Key Rotation & Revocation (Research)
 
-**Status:** Research documentation (Phase C)  
-**Operational runbook:** [kms-key-rotation-runbook.md](../security/kms-key-rotation-runbook.md)  
+**Status:** Research documentation (Phase C)
+**Operational runbook:** [kms-key-rotation-runbook.md](../security/kms-key-rotation-runbook.md)
 **Live rotation:** NOT VERIFIED
 
 ---

@@ -1,7 +1,7 @@
 # AegisProof v2 — Security Test Catalog (Research Expansion)
 
-**Status:** Phase E — additive negative test documentation  
-**Suite:** `tests/security/research-negative.test.mjs`  
+**Status:** Phase E — additive negative test documentation
+**Suite:** `tests/security/research-negative.test.mjs`
 **Runner:** `node --test tests/security/research-negative.test.mjs` (+ optional penetration registration)
 
 ---

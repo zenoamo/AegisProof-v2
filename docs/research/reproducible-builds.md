@@ -1,6 +1,6 @@
 # AegisProof v2 — Reproducible Builds (Research)
 
-**Status:** Research documentation (Phase B)  
+**Status:** Research documentation (Phase B)
 **Scope:** CI reproducibility, prover regression, benchmark baselines
 
 ---

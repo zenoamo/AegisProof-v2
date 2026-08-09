@@ -1,7 +1,7 @@
 # AegisProof v2 — PQC Readiness (Research)
 
-**Status:** Research documentation (Phase C)  
-**Algorithm:** ML-DSA-87 (FIPS 204) via `@noble/post-quantum`  
+**Status:** Research documentation (Phase C)
+**Algorithm:** ML-DSA-87 (FIPS 204) via `@noble/post-quantum`
 **Critical rule:** **PQC does NOT replace Groth16 verification**
 
 ---

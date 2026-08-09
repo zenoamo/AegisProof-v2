@@ -1,7 +1,7 @@
 # AegisProof v2 — Hybrid Authentication (Research)
 
-**Status:** RESEARCH-ONLY — not connected to production deployment  
-**Module:** `scripts/lib/hybrid-auth-envelope.mjs`  
+**Status:** RESEARCH-ONLY — not connected to production deployment
+**Module:** `scripts/lib/hybrid-auth-envelope.mjs`
 **Phase origin:** 8.13 Task 6
 
 ---

@@ -1,6 +1,6 @@
 # AegisProof v2 — Release Provenance (Research)
 
-**Status:** Research documentation (Phase B)  
+**Status:** Research documentation (Phase B)
 **Scope:** Tag release signing chain design — **live path NOT VERIFIED**
 
 ---

@@ -1,6 +1,6 @@
 # AegisProof v2 — DCAP / VCEK Research
 
-**Status:** RESEARCH / FIXTURE — offline PoC only  
+**Status:** RESEARCH / FIXTURE — offline PoC only
 **Prerequisite:** [phase8.9b-offline-dcap-vcek-plan.md](./phase8.9b-offline-dcap-vcek-plan.md)
 
 ---

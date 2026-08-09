@@ -1,7 +1,7 @@
 # AegisProof v2 — Cryptographic Specification (Research Consolidation)
 
-**Status:** Documentation consolidation (Phase A) — does not modify Frozen Core  
-**Version:** v2 (frozen)  
+**Status:** Documentation consolidation (Phase A) — does not modify Frozen Core
+**Version:** v2 (frozen)
 **Proof system:** Groth16 over BN128 (bn128 curve)
 
 ---

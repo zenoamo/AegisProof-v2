@@ -1,7 +1,7 @@
 # AegisProof v2 — Cross-Layer Threat Model
 
-**Status:** Documentation consolidation (Phase A)  
-**Scope:** ZK · Provenance · PQC · KMS · OIDC · TEE · Supply Chain · Release  
+**Status:** Documentation consolidation (Phase A)
+**Scope:** ZK · Provenance · PQC · KMS · OIDC · TEE · Supply Chain · Release
 **Live infrastructure:** **NOT VERIFIED** unless explicitly noted with operator evidence
 
 ---
