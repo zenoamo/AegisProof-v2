@@ -74,6 +74,17 @@ if (tampered.entries[0]) tampered.entries[0].sha256 = "0".repeat(64);
 const bad = verifyManifest(tampered, { allowMissingOptional: true });
 ok(!bad.ok, "tampered manifest fails verify");
 
+// Manifest path boundary: entries must not escape the repository root.
+const pathTraversal = JSON.parse(JSON.stringify(manifest));
+const traversalEntry = pathTraversal.entries.find((e) => e.artifact === "production.zkey");
+if (traversalEntry) {
+  traversalEntry.path = "../../package.json";
+}
+const traversalResult = verifyManifest(pathTraversal, { allowMissingOptional: true });
+ok(!traversalResult.ok, "manifest path traversal is rejected");
+
+
+
 // --- PQC signature generation + verification ---
 const { secretKey, publicKeyHex } = generateKeypair();
 const signedManifest = signManifest(createManifest(paths, { sign: false }), { secretKey, publicKeyHex });
