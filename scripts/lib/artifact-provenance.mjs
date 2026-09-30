@@ -260,6 +260,28 @@ export function verifyManifestIntegrity(manifest) {
  * @param {object} manifest
  * @param {{ requirePqcSignature?: boolean, pqcRequired?: boolean, allowMissingOptional?: boolean, requireRegistry?: boolean, maxSignatureAgeMs?: number }} [opts]
  */
+function resolveManifestEntryPath(entryPath) {
+  if (typeof entryPath !== "string" || entryPath.length === 0) {
+    throw new Error("manifest entry path must be a non-empty string");
+  }
+
+  const abs = path.resolve(ROOT, entryPath);
+  const rootPrefix = ROOT.endsWith(path.sep) ? ROOT : ROOT + path.sep;
+  if (abs !== ROOT && !abs.startsWith(rootPrefix)) {
+    throw new Error(`manifest entry path escapes repository root: ${entryPath}`);
+  }
+
+  // Also reject symlinks that resolve outside the repository root.
+  if (fs.existsSync(abs)) {
+    const real = fs.realpathSync.native(abs);
+    if (real !== ROOT && !real.startsWith(rootPrefix)) {
+      throw new Error(`manifest entry path resolves outside repository root: ${entryPath}`);
+    }
+  }
+
+  return abs;
+}
+
 export function verifyManifest(manifest, opts = {}) {
   const errors = [];
   const warnings = [];
