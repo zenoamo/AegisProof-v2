@@ -1,0 +1,28 @@
+```text
+# ============================================================
+# AegisProof-v2 Frozen Core
+# ============================================================
+
+/circuit.wasm
+/circuit.r1cs
+/production.zkey
+/publicSignals.json
+/checksums.sha256
+
+# ============================================================
+# Dependency manifests
+# ============================================================
+
+/package.json
+/package-lock.json
+
+/server/package.json
+/server/package-lock.json
+
+# ============================================================
+# Workflows
+# ============================================================
+
+/.github/workflows/security-gate.yml
+/.github/dependabot.yml
+```
