@@ -1,0 +1,56 @@
+name: Debug fast-uri dependency
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug-fast-uri:
+    name: Inspect fast-uri dependency tree
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Show fast-uri dependency tree
+        run: |
+          echo "=== npm ls fast-uri --all ==="
+          npm ls fast-uri --all || true
+
+      - name: Explain fast-uri
+        run: |
+          echo "=== npm explain fast-uri ==="
+          npm explain fast-uri || true
+
+      - name: Show fast-uri versions from lockfile
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from "node:fs";
+
+          const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+
+          console.log("=== fast-uri entries in package-lock.json ===");
+
+          for (const [path, info] of Object.entries(lock.packages ?? {})) {
+            if (path.endsWith("/node_modules/fast-uri")) {
+              console.log({
+                path,
+                version: info.version,
+                resolved: info.resolved,
+                integrity: info.integrity
+              });
+            }
+          }
+          EOF
