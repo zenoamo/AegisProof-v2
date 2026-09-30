@@ -1,0 +1,294 @@
+name: Dependency Security Gate
+
+on:
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "server/package.json"
+      - "server/package-lock.json"
+      - ".github/dependabot.yml"
+      - ".github/workflows/**"
+
+  push:
+    branches:
+      - main
+      - master
+
+  schedule:
+    # Every day at 04:00 JST
+    - cron: "0 19 * * *"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-security:
+    name: Dependency Security
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: root
+            directory: "."
+          - name: server
+            directory: "server"
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.project.directory }}
+
+    steps:
+      # ------------------------------------------------------------
+      # 1. Checkout
+      # ------------------------------------------------------------
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ------------------------------------------------------------
+      # 2. Node.js
+      # ------------------------------------------------------------
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      # ------------------------------------------------------------
+      # 3. Validate lockfile
+      # ------------------------------------------------------------
+
+      - name: Validate package-lock.json
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          git diff --exit-code -- package-lock.json
+
+      # ------------------------------------------------------------
+      # 4. Deterministic install
+      # ------------------------------------------------------------
+
+      - name: npm ci
+        run: npm ci --ignore-scripts
+
+      # ------------------------------------------------------------
+      # 5. Show dependency tree
+      # ------------------------------------------------------------
+
+      - name: Show fast-uri dependency tree
+        run: |
+          echo "======================================"
+          echo "fast-uri dependency tree"
+          echo "======================================"
+
+          npm ls fast-uri --all || true
+
+          echo
+          echo "======================================"
+          echo "npm why fast-uri"
+          echo "======================================"
+
+          npm why fast-uri || true
+
+      # ------------------------------------------------------------
+      # 6. fast-uri security gate
+      # ------------------------------------------------------------
+
+      - name: Verify fast-uri version
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { execFileSync } = require("node:child_process");
+          const fs = require("node:fs");
+
+          const lockfile = "package-lock.json";
+
+          if (!fs.existsSync(lockfile)) {
+            console.log("No package-lock.json found.");
+            process.exit(0);
+          }
+
+          const lock = JSON.parse(
+            fs.readFileSync(lockfile, "utf8")
+          );
+
+          const versions = new Set();
+
+          // npm lockfile v3
+          if (lock.packages) {
+            for (const [path, pkg] of Object.entries(lock.packages)) {
+              if (
+                path.endsWith("node_modules/fast-uri") &&
+                pkg.version
+              ) {
+                versions.add(pkg.version);
+              }
+            }
+          }
+
+          // Fallback for older lockfiles
+          function walkDependencies(deps) {
+            if (!deps) return;
+
+            for (const [name, dep] of Object.entries(deps)) {
+              if (name === "fast-uri" && dep.version) {
+                versions.add(dep.version);
+              }
+
+              walkDependencies(dep.dependencies);
+            }
+          }
+
+          walkDependencies(lock.dependencies);
+
+          const found = [...versions];
+
+          console.log("Detected fast-uri versions:");
+
+          for (const version of found) {
+            console.log(`  - ${version}`);
+          }
+
+          if (found.length === 0) {
+            console.log("fast-uri is not present.");
+            process.exit(0);
+          }
+
+          /*
+           * Minimum patched versions:
+           *
+           * 2.x -> 2.4.6+
+           * 3.x -> 3.1.7+
+           * 4.x -> 4.1.4+
+           *
+           * Current 4.x releases may be newer.
+           */
+
+          function versionParts(version) {
+            const match = version.match(
+              /^(\\d+)\\.(\\d+)\\.(\\d+)/
+            );
+
+            if (!match) {
+              throw new Error(
+                `Unable to parse version: ${version}`
+              );
+            }
+
+            return match.slice(1).map(Number);
+          }
+
+          function isSafe(version) {
+            const [major, minor, patch] =
+              versionParts(version);
+
+            if (major === 2) {
+              return (
+                minor > 4 ||
+                (minor === 4 && patch >= 6)
+              );
+            }
+
+            if (major === 3) {
+              return (
+                minor > 1 ||
+                (minor === 1 && patch >= 7)
+              );
+            }
+
+            if (major === 4) {
+              return (
+                minor > 1 ||
+                (minor === 1 && patch >= 4)
+              );
+            }
+
+            /*
+             * Unknown major:
+             *
+             * Fail closed rather than assuming safety.
+             */
+            return false;
+          }
+
+          const unsafe = found.filter(
+            version => !isSafe(version)
+          );
+
+          if (unsafe.length > 0) {
+            console.error("");
+            console.error(
+              "SECURITY GATE FAILED"
+            );
+            console.error(
+              "Unsafe fast-uri version(s):"
+            );
+
+            for (const version of unsafe) {
+              console.error(`  - ${version}`);
+            }
+
+            console.error("");
+            console.error(
+              "Update fast-uri to a patched release."
+            );
+
+            process.exit(1);
+          }
+
+          console.log("");
+          console.log(
+            "fast-uri version gate: PASS"
+          );
+          NODE
+
+      # ------------------------------------------------------------
+      # 7. npm audit
+      # ------------------------------------------------------------
+
+      - name: npm audit
+        run: |
+          npm audit --audit-level=high
+
+      # ------------------------------------------------------------
+      # 8. Dependency production install test
+      # ------------------------------------------------------------
+
+      - name: npm install integrity check
+        run: |
+          npm ci --ignore-scripts
+
+      # ------------------------------------------------------------
+      # 9. Package metadata
+      # ------------------------------------------------------------
+
+      - name: Dependency summary
+        run: |
+          echo "Node:"
+          node --version
+
+          echo
+          echo "npm:"
+          npm --version
+
+          echo
+          echo "fast-uri:"
+          npm ls fast-uri --all || true
+
+          echo
+          echo "Audit:"
+          npm audit --audit-level=high
