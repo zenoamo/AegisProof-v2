@@ -1,0 +1,60 @@
+version: 2
+
+updates:
+  # Root npm project
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "03:00"
+      timezone: "Asia/Tokyo"
+
+    open-pull-requests-limit: 10
+
+    labels:
+      - "dependencies"
+      - "security"
+
+    commit-message:
+      prefix: "security"
+      include: "scope"
+
+    groups:
+      fast-uri-security:
+        applies-to: security-updates
+        patterns:
+          - "fast-uri"
+
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  # Server npm project
+  - package-ecosystem: "npm"
+    directory: "/server"
+    schedule:
+      interval: "daily"
+      time: "03:15"
+      timezone: "Asia/Tokyo"
+
+    open-pull-requests-limit: 10
+
+    labels:
+      - "dependencies"
+      - "security"
+
+    commit-message:
+      prefix: "security"
+      include: "scope"
+
+    groups:
+      fast-uri-security:
+        applies-to: security-updates
+        patterns:
+          - "fast-uri"
+
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
