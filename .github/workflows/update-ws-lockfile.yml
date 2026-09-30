@@ -1,0 +1,51 @@
+name: Update ws lockfile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-lockfile:
+    name: Update package-lock.json
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Update lockfile
+        run: npm install --package-lock-only
+
+      - name: Verify ws version
+        run: |
+          npm ls ws
+          node -e "
+            const p = require('./node_modules/ws/package.json');
+            console.log('ws:', p.version);
+          " 2>/dev/null || true
+
+      - name: Check git diff
+        run: git diff -- package.json package-lock.json
+
+      - name: Commit lockfile update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add package.json package-lock.json
+
+          if git diff --cached --quiet; then
+            echo "No dependency changes detected."
+            exit 0
+          fi
+
+          git commit -m "fix(deps): override ws to patched version"
+          git push
