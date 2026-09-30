@@ -675,6 +675,10 @@ jobs:
       # T1-T9
       # ----------------------------------------------------------
 
+      - name: Compile prover verifier
+        run: |
+          npx hardhat compile --config scripts/hardhat-prover.config.ts
+
       - name: T1-T9
         run: |
           npm run test:prover-compat
