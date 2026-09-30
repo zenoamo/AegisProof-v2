@@ -166,7 +166,7 @@ jobs:
 
           function parse(version) {
             const m = version.match(
-              /^(\\d+)\\.(\\d+)\\.(\\d+)/
+              /^(\d+)\.(\d+)\.(\d+)/
             );
 
             if (!m) {
@@ -381,7 +381,7 @@ jobs:
 
           function safe(version) {
             const m = version.match(
-              /^(\\d+)\\.(\\d+)\\.(\\d+)/
+              /^(\d+)\.(\d+)\.(\d+)/
             );
 
             if (!m) {
@@ -451,106 +451,71 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ----------------------------------------------------------
-      # Frozen Core paths
-      # ----------------------------------------------------------
-
-      - name: Create Frozen Core manifest
+      - name: Verify Frozen Core is not modified
         shell: bash
         run: |
-          cat > frozen-core-paths.txt <<'EOF'
-          circuit.wasm
-          circuit.r1cs
-          production.zkey
-          publicSignals.json
-          EOF
-
-          cat frozen-core-paths.txt
-
-      # ----------------------------------------------------------
-      # Detect modification
-      # ----------------------------------------------------------
-
-      - name: Block Frozen Core modifications
-        shell: bash
-        run: |
+          set -euo pipefail
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-
-            git fetch \
-              origin \
-              "${{ github.base_ref }}" \
-              --depth=1
-
-            CHANGED_FILES="$(
-              git diff \
-                --name-only \
-                "origin/${{ github.base_ref }}...HEAD"
-            )"
-
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
           else
-
-            CHANGED_FILES="$(
-              git diff-tree \
-                --no-commit-id \
-                --name-only \
-                -r \
-                HEAD
-            )"
-
+            changed="$(git diff-tree --no-commit-id --name-only -r HEAD)"
           fi
 
-          echo "Changed files:"
-          echo "$CHANGED_FILES"
-
-          while IFS= read -r file; do
-
-            [[ -z "$file" ]] && continue
-
-            if echo "$CHANGED_FILES" |
-              grep -Fxq "$file"; then
-
-              echo ""
-              echo "========================================"
-              echo "FROZEN CORE MODIFICATION DETECTED"
-              echo "========================================"
-              echo "$file"
-
+          while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+            if grep -Fxq "$path" <<<"$changed"; then
+              echo "::error::Frozen Core modification detected: $path"
               exit 1
             fi
-
-          done < frozen-core-paths.txt
+          done <<'EOF'
+          crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs
+          crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm
+          crypto-artifacts/phase4/production.zkey
+          crypto-artifacts/phase4/production-vkey.json
+          EOF
 
           echo "Frozen Core boundary: PASS"
 
-      # ----------------------------------------------------------
-      # SHA-256
-      # ----------------------------------------------------------
-
-      - name: Verify Frozen Core SHA-256
+      - name: Verify canonical artifact hashes
         shell: bash
         run: |
+          set -euo pipefail
 
-          if [[ ! -f checksums.sha256 ]]; then
-            echo "checksums.sha256 not found."
-            exit 1
-          fi
+          node <<'NODE'
+          const fs = require("node:fs");
+          const crypto = require("node:crypto");
 
-          sha256sum -c checksums.sha256
+          const manifest = JSON.parse(
+            fs.readFileSync("artifacts/provenance/manifest.json", "utf8")
+          );
 
-      - name: Print Frozen Core hashes
-        run: |
-          sha256sum \
-            circuit.wasm \
-            circuit.r1cs \
-            production.zkey \
-            publicSignals.json
+          for (const entry of manifest.entries ?? []) {
+            if (!entry.present || !entry.path || !entry.sha256) continue;
+            if (!fs.existsSync(entry.path)) {
+              console.error("Missing canonical artifact:", entry.path);
+              process.exit(1);
+            }
+            const digest = crypto
+              .createHash("sha256")
+              .update(fs.readFileSync(entry.path))
+              .digest("hex");
+            if (digest !== entry.sha256) {
+              console.error("Artifact hash mismatch:", entry.path);
+              console.error("Expected:", entry.sha256);
+              console.error("Actual:", digest);
+              process.exit(1);
+            }
+          }
+
+          console.log("Canonical artifact hashes: PASS");
+          NODE
 
 
   # ============================================================
@@ -562,69 +527,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify publicSignals
+      - name: Verify canonical publicSignals vector
         shell: bash
         run: |
+          set -euo pipefail
 
           node <<'NODE'
           const fs = require("node:fs");
 
-          const FILE =
-            "publicSignals.json";
+          const file = "artifacts/phase4/reports/production_proof_baseline.json";
+          const expected = 30;
 
-          const EXPECTED_COUNT = 30;
-
-          if (!fs.existsSync(FILE)) {
-            console.error(
-              `${FILE} not found`
-            );
+          if (!fs.existsSync(file)) {
+            console.error("Missing canonical proof baseline:", file);
             process.exit(1);
           }
 
-          const signals = JSON.parse(
-            fs.readFileSync(FILE, "utf8")
-          );
+          const proof = JSON.parse(fs.readFileSync(file, "utf8"));
+          const signals = proof.publicSignals;
 
           if (!Array.isArray(signals)) {
-            console.error(
-              "publicSignals must be an array"
-            );
+            console.error("production proof publicSignals must be an array");
             process.exit(1);
           }
 
-          if (
-            signals.length !==
-            EXPECTED_COUNT
-          ) {
-
-            console.error(
-              "publicSignals count mismatch"
-            );
-
-            console.error(
-              `Expected: ${EXPECTED_COUNT}`
-            );
-
-            console.error(
-              `Actual: ${signals.length}`
-            );
-
+          if (signals.length !== expected) {
+            console.error("publicSignals count mismatch: expected", expected, "actual", signals.length);
             process.exit(1);
           }
 
-          console.log(
-            `publicSignals integrity: PASS`
-          );
-
-          console.log(
-            `Count: ${signals.length}`
-          );
+          console.log("publicSignals integrity: PASS (" + signals.length + ")");
           NODE
-
 
   # ============================================================
   # T1 - T9 REGRESSION
