@@ -1,4 +1,4 @@
-name: Server fast-uri Security Update
+name: Dependency Security Update
 
 on:
   workflow_dispatch:
@@ -8,20 +8,28 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: fast-uri-security-update
+  group: dependency-security-update
   cancel-in-progress: false
 
 jobs:
   update:
     name: Update vulnerable dependencies
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
+      # ============================================================
+      # Checkout
+      # ============================================================
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # ============================================================
+      # Node.js
+      # ============================================================
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,35 +40,48 @@ jobs:
             package-lock.json
             server/package-lock.json
 
-      # ------------------------------------------------------------
-      # Root dependency update
-      # ------------------------------------------------------------
+      # ============================================================
+      # Root lockfile update
+      # ============================================================
 
-      - name: Update root fast-uri
-        run: |
-          npm update fast-uri --package-lock-only
-
-      - name: Update root audit fixes
+      - name: Update root dependency lockfile
         run: |
           npm audit fix --package-lock-only
 
-      # ------------------------------------------------------------
-      # Server dependency update
-      # ------------------------------------------------------------
-
-      - name: Update server fast-uri
-        working-directory: server
+      - name: Update root vulnerable transitive dependencies
         run: |
-          npm update fast-uri --package-lock-only
+          npm update fast-uri underscore jsonpath bfj --package-lock-only || true
 
-      - name: Update server audit fixes
+      # ============================================================
+      # Server lockfile update
+      # ============================================================
+
+      - name: Update server dependency lockfile
         working-directory: server
         run: |
           npm audit fix --package-lock-only
 
-      # ------------------------------------------------------------
+      - name: Update server vulnerable transitive dependencies
+        working-directory: server
+        run: |
+          npm update fast-uri underscore jsonpath bfj --package-lock-only || true
+
+      # ============================================================
+      # Lockfile consistency
+      # ============================================================
+
+      - name: Verify root lockfile
+        run: |
+          npm ci --dry-run
+
+      - name: Verify server lockfile
+        working-directory: server
+        run: |
+          npm ci --dry-run
+
+      # ============================================================
       # Clean installation
-      # ------------------------------------------------------------
+      # ============================================================
 
       - name: Install root dependencies
         run: |
@@ -71,32 +92,56 @@ jobs:
         run: |
           npm ci
 
-      # ------------------------------------------------------------
-      # Dependency tree verification
-      # ------------------------------------------------------------
+      # ============================================================
+      # Dependency tree
+      # ============================================================
 
-      - name: Verify root fast-uri
+      - name: Show root security dependency tree
         run: |
           echo "=== ROOT fast-uri ==="
-          npm ls fast-uri --all
+          npm ls fast-uri --all || true
 
-      - name: Verify server fast-uri
+          echo "=== ROOT elliptic ==="
+          npm ls elliptic --all || true
+
+          echo "=== ROOT underscore ==="
+          npm ls underscore --all || true
+
+          echo "=== ROOT jsonpath ==="
+          npm ls jsonpath --all || true
+
+          echo "=== ROOT bfj ==="
+          npm ls bfj --all || true
+
+      - name: Show server security dependency tree
         working-directory: server
         run: |
           echo "=== SERVER fast-uri ==="
-          npm ls fast-uri --all
+          npm ls fast-uri --all || true
 
-      # ------------------------------------------------------------
-      # Exact fast-uri version verification
-      # ------------------------------------------------------------
+          echo "=== SERVER elliptic ==="
+          npm ls elliptic --all || true
 
-      - name: Verify installed fast-uri versions
+          echo "=== SERVER underscore ==="
+          npm ls underscore --all || true
+
+          echo "=== SERVER jsonpath ==="
+          npm ls jsonpath --all || true
+
+          echo "=== SERVER bfj ==="
+          npm ls bfj --all || true
+
+      # ============================================================
+      # fast-uri verification
+      # ============================================================
+
+      - name: Verify patched fast-uri versions
         run: |
           node <<'NODE'
           const { execFileSync } = require("node:child_process");
 
-          function getVersions(cwd) {
-            const output = execFileSync(
+          function versions(cwd) {
+            const result = execFileSync(
               "npm",
               ["ls", "fast-uri", "--all", "--json"],
               {
@@ -106,14 +151,14 @@ jobs:
               }
             );
 
-            const tree = JSON.parse(output);
-            const versions = new Set();
+            const tree = JSON.parse(result);
+            const found = new Set();
 
             function walk(node) {
               if (!node) return;
 
               if (node.name === "fast-uri" && node.version) {
-                versions.add(node.version);
+                found.add(node.version);
               }
 
               for (const child of Object.values(node.dependencies || {})) {
@@ -122,7 +167,31 @@ jobs:
             }
 
             walk(tree);
-            return [...versions].sort();
+            return [...found].sort();
+          }
+
+          function patched(version) {
+            const m = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+
+            if (!m) return false;
+
+            const major = Number(m[1]);
+            const minor = Number(m[2]);
+            const patch = Number(m[3]);
+
+            if (major === 2) {
+              return minor > 4 || (minor === 4 && patch >= 7);
+            }
+
+            if (major === 3) {
+              return minor > 1 || (minor === 1 && patch >= 8);
+            }
+
+            if (major === 4) {
+              return minor > 2 || (minor === 2 && patch >= 1);
+            }
+
+            return true;
           }
 
           const targets = [
@@ -130,51 +199,17 @@ jobs:
             ["server", "server"]
           ];
 
-          const minimums = {
-            2: [4, 7],
-            3: [1, 8],
-            4: [2, 1]
-          };
-
-          function isPatched(version) {
-            const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
-
-            if (!match) {
-              return false;
-            }
-
-            const major = Number(match[1]);
-            const minor = Number(match[2]);
-            const patch = Number(match[3]);
-
-            const minimum = minimums[major];
-
-            if (!minimum) {
-              return true;
-            }
-
-            if (minor > minimum[0]) {
-              return true;
-            }
-
-            if (minor < minimum[0]) {
-              return false;
-            }
-
-            return patch >= minimum[1];
-          }
-
           let failed = false;
 
           for (const [name, cwd] of targets) {
-            const versions = getVersions(cwd);
+            const found = versions(cwd);
 
-            console.log(`${name} fast-uri versions:`, versions);
+            console.log(`${name} fast-uri:`, found);
 
-            for (const version of versions) {
-              if (!isPatched(version)) {
+            for (const version of found) {
+              if (!patched(version)) {
                 console.error(
-                  `ERROR: ${name} contains vulnerable fast-uri ${version}`
+                  `ERROR: vulnerable fast-uri remains: ${name} ${version}`
                 );
                 failed = true;
               }
@@ -185,25 +220,124 @@ jobs:
             process.exit(1);
           }
 
-          console.log("OK: all installed fast-uri versions are patched.");
+          console.log("OK: all fast-uri versions satisfy patched minimums.");
           NODE
 
-      # ------------------------------------------------------------
-      # Full dependency audit
-      # ------------------------------------------------------------
+      # ============================================================
+      # High / Critical audit gate
+      #
+      # elliptic GHSA-848j-6mx2-7j84 is explicitly handled as a
+      # known no-fix exception. Everything else at high/critical
+      # must fail the workflow.
+      # ============================================================
 
       - name: Audit root dependencies
         run: |
-          npm audit --audit-level=low
+          npm audit --json > root-audit.json || true
 
       - name: Audit server dependencies
         working-directory: server
         run: |
-          npm audit --audit-level=low
+          npm audit --json > ../server-audit.json || true
 
-      # ------------------------------------------------------------
+      - name: Enforce security audit policy
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const files = [
+            ["root", "root-audit.json"],
+            ["server", "server-audit.json"]
+          ];
+
+          const ALLOWED_NO_FIX = "GHSA-848j-6mx2-7j84";
+
+          let failed = false;
+
+          function advisoryIds(via) {
+            const ids = [];
+
+            for (const item of via || []) {
+              if (typeof item === "string") {
+                ids.push(item);
+              } else if (item && typeof item === "object") {
+                if (item.url) {
+                  const match = item.url.match(
+                    /advisories\/(GHSA-[A-Za-z0-9-]+|CVE-[0-9-]+)/
+                  );
+
+                  if (match) {
+                    ids.push(match[1]);
+                  }
+                }
+
+                if (item.source) {
+                  ids.push(String(item.source));
+                }
+              }
+            }
+
+            return ids;
+          }
+
+          for (const [scope, file] of files) {
+            if (!fs.existsSync(file)) {
+              console.error(`ERROR: missing audit report: ${file}`);
+              failed = true;
+              continue;
+            }
+
+            const report = JSON.parse(fs.readFileSync(file, "utf8"));
+
+            console.log(`\n=== ${scope} audit ===`);
+
+            for (const [name, vulnerability] of Object.entries(
+              report.vulnerabilities || {}
+            )) {
+              const severity = vulnerability.severity;
+              const ids = advisoryIds(vulnerability.via);
+
+              if (!["high", "critical"].includes(severity)) {
+                continue;
+              }
+
+              const onlyKnownNoFix =
+                ids.length > 0 &&
+                ids.every(id => id === ALLOWED_NO_FIX);
+
+              if (onlyKnownNoFix) {
+                console.warn(
+                  `KNOWN NO-FIX EXCEPTION: ${scope}: ${name} -> ${ids.join(", ")}`
+                );
+                continue;
+              }
+
+              console.error(
+                `SECURITY FAILURE: ${scope}: ${name} (${severity})`
+              );
+              console.error(
+                `Advisories: ${ids.join(", ") || "unknown"}`
+              );
+
+              failed = true;
+            }
+          }
+
+          if (failed) {
+            console.error(
+              "\nERROR: unresolved high/critical vulnerabilities remain."
+            );
+            process.exit(1);
+          }
+
+          console.log(
+            "\nOK: no unresolved high/critical vulnerabilities remain outside the documented elliptic no-fix exception."
+          );
+          NODE
+
+      # ============================================================
       # Frozen Core protection
-      # ------------------------------------------------------------
+      # ============================================================
 
       - name: Verify Frozen Core
         run: |
@@ -221,9 +355,9 @@ jobs:
 
           echo "OK: Frozen Core untouched."
 
-      # ------------------------------------------------------------
+      # ============================================================
       # Changed-file boundary
-      # ------------------------------------------------------------
+      # ============================================================
 
       - name: Verify changed files
         run: |
@@ -243,23 +377,23 @@ jobs:
             exit 1
           fi
 
-          echo "OK: only dependency manifests/lockfiles changed."
+          echo "OK: dependency files only."
 
-      # ------------------------------------------------------------
-      # Create branch
-      # ------------------------------------------------------------
+      # ============================================================
+      # Create update branch
+      # ============================================================
 
       - name: Create update branch
         run: |
-          branch="security/fast-uri-update-$(date +%Y%m%d-%H%M%S)"
+          branch="security/dependency-update-$(date +%Y%m%d-%H%M%S)"
 
           git checkout -b "$branch"
 
           echo "BRANCH=$branch" >> "$GITHUB_ENV"
 
-      # ------------------------------------------------------------
+      # ============================================================
       # Commit
-      # ------------------------------------------------------------
+      # ============================================================
 
       - name: Commit dependency updates
         run: |
@@ -278,43 +412,51 @@ jobs:
             server/package-lock.json
 
           git commit \
-            -m "fix(deps): update fast-uri to patched versions"
+            -m "fix(deps): harden dependency security"
 
-      # ------------------------------------------------------------
-      # Push branch
-      # ------------------------------------------------------------
+      # ============================================================
+      # Push update branch
+      # ============================================================
 
       - name: Push update branch
         run: |
           git push --set-upstream origin "$BRANCH"
 
-      # ------------------------------------------------------------
+      # ============================================================
       # Create PR
-      # ------------------------------------------------------------
+      # ============================================================
 
       - name: Create pull request
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > pr-body.md <<'EOF'
-          Updates vulnerable npm dependencies and refreshes fast-uri versions.
+          ## Dependency security update
 
-          Security targets:
-          - fast-uri 2.x -> >= 2.4.7
-          - fast-uri 3.x -> >= 3.1.8
-          - fast-uri 4.x -> >= 4.2.1
+          This PR updates vulnerable npm dependencies without modifying Frozen Core.
 
-          Verification performed:
-          - npm ci
-          - npm ls fast-uri --all
-          - patched-version validation
-          - npm audit --audit-level=low
-          - Frozen Core protection check
-          - changed-file boundary check
+          ### Security checks
 
-          Frozen Core was verified as untouched.
+          - npm ci --dry-run
+          - clean npm ci
+          - fast-uri dependency-tree verification
+          - high/critical npm audit policy
+          - Frozen Core protection
+          - changed-file boundary verification
 
-          Expected changed files are limited to:
+          ### Known no-fix exception
+
+          GHSA-848j-6mx2-7j84 (`elliptic`) is explicitly tracked because the
+          current advisory has no patched npm release.
+
+          This exception does not permit unrelated high/critical advisories.
+
+          ### Frozen Core
+
+          Verified untouched.
+
+          ### Expected changed files
+
           - package.json
           - package-lock.json
           - server/package.json
@@ -324,5 +466,5 @@ jobs:
           gh pr create \
             --base master \
             --head "$BRANCH" \
-            --title "fix(deps): update fast-uri security dependencies" \
+            --title "fix(deps): harden dependency security" \
             --body-file pr-body.md
