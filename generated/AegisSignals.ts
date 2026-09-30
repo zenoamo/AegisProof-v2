@@ -1,4 +1,4 @@
-// GENERATED FILE — do not edit. Source: specs/aegis-protocol.v2.json
+// GENERATED FILE — do not edit. Source: protocol/specs
 // Regenerate: node scripts/codegen_signals.mjs
 
 export const PROTOCOL_VERSION = 2 as const;
