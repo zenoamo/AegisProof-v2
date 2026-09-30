@@ -4,6 +4,7 @@
 // Exit 0 = valid, 1 = invalid or error
 // ============================================================================
 import fs from "node:fs";
+import { getContract } from "viem";
 import { network } from "hardhat";
 
 interface ProofBundle {
@@ -34,9 +35,34 @@ async function main() {
   const bundle: ProofBundle = { proof, publicSignals };
 
   const { viem } = await network.connect();
-  const verifier = await viem.deployContract(
-    "scripts/prover-contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production"
-  );
+  const artifactPath =
+    "artifacts/hardhat/scripts/prover-contracts/Groth16VerifierV2Production.sol/Groth16VerifierV2Production.json";
+  if (!fs.existsSync(artifactPath)) {
+    throw new Error(
+      "Missing verifier artifact: " +
+        artifactPath +
+        ". Run hardhat compile with scripts/hardhat-prover.config.ts first."
+    );
+  }
+
+  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+  const [walletClient] = await viem.getWalletClients();
+  const publicClient = await viem.getPublicClient();
+  const deploymentHash = await walletClient.deployContract({
+    abi: artifact.abi,
+    bytecode: artifact.bytecode,
+  });
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: deploymentHash,
+  });
+  if (!receipt.contractAddress) {
+    throw new Error("Verifier deployment returned no contract address.");
+  }
+  const verifier = getContract({
+    address: receipt.contractAddress,
+    abi: artifact.abi,
+    client: { public: publicClient, wallet: walletClient },
+  });
   const { pA, pB, pC } = calldata(bundle);
   const ok = await verifier.read.verifyProof([
     pA,
