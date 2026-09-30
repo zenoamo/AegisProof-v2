@@ -1,17 +1,17 @@
 name: Publish AegisProof SDK
 
 on:
+  release:
+    types:
+      - published
   workflow_dispatch:
-  push:
-    tags:
-      - "sdk-v*"
 
 permissions:
   contents: read
   packages: write
 
 concurrency:
-  group: publish-sdk
+  group: aegisproof-sdk-publish
   cancel-in-progress: false
 
 defaults:
@@ -22,7 +22,7 @@ env:
   NODE_VERSION: "22"
 
 jobs:
-  test-build-publish:
+  publish-sdk:
     name: Test, build and publish SDK
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -36,6 +36,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: https://npm.pkg.github.com
+          scope: "@zenoamo"
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -45,18 +46,6 @@ jobs:
       - name: Install SDK dependencies
         working-directory: packages/sdk
         run: npm install --no-package-lock --ignore-scripts
-
-      - name: Test SDK
-        working-directory: packages/sdk
-        run: npm test
-
-      - name: Build SDK
-        working-directory: packages/sdk
-        run: npm run build
-
-      - name: Inspect package
-        working-directory: packages/sdk
-        run: npm pack --dry-run
 
       - name: Verify package metadata
         working-directory: packages/sdk
@@ -68,44 +57,50 @@ jobs:
             fs.readFileSync("package.json", "utf8")
           );
 
-          if (!pkg.name.startsWith("@aegisproof/")) {
+          const expectedName = "@zenoamo/aegisproof-sdk";
+          const expectedRegistry = "https://npm.pkg.github.com";
+
+          if (pkg.name !== expectedName) {
             throw new Error(
-              `Invalid GitHub Packages scope: ${pkg.name}`
+              `Unexpected package name: ${pkg.name}`
             );
           }
 
-          if (!pkg.publishConfig?.registry) {
+          if (pkg.publishConfig?.registry !== expectedRegistry) {
             throw new Error(
-              "publishConfig.registry is missing"
+              `Unexpected publish registry: ${pkg.publishConfig?.registry}`
             );
           }
 
-          if (
-            pkg.publishConfig.registry !==
-            "https://npm.pkg.github.com"
-          ) {
-            throw new Error(
-              `Unexpected registry: ${pkg.publishConfig.registry}`
-            );
+          if (!pkg.version) {
+            throw new Error("Package version is missing");
           }
 
-          console.log("Package:", pkg.name);
-          console.log("Version:", pkg.version);
-          console.log(
-            "Registry:",
-            pkg.publishConfig.registry
-          );
+          console.log(`Package: ${pkg.name}`);
+          console.log(`Version: ${pkg.version}`);
+          console.log(`Registry: ${pkg.publishConfig.registry}`);
           NODE
 
-      - name: Configure npm authentication
+      - name: Test SDK
+        working-directory: packages/sdk
+        run: npm test
+
+      - name: Build SDK
+        working-directory: packages/sdk
+        run: npm run build
+
+      - name: Verify build output
         working-directory: packages/sdk
         run: |
-          cat > .npmrc <<'EOF'
-          registry=https://registry.npmjs.org/
-          @aegisproof:registry=https://npm.pkg.github.com
-          //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
-          always-auth=true
-          EOF
+          test -f dist/core.js
+          test -f dist/core.d.ts
+
+          echo "Build output:"
+          find dist -maxdepth 2 -type f -print | sort
+
+      - name: Pack test
+        working-directory: packages/sdk
+        run: npm run pack-test
 
       - name: Publish SDK
         working-directory: packages/sdk
