@@ -118,18 +118,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          cat > pr-body.md <<'EOF'
+          Updates fast-uri dependencies to patched releases.
+
+          Targets:
+          - fast-uri 3.x -> 3.1.8
+          - fast-uri 4.x -> 4.2.1
+
+          Frozen Core was verified as untouched.
+
+          Changed files:
+          - package-lock.json
+          - server/package-lock.json
+          EOF
+
           gh pr create \
             --base master \
             --head "$BRANCH" \
             --title "fix(deps): update fast-uri security dependencies" \
-            --body "Updates fast-uri dependencies to patched releases.
-
-Targets:
-- fast-uri 3.x → 3.1.8
-- fast-uri 4.x → 4.2.1
-
-Frozen Core was verified as untouched.
-
-Changed files:
-- package-lock.json
-- server/package-lock.json"
+            --body-file pr-body.md
