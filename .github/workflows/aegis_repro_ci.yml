@@ -14,6 +14,7 @@
 #   - TEE regression
 #   - prover compatibility
 #   - hybrid-auth regression
+#   - Lean formal assurance
 #
 # WEEKLY / MANUAL
 #   - FULL verification suite
@@ -30,6 +31,8 @@
 #   - Production trusted setup is never performed by CI.
 #   - FULL verification may create/reuse ephemeral DEVELOPMENT setup only.
 #   - PQC production simulation remains optional until its secret is configured.
+#   - Lean is an independent formal-assurance layer; it does not replace
+#     runtime, cryptographic, provenance, or integration verification.
 # ============================================================================
 
 name: AegisProof Reproducibility CI
@@ -77,9 +80,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -104,7 +105,6 @@ jobs:
 
       # NOTE:
       # Do NOT use specs/artifact-manifest.json here.
-      # That file is not present in the current repository.
       # The canonical runtime verification path is the provenance verifier.
       - name: Live artifact provenance verification
         run: npm run verify:provenance -- --live
@@ -132,9 +132,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -152,7 +150,7 @@ jobs:
 
       # NOTE:
       # Do NOT call scripts/verify_manifest.mjs.
-      # It requires specs/artifact-manifest.json, which is not present.
+      # The canonical runtime verification path is the provenance verifier.
       - name: Live artifact provenance verification
         run: npm run verify:provenance -- --live
 
@@ -198,9 +196,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -249,9 +245,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install root dependencies
         run: npm ci
@@ -261,13 +255,6 @@ jobs:
 
       # packages/sdk currently has no package-lock.json.
       # Therefore npm ci would fail here.
-      #
-      # Keep this non-lockfile install until a dedicated SDK lockfile is
-      # committed. Once packages/sdk/package-lock.json exists, replace this
-      # with:
-      #
-      #   npm ci
-      #
       - name: Install SDK dependencies
         working-directory: packages/sdk
         run: npm install --no-package-lock --ignore-scripts
@@ -350,9 +337,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -380,9 +365,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -485,6 +468,41 @@ jobs:
 
 
   # ==========================================================================
+  # FORMAL ASSURANCE
+  # ==========================================================================
+
+  # Lean is an independent assurance layer.
+  # It formalizes semantic contracts and invariants; it does not replace
+  # Groth16, BN254, WASM, Solidity, SHA-256, ML-DSA, TEE, or runtime tests.
+  formal-assurance:
+    name: Lean formal assurance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install elan
+        run: |
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y
+
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Lean toolchain
+        working-directory: formal
+        run: |
+          lean --version
+          lake --version
+
+      - name: Build formal assurance layer
+        working-directory: formal
+        run: lake build
+
+
+  # ==========================================================================
   # PROVER BENCHMARK
   # ==========================================================================
 
@@ -503,9 +521,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -572,9 +588,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -601,10 +615,6 @@ jobs:
           );
           NODE
 
-      # IMPORTANT:
-      # --write-public creates the matching registry entry for the ephemeral
-      # public key. Without it, --pqc verification fails with:
-      #   unknown publicKeyId: ci-ephemeral
       - name: Generate ephemeral ML-DSA keys
         run: |
           node scripts/generate-pqc-dev-keys.mjs \
@@ -664,9 +674,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -698,9 +706,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -732,9 +738,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/sdk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -771,8 +775,11 @@ jobs:
       - tee-layer-regression
       - prover-compatibility
       - hybrid-auth-research
+      - formal-assurance
+
     if: ${{ always() }}
     runs-on: ubuntu-latest
+
     steps:
       - name: Validate required jobs
         run: |
@@ -781,7 +788,9 @@ jobs:
           validate() {
             local name="$1"
             local result="$2"
+
             echo "${name}=${result}"
+
             if [[ "$result" != "success" ]]; then
               echo "ERROR: Required job '${name}' did not succeed"
               exit 1
@@ -794,5 +803,6 @@ jobs:
           validate "tee-layer-regression" "${{ needs.tee-layer-regression.result }}"
           validate "prover-compatibility" "${{ needs.prover-compatibility.result }}"
           validate "hybrid-auth-research" "${{ needs.hybrid-auth-research.result }}"
+          validate "formal-assurance" "${{ needs.formal-assurance.result }}"
 
           echo "✓ All required jobs passed"
