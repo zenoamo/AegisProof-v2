@@ -630,13 +630,21 @@ async function main() {
   }
 }
 
-main().catch(
-  (err) => {
-    console.error(
-      "BENCHMARK FAILED:",
-      err.message ?? err
-    );
+main()
+  .then(() => {
+    // snarkjs witness-calculator workers can keep the Node event loop alive
+    // after the benchmark report has been written. CI must terminate cleanly
+    // once all measured work and cleanup are complete; otherwise Actions can
+    // wait for the job timeout and report the benchmark as cancelled.
+    process.exit(0);
+  })
+  .catch(
+    (err) => {
+      console.error(
+        "BENCHMARK FAILED:",
+        err.message ?? err
+      );
 
-    process.exit(1);
-  }
-);
+      process.exit(1);
+    }
+  );
