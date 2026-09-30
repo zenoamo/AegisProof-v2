@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   update-lockfile:
+    name: Update and verify adm-zip lockfile
     runs-on: ubuntu-latest
 
     steps:
@@ -20,11 +21,168 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Update package-lock.json
-        run: npm install --package-lock-only
+      - name: Show Node and npm versions
+        run: |
+          node --version
+          npm --version
 
-      - name: Verify adm-zip
-        run: npm ls adm-zip --all
+      - name: Show current adm-zip state
+        run: |
+          echo "Before lockfile update:"
+          npm ls adm-zip --all || true
+
+          echo
+          echo "package.json override:"
+          node --input-type=module <<'EOF'
+          import { readFile } from "node:fs/promises";
+
+          const pkg = JSON.parse(
+            await readFile("package.json", "utf8")
+          );
+
+          console.log(
+            `adm-zip override: ${pkg.overrides?.["adm-zip"] ?? "not set"}`
+          );
+          EOF
+
+      - name: Update package-lock.json
+        run: |
+          npm install --package-lock-only
+
+      - name: Show package-lock.json diff
+        run: |
+          echo "package-lock.json diff:"
+          git diff -- package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Show adm-zip dependency tree
+        run: |
+          echo "Installed adm-zip dependency tree:"
+          npm ls adm-zip --all
+
+      - name: Verify installed adm-zip version
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile } from "node:fs/promises";
+
+          const packageJson = JSON.parse(
+            await readFile(
+              "node_modules/adm-zip/package.json",
+              "utf8"
+            )
+          );
+
+          const version = packageJson.version;
+
+          console.log(`Installed adm-zip version: ${version}`);
+
+          const [major, minor, patch] = version
+            .split(".")
+            .map(Number);
+
+          const patched =
+            major === 0 &&
+            minor === 6 &&
+            patch >= 1;
+
+          if (!patched) {
+            console.error(
+              `ERROR: expected adm-zip@0.6.1 or later within 0.6.x, found adm-zip@${version}`
+            );
+            process.exit(1);
+          }
+
+          console.log(
+            "OK: installed adm-zip is patched."
+          );
+          EOF
+
+      - name: Verify package-lock.json adm-zip version
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile } from "node:fs/promises";
+
+          const lock = JSON.parse(
+            await readFile("package-lock.json", "utf8")
+          );
+
+          const admZip =
+            lock.packages?.["node_modules/adm-zip"];
+
+          if (!admZip) {
+            console.error(
+              "ERROR: node_modules/adm-zip entry was not found in package-lock.json."
+            );
+            process.exit(1);
+          }
+
+          const version = admZip.version;
+
+          console.log(
+            `Locked adm-zip version: ${version}`
+          );
+
+          const [major, minor, patch] = version
+            .split(".")
+            .map(Number);
+
+          const patched =
+            major === 0 &&
+            minor === 6 &&
+            patch >= 1;
+
+          if (!patched) {
+            console.error(
+              `ERROR: package-lock.json contains adm-zip@${version}; expected 0.6.1 or later within 0.6.x.`
+            );
+            process.exit(1);
+          }
+
+          console.log(
+            "OK: package-lock.json contains a patched adm-zip version."
+          );
+          EOF
+
+      - name: Verify Hardhat dependency
+        run: |
+          npm ls hardhat --depth=0
+
+      - name: Verify dependency tree
+        run: |
+          npm ls adm-zip --all
+
+      - name: Show final lockfile diff
+        run: |
+          echo "Final package-lock.json diff:"
+          git diff -- package-lock.json
+
+      - name: Ensure only package-lock.json changed
+        run: |
+          changed_files="$(git status --short | awk '{$1=""; sub(/^ /,""); print}')"
+
+          if [ -z "$changed_files" ]; then
+            echo "ERROR: No changes detected."
+            exit 1
+          fi
+
+          echo "Changed files:"
+          echo "$changed_files"
+
+          while IFS= read -r file; do
+            case "$file" in
+              package-lock.json)
+                ;;
+              *)
+                echo "ERROR: Unexpected modified file: $file"
+                exit 1
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          echo "OK: Only package-lock.json changed."
 
       - name: Commit package-lock.json
         run: |
@@ -34,9 +192,28 @@ jobs:
           git add package-lock.json
 
           if git diff --cached --quiet; then
-            echo "No package-lock.json changes detected."
-            exit 0
+            echo "ERROR: No staged package-lock.json changes."
+            exit 1
           fi
 
-          git commit -m "fix(deps): update adm-zip lockfile to patched version"
+          git commit \
+            -m "fix(deps): update adm-zip lockfile to patched version"
+
+      - name: Push package-lock.json update
+        run: |
           git push
+
+      - name: Final summary
+        run: |
+          echo "========================================"
+          echo "adm-zip lockfile update complete"
+          echo "========================================"
+          echo
+          echo "Verified:"
+          echo "  - package-lock.json synchronized"
+          echo "  - npm ci succeeded"
+          echo "  - adm-zip is patched"
+          echo "  - Hardhat dependency tree is valid"
+          echo "  - only package-lock.json changed"
+          echo "  - package-lock.json update committed"
+          echo "  - commit pushed"
