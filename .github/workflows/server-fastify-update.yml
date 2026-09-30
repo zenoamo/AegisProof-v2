@@ -1,4 +1,4 @@
-```yaml
+
 name: Server Fastify Update
 
 on:
@@ -71,4 +71,3 @@ jobs:
             -m "fix(deps): update server fastify to resolve fast-uri vulnerability"
 
           git push
-```
