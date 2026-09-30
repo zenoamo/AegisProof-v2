@@ -446,7 +446,10 @@ export function decodeRevertReason(reasonOrData: string): { selector?: string; m
   
   const data = reasonOrData;
   const selector = data.slice(0, 10);
-  const msg = data.includes(" revert") ? data.replace(/ revert.*$/, "") : undefined;
+const revertIndex = data.indexOf(" REVERT");
+const msg = revertIndex >= 0
+  ? data.slice(0, revertIndex)
+  : undefined;
   
   return { selector, message: msg };
 }
