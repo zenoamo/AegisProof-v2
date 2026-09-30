@@ -58,7 +58,7 @@
     "@azure/identity": "^4.12.0",
     "google-auth-library": "^10.3.0"
   },
-  "overrides": {
-    "ws": "8.21.0"
-  }
+"overrides": {
+  "ws": "8.21.1"
+}
 }
