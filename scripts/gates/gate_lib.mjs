@@ -1,6 +1,4 @@
 // Shared library for the standalone Phase 3 CI gates (#1,2,3,5,6).
-// Each gate is self-contained, prints "[GATE <name>] PASS/FAIL — detail"
-// lines, and exits 1 on any failure (never treated as success).
 
 import { createRequire } from "module";
 import fs from "fs";
@@ -10,68 +8,65 @@ import { fileURLToPath } from "url";
 const require = createRequire(import.meta.url);
 const { buildPoseidon } = require("circomlibjs");
 
-export const ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../.."
-);
+import {
+  resolveArtifacts,
+  ROOT,
+} from "../lib/resolve-artifacts.mjs";
+
+export { ROOT };
 
 export const P2 = path.join(ROOT, "artifacts", "phase2");
 export const R = (p) => path.join(ROOT, p);
 
-// Canonical v2 SSoT.
-//
-// IMPORTANT:
-//   protocol/specs is a FILE, not a directory.
-//   Do not use fs.readdirSync() here.
-//   Do not fall back to specs/aegis-protocol.v2.json.
+// Canonical protocol SSoT.
+// This is a FILE, not a directory.
 export const PATHS = {
   ssot: R("protocol/specs"),
 
-  r1cs: path.join(
-    P2,
-    "r1cs/aegis_commit_core_v2.r1cs"
-  ),
+  // Resolve phase-2 artifacts through the canonical resolver.
+  ...resolveArtifacts({ profile: "phase2" }),
 
-  sym: path.join(
-    P2,
-    "r1cs/aegis_commit_core_v2.sym"
-  ),
-
-  wasm: path.join(
-    P2,
-    "r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm"
-  ),
-
-  witCalc: path.join(
-    P2,
-    "r1cs/aegis_commit_core_v2_js/witness_calculator.js"
-  ),
-
-  input: path.join(
-    P2,
-    "tests/input_v2.json"
-  ),
-
-  zkey: path.join(
-    P2,
-    "setup/aegis_v2_0000.zkey"
-  ),
-
-  vkey: path.join(
-    P2,
-    "vkey/vkey_v2.json"
-  ),
-
+  // Gate-specific baseline proof.
   proof: path.join(
-    P2,
-    "proofs/proof_v2_baseline.json"
-  ),
-
-  cacheDir: path.join(
-    P2,
-    "cache"
+    ROOT,
+    "artifacts",
+    "phase2",
+    "proofs",
+    "proof_v2_baseline.json"
   ),
 };
+
+// Fail early with useful diagnostics instead of raw ENOENT errors.
+export function assertGateArtifacts() {
+  const required = [
+    ["r1cs", PATHS.r1cs],
+    ["sym", PATHS.sym],
+    ["wasm", PATHS.wasm],
+    ["witCalc", PATHS.witCalc],
+    ["input", PATHS.input],
+    ["vkey", PATHS.vkey],
+  ];
+
+  const missing = required.filter(([, p]) => !fs.existsSync(p));
+
+  if (missing.length > 0) {
+    throw new Error(
+      [
+        "Missing required Phase-2 gate artifacts:",
+        ...missing.map(
+          ([name, p]) =>
+            `  ${name}: ${path.relative(ROOT, p)}`
+        ),
+        "",
+        "Artifact resolution:",
+        `  r1cs source: ${PATHS.sources?.r1cs ?? "unknown"}`,
+        `  sym source: ${PATHS.sources?.sym ?? "unknown"}`,
+        `  input source: ${PATHS.sources?.input ?? "unknown"}`,
+        `  vkey source: ${PATHS.sources?.vkey ?? "unknown"}`,
+      ].join("\n")
+    );
+  }
+}
 
 export function resolveSsot() {
   if (!fs.existsSync(PATHS.ssot)) {
@@ -103,7 +98,7 @@ export function loadSsot() {
   }
 }
 
-// --- Poseidon (canonical conversion: F.toObject) ----------------------------
+// --- Poseidon ---------------------------------------------------------------
 
 let poseidon = null;
 
@@ -127,7 +122,7 @@ export const utf8BE = (s) => {
   return e;
 };
 
-// --- witness (sanity-checked) -----------------------------------------------
+// --- witness ----------------------------------------------------------------
 
 let wcFactory = null;
 
@@ -153,7 +148,7 @@ export async function getCalculator() {
 export async function genWitness(inputObj) {
   const wc = await getCalculator();
 
-  // sanityCheck=1: asserts all R1CS constraints
+  // sanityCheck=1: assert every R1CS constraint.
   return wc.calculateWitness(inputObj, 1);
 }
 
