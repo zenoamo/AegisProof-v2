@@ -305,7 +305,13 @@ export function verifyManifest(manifest, opts = {}) {
 
   for (const entry of manifest.entries ?? []) {
     seen.add(entry.artifact);
-    const abs = path.join(ROOT, entry.path.replace(/\//g, path.sep));
+    let abs;
+    try {
+      abs = resolveManifestEntryPath(entry.path);
+    } catch (error) {
+      errors.push(`invalid manifest entry path: ${entry.artifact} (${error.message})`);
+      continue;
+    }
 
     if (requiredArtifacts.has(entry.artifact) && !entry.present && !fs.existsSync(abs)) {
       errors.push(`missing required artifact: ${entry.artifact} (${entry.path})`);
