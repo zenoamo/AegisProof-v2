@@ -546,6 +546,9 @@ jobs:
             "RAPIDSNARK_BIN=${{ github.workspace }}/rapidsnark/package/bin/prover" \
             >> "$GITHUB_ENV"
 
+      - name: Compile prover verifier artifacts
+        run: npx hardhat compile --config scripts/hardhat-prover.config.ts
+
       - name: rapidsnark evaluation
         continue-on-error: true
         run: npm run evaluate:rapidsnark
