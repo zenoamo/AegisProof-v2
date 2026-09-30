@@ -1,4 +1,4 @@
-name: Debug fast-uri dependency
+name: Debug fast-uri parent dependencies
 
 on:
   workflow_dispatch:
@@ -7,8 +7,8 @@ permissions:
   contents: read
 
 jobs:
-  debug-fast-uri:
-    name: Inspect fast-uri dependency tree
+  debug-fast-uri-parents:
+    name: Inspect Fastify dependency update path
     runs-on: ubuntu-latest
 
     steps:
@@ -24,33 +24,64 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Show fast-uri dependency tree
+      - name: Show current dependency tree
         run: |
-          echo "=== npm ls fast-uri --all ==="
+          echo "=== fastify ==="
+          npm ls fastify --all || true
+
+          echo "=== @fastify/ajv-compiler ==="
+          npm ls @fastify/ajv-compiler --all || true
+
+          echo "=== ajv ==="
+          npm ls ajv --all || true
+
+          echo "=== fast-uri ==="
           npm ls fast-uri --all || true
 
-      - name: Explain fast-uri
+      - name: Explain dependency chain
         run: |
           echo "=== npm explain fast-uri ==="
           npm explain fast-uri || true
 
-      - name: Show fast-uri versions from lockfile
+          echo "=== npm explain @fastify/ajv-compiler ==="
+          npm explain @fastify/ajv-compiler || true
+
+          echo "=== npm explain ajv ==="
+          npm explain ajv || true
+
+          echo "=== npm explain fastify ==="
+          npm explain fastify || true
+
+      - name: Check available Fastify versions
         run: |
-          node --input-type=module <<'EOF'
-          import fs from "node:fs";
+          echo "=== fastify versions ==="
+          npm view fastify versions --json
 
-          const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+      - name: Check available @fastify/ajv-compiler versions
+        run: |
+          echo "=== @fastify/ajv-compiler versions ==="
+          npm view @fastify/ajv-compiler versions --json
 
-          console.log("=== fast-uri entries in package-lock.json ===");
+      - name: Check available ajv versions
+        run: |
+          echo "=== ajv versions ==="
+          npm view ajv versions --json
 
-          for (const [path, info] of Object.entries(lock.packages ?? {})) {
-            if (path.endsWith("/node_modules/fast-uri")) {
-              console.log({
-                path,
-                version: info.version,
-                resolved: info.resolved,
-                integrity: info.integrity
-              });
-            }
-          }
-          EOF
+      - name: Check package metadata
+        run: |
+          echo "=== fastify latest metadata ==="
+          npm view fastify version dependencies --json
+
+          echo "=== @fastify/ajv-compiler latest metadata ==="
+          npm view @fastify/ajv-compiler version dependencies --json
+
+          echo "=== ajv latest metadata ==="
+          npm view ajv version dependencies --json
+
+      - name: Check fast-uri versions
+        run: |
+          echo "=== fast-uri versions ==="
+          npm view fast-uri versions --json
+
+          echo "=== fast-uri latest metadata ==="
+          npm view fast-uri version engines --json
