@@ -9,6 +9,12 @@
       "import": "./dist/core.js"
     }
   },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "peerDependencies": {
     "viem": "^2.55.10",
     "ethers": "~6.0.0"
