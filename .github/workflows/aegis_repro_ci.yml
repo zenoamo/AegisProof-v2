@@ -2,29 +2,35 @@
 # AegisProof Reproducibility CI (Phases 2–5)
 # ----------------------------------------------------------------------------
 # FAST job (every push / PR):
-#   - codegen determinism  (SSoT -> TS/Solidity constants must be up to date)
-#   - Phase 0 / canonical artifact manifest verification (20/20)
-#   - standalone gates (Layout/Binding/IC-VK/Domain/Forbidden-Hardcode)
-#   - contract compilation (Hardhat 3, isolated artifacts dir)
-#   - verification suite --fast (30 checks, no trusted setup needed:
-#     uses the committed vkey_v2.json — dev zkey absent = CI mode)
+#   - codegen determinism
+#   - Phase 0 / canonical artifact manifest verification
+#   - standalone gates
+#   - contract compilation
+#   - verification suite --fast
+#   - artifact resolution regression
 #
 # FULL job (weekly schedule + manual dispatch):
-#   - gates + manifest FIRST (while pinned files are untouched)
-#   - verification suite --full (41 checks). In CI the dev setup is absent,
-#     so the suite runs its DEVELOPMENT setup with EPHEMERAL random entropy:
-#     the regenerated ptau/zkey/vkey exist only inside the disposable runner
-#     and can NEVER match the committed dev hashes (random entropy by design).
-#     CI FULL therefore proves the pipeline is end-to-end reproducible from
-#     the canonical r1cs/wasm/sym, not byte-reproduction of the dev setup.
-#     The pinned evidence in Git is untouched (runner is discarded).
-#   - Production trusted setup is NEVER performed here (Phase 4 ceremony).
+#   - gates + manifest before ephemeral setup
+#   - verification suite --full
+#   - development setup is ephemeral inside disposable runner
+#   - production trusted setup is NEVER performed here
 #
-# PHASE5-READYNESS job (every push):
-#   - SDK package build and dry-run packaging
-#   - Documentation link consistency check
-#   - No deployment steps; read-only verification only.
+# PHASE5-READYNESS job (every push / PR):
+#   - SDK package build
+#   - SDK pack dry-run
+#   - documentation link consistency
+#   - production artifact presence check
+#
+# SECURITY NOTES:
+#   - Production dependencies are audited with `npm audit --omit=dev`.
+#   - elliptic is currently a transitive development dependency introduced
+#     through circomlibjs -> ethers 5.x.
+#   - GitHub Dependabot currently reports no patched version for elliptic.
+#   - This workflow therefore does NOT attempt to force-replace elliptic.
+#   - Frozen Core artifacts and trusted setup files are not regenerated or
+#     modified by the FAST CI path.
 # ============================================================================
+
 name: AegisProof Reproducibility CI
 
 on:
@@ -32,25 +38,35 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    # weekly FULL run (Monday 03:00 UTC)
+    # Weekly FULL run: Monday 03:00 UTC
     - cron: "0 3 * * 1"
 
 jobs:
+  # ==========================================================================
+  # SECURITY BOUNDARY
+  # ==========================================================================
+
   security-boundary-check:
     name: Security boundary gate (PR)
     runs-on: ubuntu-latest
     timeout-minutes: 25
     if: github.event_name == 'push' || github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev
 
       - name: Sensitive file boundary scan
         run: npm run check:sensitive-files
@@ -67,36 +83,52 @@ jobs:
       - name: KMS signer abstraction tests (T-KMS)
         run: npm run test:kms-signer
 
-      - name: Verify production artifacts (required for T1–T9)
+      - name: Verify production artifacts
         run: |
           node --input-type=module -e "
           import fs from 'fs';
           import { artifactsReady, resolveArtifacts } from './scripts/lib/resolve-artifacts.mjs';
+
           const paths = resolveArtifacts();
+
           if (!artifactsReady()) {
             console.error('FAIL: prover artifacts missing after checkout.');
-            for (const [k,p] of Object.entries({wasm:paths.wasm,zkey:paths.zkey,vkey:paths.vkey})) {
-              console.error(k+':', p, 'exists=', fs.existsSync(p));
+
+            for (const [k, p] of Object.entries({
+              wasm: paths.wasm,
+              zkey: paths.zkey,
+              vkey: paths.vkey
+            })) {
+              console.error(k + ':', p, 'exists=', fs.existsSync(p));
             }
+
             process.exit(1);
           }
+
           console.log('PASS: prover artifacts ready');
           "
 
-      - name: Artifact provenance verification (hash required)
+      - name: Artifact provenance verification
         run: npm run verify:provenance -- --live
 
       - name: Prover compatibility regression (T1–T9)
         run: npm run test:prover-compat
 
+  # ==========================================================================
+  # FAST REGRESSION
+  # ==========================================================================
+
   fast:
     name: FAST gates + suite (30 checks)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -104,15 +136,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Production dependency audit
+        run: npm audit --omit=dev
+
       - name: Codegen determinism (SSoT -> TS/Solidity constants)
         run: |
           node scripts/codegen_signals.mjs
-          git diff --exit-code -- generated/AegisSignals.ts contracts/generated/AegisSignals.sol
+          git diff --exit-code -- \
+            generated/AegisSignals.ts \
+            contracts/generated/AegisSignals.sol
 
-      - name: Artifact manifest verification (Phase 0 + canonical hashes)
+      - name: Artifact manifest verification
         run: node scripts/verify_manifest.mjs
 
-      - name: Standalone gates (CI mode — committed vkey, no dev zkey)
+      - name: Standalone gates
         run: node scripts/gates/run_all.mjs
 
       - name: Hardhat compile (isolated artifacts dir)
@@ -124,7 +161,7 @@ jobs:
       - name: Artifact resolution regression
         run: npm run test:artifact-resolution
 
-      - name: Upload evidence
+      - name: Upload FAST evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -134,17 +171,22 @@ jobs:
             artifacts/phase2/reports/phase2_verify_run_fast.log
           if-no-files-found: warn
 
+  # ==========================================================================
+  # FULL VERIFICATION
+  # ==========================================================================
+
   full:
     name: FULL suite (41 checks, ephemeral dev setup)
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # FAST runs on every push/PR; the heavier FULL job runs on the weekly
-    # schedule and on manual dispatch only (note: cron fires on default branch)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -152,16 +194,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Artifact manifest verification (before any setup touches files)
+      - name: Artifact manifest verification before setup
         run: node scripts/verify_manifest.mjs
 
-      - name: Standalone gates (CI mode — before ephemeral setup)
+      - name: Standalone gates before ephemeral setup
         run: node scripts/gates/run_all.mjs
 
-      - name: Verification suite — FULL (41 checks, dev setup auto-run)
+      - name: Verification suite — FULL (41 checks)
         run: node scripts/phase2_verify.mjs --full
 
-      - name: Upload evidence
+      - name: Upload FULL evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -171,54 +213,80 @@ jobs:
             artifacts/phase2/reports/phase2_verify_run_full.log
           if-no-files-found: warn
 
+  # ==========================================================================
+  # PHASE 5 READINESS
+  # ==========================================================================
+
   phase5-readiness:
     name: Phase 5 readiness (SDK build, docs check)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.event_name == 'push' || github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm ci
 
+      - name: Production dependency audit
+        run: npm audit --omit=dev
+
       - name: SDK package build
-        run: cd packages/sdk && npm install && npm run build
+        working-directory: packages/sdk
+        run: |
+          npm ci
+          npm run build
 
       - name: SDK pack dry-run test
-        run: cd packages/sdk && npm pack --dry-run
+        working-directory: packages/sdk
+        run: npm pack --dry-run
 
       - name: Documentation link consistency check
+        shell: bash
         run: |
-          # Simple check: verify all markdown links resolve to existing files
-          grep -r "\[.*\](\./[^)]*)\.md" docs/*.md | while read line; do
+          set -euo pipefail
+
+          grep -r "\[.*\](\./[^)]*)\.md" docs/*.md | while read -r line; do
             file=$(echo "$line" | sed 's/.*(\.\([^)]*\))\.md.*/\1/')
+
             if [ ! -f "docs/$file.md" ]; then
               echo "Broken link in $line"
               exit 1
             fi
           done
-        shell: bash
 
       - name: Verify production artifacts exist
         run: |
-          test -f artifacts/phase4/final/production.zkey && echo "✓ production.zkey present"
-          test -f artifacts/phase4/final/production-vkey.json && echo "✓ production-vkey.json present"
+          test -f artifacts/phase4/final/production.zkey
+          echo "✓ production.zkey present"
+
+          test -f artifacts/phase4/final/production-vkey.json
+          echo "✓ production-vkey.json present"
+
+  # ==========================================================================
+  # TEE REGRESSION
+  # ==========================================================================
 
   tee-layer-regression:
     name: TEE Layer regression (Stages A–G, ADR-001 D8)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: github.event_name == 'push' || github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -229,15 +297,22 @@ jobs:
       - name: TEE Adapter evaluation (Stages A–G)
         run: npx tsx tee/scripts/evaluate.ts
 
+  # ==========================================================================
+  # PROVER COMPATIBILITY
+  # ==========================================================================
+
   prover-compatibility:
     name: Prover compatibility (snarkjs + optional rapidsnark)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: github.event_name == 'push' || github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -245,38 +320,58 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify production artifacts (required for prover regression)
+      - name: Production dependency audit
+        run: npm audit --omit=dev
+
+      - name: Verify production artifacts
         run: |
           node --input-type=module -e "
           import fs from 'fs';
           import { artifactsReady, resolveArtifacts } from './scripts/lib/resolve-artifacts.mjs';
+
           const paths = resolveArtifacts();
+
           if (!artifactsReady()) {
             console.error('FAIL: prover artifacts missing after checkout.');
             console.error('Expected crypto-artifacts/ mirror or artifacts/phase2+phase4 paths.');
-            for (const [k,p] of Object.entries({wasm:paths.wasm,zkey:paths.zkey,vkey:paths.vkey})) {
-              console.error(k+':', p, 'exists=', fs.existsSync(p));
+
+            for (const [k, p] of Object.entries({
+              wasm: paths.wasm,
+              zkey: paths.zkey,
+              vkey: paths.vkey
+            })) {
+              console.error(k + ':', p, 'exists=', fs.existsSync(p));
             }
+
             process.exit(1);
           }
+
           console.log('PASS: prover artifacts ready');
           "
 
-      - name: Compile production verifier (isolated)
+      - name: Compile production verifier
         run: npx hardhat compile --config scripts/hardhat-prover.config.ts
 
-      - name: Install rapidsnark (optional — does not fail job)
+      - name: Install rapidsnark (optional)
         continue-on-error: true
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential cmake libgmp-dev libsodium-dev nasm curl m4
+          sudo apt-get install -y -qq \
+            build-essential \
+            cmake \
+            libgmp-dev \
+            libsodium-dev \
+            nasm \
+            curl \
+            m4
+
           node scripts/install-rapidsnark.mjs
           echo "RAPIDSNARK_BIN=${{ github.workspace }}/rapidsnark/package/bin/prover" >> "$GITHUB_ENV"
 
-      - name: Prover compatibility tests (T1–T9, snarkjs required)
+      - name: Prover compatibility tests (T1–T9)
         run: npm run test:prover-compat
 
-      - name: Artifact provenance check (Phase 8.13 Task 5 — hash required, PQC WARN)
+      - name: Artifact provenance check
         run: npm run verify:provenance -- --live
 
       - name: Artifact provenance unit tests
@@ -288,7 +383,7 @@ jobs:
       - name: Hybrid auth envelope research tests (T-AUTH-01..08)
         run: npm run test:hybrid-auth
 
-      - name: rapidsnark evaluation (optional — T2/T4/M4 record)
+      - name: rapidsnark evaluation (optional)
         continue-on-error: true
         run: npm run evaluate:rapidsnark
 
@@ -296,15 +391,22 @@ jobs:
         continue-on-error: true
         run: npm run check:bench-drift
 
+  # ==========================================================================
+  # PROVER BENCHMARK
+  # ==========================================================================
+
   prover-benchmark:
     name: Prover benchmark (20 samples)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -316,7 +418,15 @@ jobs:
         continue-on-error: true
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential cmake libgmp-dev libsodium-dev nasm curl m4
+          sudo apt-get install -y -qq \
+            build-essential \
+            cmake \
+            libgmp-dev \
+            libsodium-dev \
+            nasm \
+            curl \
+            m4
+
           node scripts/install-rapidsnark.mjs
           echo "RAPIDSNARK_BIN=${{ github.workspace }}/rapidsnark/package/bin/prover" >> "$GITHUB_ENV"
 
@@ -342,15 +452,22 @@ jobs:
             benchmarks/reports/rapidsnark-evaluation.json
           if-no-files-found: warn
 
+  # ==========================================================================
+  # PROVENANCE + PQC HARDENING
+  # ==========================================================================
+
   provenance-pqc-hardening:
     name: Provenance PQC hardening (strict + production simulation)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -361,37 +478,50 @@ jobs:
       - name: Verify public key registry present
         run: |
           test -f artifacts/provenance/public-keys/aegis-ci-mldsa87-v1.json
+
           node --input-type=module -e "
           import { loadRegistryPublicKey } from './scripts/lib/public-key-registry.mjs';
+
           const k = loadRegistryPublicKey('aegis-ci-mldsa87-v1');
-          if (!k?.publicKey) { console.error('FAIL registry key'); process.exit(1); }
-          console.log('PASS registry key:', k.keyId, k.algorithm, k.version);
+
+          if (!k?.publicKey) {
+            console.error('FAIL registry key');
+            process.exit(1);
+          }
+
+          console.log(
+            'PASS registry key:',
+            k.keyId,
+            k.algorithm,
+            k.version
+          );
           "
 
-      - name: Generate ephemeral ML-DSA keys (strict CI tier)
+      - name: Generate ephemeral ML-DSA keys
         run: node scripts/generate-pqc-dev-keys.mjs ci-ephemeral
 
-      - name: Strict provenance verify (--live --pqc)
+      - name: Strict provenance verify
         env:
           AEGIS_PQC_PRIVATE_KEY_PATH: ${{ github.workspace }}/artifacts/provenance/keys/ci-ephemeral.key.json
         run: npm run verify:provenance -- --live --pqc
 
-      - name: Production simulation (--require-pqc alias, optional secret)
+      - name: Production simulation
         continue-on-error: true
         env:
           AEGIS_PQC_PRIVATE_KEY_HEX: ${{ secrets.AEGIS_PQC_PRIVATE_KEY_HEX }}
           AEGIS_PQC_PUBLIC_KEY_ID: aegis-ci-mldsa87-v1
         run: |
           if [ -z "$AEGIS_PQC_PRIVATE_KEY_HEX" ]; then
-            echo "SKIP production simulation — AEGIS_PQC_PRIVATE_KEY_HEX secret not configured"
+            echo "SKIP production simulation — secret not configured"
             exit 0
           fi
+
           npm run verify:provenance -- --live --require-pqc
 
       - name: Provenance verification benchmark
         run: npm run bench:provenance
 
-      - name: ML-DSA regression tests (T-PQC-01..10)
+      - name: ML-DSA regression tests
         run: npm run test:pqc-signature
 
       - name: Upload provenance benchmark report
@@ -402,15 +532,22 @@ jobs:
           path: benchmarks/reports/provenance-verify-benchmark.json
           if-no-files-found: warn
 
+  # ==========================================================================
+  # SECURITY PENETRATION — FULL
+  # ==========================================================================
+
   security-penetration-full:
     name: Security penetration full (schedule/manual + Shield live)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -422,18 +559,25 @@ jobs:
         run: npm run test:penetration
 
       - name: AegisShield live penetration (PT-07)
-        run: PT_RUN_SHIELD_LIVE=1 npm run test:penetration
         continue-on-error: true
+        run: PT_RUN_SHIELD_LIVE=1 npm run test:penetration
+
+  # ==========================================================================
+  # PHASE 8.13 REGRESSION
+  # ==========================================================================
 
   phase813-regression:
     name: Phase 8.13 unified regression (schedule/manual)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -444,15 +588,26 @@ jobs:
       - name: Phase 8.13 unified regression gate
         run: npm run test:phase813
 
+  # ==========================================================================
+  # HYBRID AUTH RESEARCH
+  # ==========================================================================
+
   hybrid-auth-research:
     name: Hybrid auth envelope research (optional)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'pull_request' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -463,7 +618,7 @@ jobs:
       - name: Hybrid auth unit tests (T-AUTH-01..08)
         run: npm run test:hybrid-auth
 
-      - name: Full hybrid auth validation + benchmark (schedule/manual only)
+      - name: Full hybrid auth validation + benchmark
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: |
           npm run test:hybrid-auth
