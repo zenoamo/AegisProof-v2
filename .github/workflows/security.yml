@@ -1,12 +1,18 @@
-# Supplementary security workflow — CodeQL and dependency review.
-# Primary security gates remain in aegis_repro_ci.yml (security-boundary-check).
+# Supplementary security workflow — CodeQL, dependency review,
+# sensitive-file protection, and PR security checks.
+#
+# Primary reproducibility/security-boundary gates remain in
+# aegis_repro_ci.yml.
+
 name: Security
 
 on:
   push:
     branches: [master, main]
+
   pull_request:
     branches: [master, main]
+
   schedule:
     - cron: "0 6 * * 1"
 
@@ -20,8 +26,10 @@ jobs:
     name: Dependency review
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
@@ -30,10 +38,12 @@ jobs:
     name: CodeQL analysis
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     strategy:
       fail-fast: false
       matrix:
         language: [javascript-typescript]
+
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +66,7 @@ jobs:
   security-scripts-smoke:
     name: Security script smoke check
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -69,3 +80,36 @@ jobs:
 
       - name: Sensitive file scan
         run: npm run check:sensitive-files
+
+  frozen-core-boundary:
+    name: Frozen Core boundary check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check changed files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}" \
+            > changed-files.txt
+
+          echo "Changed files:"
+          cat changed-files.txt
+
+          # Adjust these paths to the actual repository layout.
+          if grep -E \
+            '^(wasm/|r1cs/|production\.zkey$|frozen-core/)' \
+            changed-files.txt; then
+            echo "::error::Frozen Core modification detected."
+            exit 1
+          fi
+
+          echo "Frozen Core boundary check passed."
