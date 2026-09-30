@@ -33,10 +33,16 @@ const { buildPoseidon } = require("circomlibjs");
 
 const P2 = path.join(ROOT, "artifacts", "phase2");
 const R = (p) => path.join(ROOT, p);
-const SSOT_PATH = R("specs/aegis-protocol.v2.json");
+
+// Canonical v2 SSoT.
+// protocol/specs is the canonical SSoT FILE.
+const SSOT_PATH = R("protocol/specs");
 
 const RESOLVED = resolveArtifacts({ profile: "phase2" });
-const RESOLUTION = logArtifactResolver(RESOLVED, { json: process.argv.includes("--artifact-json") });
+const RESOLUTION = logArtifactResolver(
+  RESOLVED,
+  { json: process.argv.includes("--artifact-json") }
+);
 
 const PATHS = {
   ssot: SSOT_PATH,
@@ -55,9 +61,6 @@ const PATHS = {
   cacheDir: RESOLVED.cacheDir,
   cache: path.join(P2, "cache/cache-manifest.json"),
   reports: path.join(P2, "reports"),
-  // NOTE: per-mode evidence/log paths are resolved after MODE parsing
-  // (phase2_evidence_<mode>.json) so a FAST run can NEVER overwrite the
-  // persisted FULL evidence (E-1 fix).
 };
 
 // Phase 0 evidence files (immutable) — hashed before and after each run.
