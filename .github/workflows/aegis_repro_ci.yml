@@ -109,6 +109,9 @@ jobs:
       - name: Live artifact provenance verification
         run: npm run verify:provenance -- --live
 
+      - name: Compile prover verifier
+        run: npx hardhat compile --config scripts/hardhat-prover.config.ts
+
       - name: Prover compatibility regression
         run: npm run test:prover-compat
 
