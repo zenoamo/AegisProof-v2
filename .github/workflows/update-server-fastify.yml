@@ -1,0 +1,177 @@
+```yaml
+name: Update server Fastify
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-server-fastify:
+    name: Update server Fastify dependency
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify server project
+        run: |
+          test -f server/package.json
+          test -f server/package-lock.json
+
+      - name: Update server Fastify
+        working-directory: server
+        run: |
+          npm install fastify@^5.12.5
+
+      - name: Install server dependencies from lockfile
+        working-directory: server
+        run: |
+          npm ci
+
+      - name: Show server dependency tree
+        working-directory: server
+        run: |
+          echo "=== fastify ==="
+          npm ls fastify --all
+
+          echo "=== fast-uri ==="
+          npm ls fast-uri --all
+
+          echo "=== @fastify/ajv-compiler ==="
+          npm ls @fastify/ajv-compiler --all
+
+          echo "=== ajv ==="
+          npm ls ajv --all
+
+      - name: Explain server fast-uri
+        working-directory: server
+        run: |
+          echo "=== npm explain fast-uri ==="
+          npm explain fast-uri
+
+      - name: Verify Fastify dependency range
+        working-directory: server
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from "node:fs";
+
+          const pkg = JSON.parse(
+            fs.readFileSync("package.json", "utf8")
+          );
+
+          const version = pkg.dependencies?.fastify;
+
+          console.log(`Server Fastify dependency: ${version}`);
+
+          if (version !== "^5.12.5") {
+            console.error(
+              `ERROR: expected fastify ^5.12.5, got ${version}`
+            );
+            process.exit(1);
+          }
+
+          console.log("OK: server Fastify dependency is ^5.12.5.");
+          EOF
+
+      - name: Verify installed Fastify version
+        working-directory: server
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from "node:fs";
+
+          const pkg = JSON.parse(
+            fs.readFileSync("node_modules/fastify/package.json", "utf8")
+          );
+
+          console.log(`Installed Fastify version: ${pkg.version}`);
+
+          const [major, minor] = pkg.version.split(".").map(Number);
+
+          if (major !== 5 || minor < 12) {
+            console.error(
+              `ERROR: expected Fastify >=5.12.0, got ${pkg.version}`
+            );
+            process.exit(1);
+          }
+
+          console.log("OK: installed Fastify version is compatible.");
+          EOF
+
+      - name: Check for vulnerable fast-uri 3.x
+        working-directory: server
+        run: |
+          echo "=== Checking installed fast-uri versions ==="
+
+          versions="$(
+            npm ls fast-uri --all --parseable 2>/dev/null |
+            while read -r path; do
+              if [ -f "$path/package.json" ]; then
+                node -p "require('$path/package.json').version"
+              fi
+            done |
+            sort -u
+          )"
+
+          echo "$versions"
+
+          if echo "$versions" | grep -E '^3\.' >/dev/null; then
+            echo "ERROR: vulnerable fast-uri 3.x is still installed."
+            exit 1
+          fi
+
+          echo "OK: no fast-uri 3.x version is installed."
+
+      - name: Check Frozen Core untouched
+        run: |
+          git diff --name-only
+
+          if git diff --name-only | grep -E \
+            '^(circuits/|artifacts/|keys/|wasm/|production\.zkey|publicSignals|src/.*proof|contracts/)' \
+            >/dev/null; then
+            echo "ERROR: Frozen Core related files were modified."
+            exit 1
+          fi
+
+          echo "OK: Frozen Core paths untouched."
+
+      - name: Verify only server dependency files changed
+        run: |
+          changed="$(git diff --name-only)"
+
+          echo "Changed files:"
+          echo "$changed"
+
+          if [ -z "$changed" ]; then
+            echo "ERROR: No files changed."
+            exit 1
+          fi
+
+          if echo "$changed" | grep -vE \
+            '^server/(package\.json|package-lock\.json)$' \
+            >/dev/null; then
+            echo "ERROR: Unexpected files were modified."
+            exit 1
+          fi
+
+          echo "OK: only server dependency files changed."
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add server/package.json server/package-lock.json
+
+          git commit \
+            -m "fix(deps): update server fastify to resolve fast-uri vulnerability"
+
+          git push
+```
