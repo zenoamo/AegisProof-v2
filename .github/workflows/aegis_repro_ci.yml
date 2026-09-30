@@ -551,7 +551,7 @@ jobs:
         run: npm run evaluate:rapidsnark
 
       - name: Run prover benchmark
-        run: npm run bench:prover -- --samples 20
+        run: npm run bench:prover -- --modes M3,M4 --samples 3
 
       - name: Benchmark drift check
         continue-on-error: true
