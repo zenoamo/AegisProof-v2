@@ -1,9 +1,14 @@
 version: 2
 
 updates:
-  # Root npm project
+
+  # ============================================================
+  # Root
+  # ============================================================
+
   - package-ecosystem: "npm"
     directory: "/"
+
     schedule:
       interval: "daily"
       time: "03:00"
@@ -20,7 +25,8 @@ updates:
       include: "scope"
 
     groups:
-      fast-uri-security:
+
+      fast-uri:
         applies-to: security-updates
         patterns:
           - "fast-uri"
@@ -30,9 +36,14 @@ updates:
         patterns:
           - "*"
 
-  # Server npm project
+
+  # ============================================================
+  # Server
+  # ============================================================
+
   - package-ecosystem: "npm"
     directory: "/server"
+
     schedule:
       interval: "daily"
       time: "03:15"
@@ -49,7 +60,8 @@ updates:
       include: "scope"
 
     groups:
-      fast-uri-security:
+
+      fast-uri:
         applies-to: security-updates
         patterns:
           - "fast-uri"
