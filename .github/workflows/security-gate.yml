@@ -1,4 +1,3 @@
-```yaml
 name: AegisProof Security Gate
 
 on:
@@ -738,4 +737,3 @@ jobs:
       - name: Verify clean working tree
         run: |
           git diff --exit-code
-```
