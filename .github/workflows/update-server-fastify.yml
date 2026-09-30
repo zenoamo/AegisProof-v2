@@ -35,7 +35,7 @@ jobs:
         run: |
           npm ci
 
-      - name: Show Fastify tree
+      - name: Show server dependency tree
         working-directory: server
         run: |
           echo "=== fastify ==="
@@ -47,13 +47,16 @@ jobs:
           echo "=== @fastify/ajv-compiler ==="
           npm ls @fastify/ajv-compiler --all
 
-      - name: Explain fast-uri
+          echo "=== ajv ==="
+          npm ls ajv --all
+
+      - name: Explain server fast-uri
         working-directory: server
         run: |
           echo "=== npm explain fast-uri ==="
           npm explain fast-uri
 
-      - name: Verify Fastify version
+      - name: Verify Fastify dependency range
         working-directory: server
         run: |
           node --input-type=module <<'EOF'
@@ -74,21 +77,56 @@ jobs:
             process.exit(1);
           }
 
-          console.log("OK: server Fastify dependency updated.");
+          console.log("OK: server Fastify dependency is ^5.12.5.");
           EOF
 
       - name: Verify installed Fastify version
         working-directory: server
         run: |
-          node -e "
-            const p = require('./node_modules/fastify/package.json');
-            console.log('Installed Fastify version:', p.version);
+          node --input-type=module <<'EOF'
+          import fs from "node:fs";
 
-            if (p.version !== '5.12.5') {
-              console.error('ERROR: unexpected Fastify version');
-              process.exit(1);
-            }
-          "
+          const pkg = JSON.parse(
+            fs.readFileSync("node_modules/fastify/package.json", "utf8")
+          );
+
+          console.log(`Installed Fastify version: ${pkg.version}`);
+
+          const [major, minor] = pkg.version.split(".").map(Number);
+
+          if (major !== 5 || minor < 12) {
+            console.error(
+              `ERROR: expected Fastify >=5.12.0, got ${pkg.version}`
+            );
+            process.exit(1);
+          }
+
+          console.log("OK: installed Fastify version is compatible.");
+          EOF
+
+      - name: Check for vulnerable fast-uri 3.x
+        working-directory: server
+        run: |
+          echo "=== Checking installed fast-uri versions ==="
+
+          versions="$(
+            npm ls fast-uri --all --parseable 2>/dev/null |
+            while read -r path; do
+              if [ -f "$path/package.json" ]; then
+                node -p "require('$path/package.json').version"
+              fi
+            done |
+            sort -u
+          )"
+
+          echo "$versions"
+
+          if echo "$versions" | grep -E '^3\.' >/dev/null; then
+            echo "ERROR: vulnerable fast-uri 3.x is still installed."
+            exit 1
+          fi
+
+          echo "OK: no fast-uri 3.x version is installed."
 
       - name: Check Frozen Core untouched
         run: |
@@ -122,7 +160,7 @@ jobs:
             exit 1
           fi
 
-          echo "OK: only server package.json and package-lock.json changed."
+          echo "OK: only server dependency files changed."
 
       - name: Commit and push
         run: |
