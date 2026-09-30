@@ -23,3 +23,16 @@ import AegisProof.TEE.Boundary
 import AegisProof.Tests.SignalTests
 import AegisProof.Tests.InvariantTests
 import AegisProof.Tests.Regression
+
+namespace AegisProof
+
+/--
+Top-level formal assurance sentinel.
+
+The project is formally wired when this theorem compiles.
+-/
+theorem formal_assurance_layer_compiles :
+    Core.publicSignalCount = 30 := by
+  rfl
+
+end AegisProof
