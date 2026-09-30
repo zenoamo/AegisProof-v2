@@ -3,11 +3,11 @@
 // ----------------------------------------------------------------------------
 // Strongly typed APIs for proof verification, calldata generation, and contract
 // interaction. All signal definitions sourced from SSoT (specs/aegis-protocol.v2.json).
-// Compatible with production zkey VK hash: d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec
+// Compatible with production zkey VK hash:
+// d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec
 // ============================================================================
 
-import { createPublicClient, http, ContractFunctionParameters } from "viem";
-import { Chain } from "viem/chains";
+import { createPublicClient, http } from "viem";
 
 /** ==========================================================================
  * TYPE DEFINITIONS
@@ -15,13 +15,17 @@ import { Chain } from "viem/chains";
 
 /**
  * Groth16 proof structure compatible with snarkjs output format.
+ *
  * - pi_a: [G1 point x, G1 point y]
  * - pi_b: [[G2 point x_lo, G2 point x_hi], [G2 point y_lo, G2 point y_hi]]
  * - pi_c: [G1 point x, G1 point y]
  */
 export interface GrothProof {
   pi_a: readonly [string, string];
-  pi_b: readonly [readonly [string, string], readonly [string, string]];
+  pi_b: readonly [
+    readonly [string, string],
+    readonly [string, string]
+  ];
   pi_c: readonly [string, string];
 }
 
@@ -40,10 +44,21 @@ export interface ProofBundle {
 export interface VerifierClientConfig {
   /** Address of deployed Groth16VerifierV2Production.sol contract */
   verifierAddress: `0x${string}`;
+
   /** Viem public client instance (optional; auto-created if omitted) */
   publicClient?: ReturnType<typeof createPublicClient>;
-  /** Chain ID (required for cross-chain validation) */
+
+  /** Chain ID used for cross-chain validation */
   chainId: number;
+}
+
+/**
+ * Public verifier client returned by createVerifierClient().
+ */
+export interface VerifierClient {
+  verifierAddress: `0x${string}`;
+  chainId: number;
+  client: ReturnType<typeof createPublicClient>;
 }
 
 /**
@@ -52,54 +67,57 @@ export interface VerifierClientConfig {
 export interface VerificationResult {
   /** Whether proof verification succeeded */
   success: boolean;
+
   /** Gas estimate for on-chain verification (if applicable) */
   gasEstimate?: bigint;
+
   /** Additional context about the verification outcome */
   context?: Record<string, unknown>;
 }
 
 /** ==========================================================================
- * SSOT-SUPPORTED SIGNAL TYPES (generated from specs/aegis-protocol.v2.json)
+ * SSOT-SUPPORTED SIGNAL TYPES
  * ========================================================================== */
 
 /**
- * Official signal names in SSoT order (indices 0-29 map to wires 1-30).
- * This enum ensures compile-time type safety when building inputs.
+ * Official signal names in SSoT order.
+ *
+ * Indices 0-29 map to public wires 1-30.
+ * Currently defined names occupy indices 0-7.
+ * Indices 8-29 are reserved for future extensions.
  */
 export const SIGNAL_NAMES = [
-  "timestamp",           // Index 0: Unix timestamp (untrusted metadata)
-  "chainId",             // Index 1: Blockchain chain ID (binding)
-  "protocolVersion",     // Index 2: Protocol version number (must be 2)
-  "deviceId",            // Index 3: Unique device identifier
-  "commitment",          // Index 4: Commitment value (Poseidon(6))
-  "nullifier",           // Index 5: Nullifier value (Poseidon(8))
-  "sessionId",           // Index 6: Session identifier (nullifier-bound)
-  "purposeId",           // Index 7: Purpose/application identifier
-  // Indices 8-29 reserved for future extensions (must remain contiguous)
+  "timestamp",       // Index 0: Unix timestamp (untrusted metadata)
+  "chainId",         // Index 1: Blockchain chain ID (binding)
+  "protocolVersion", // Index 2: Protocol version number (must be 2)
+  "deviceId",        // Index 3: Unique device identifier
+  "commitment",      // Index 4: Commitment value (Poseidon(6))
+  "nullifier",       // Index 5: Nullifier value (Poseidon(8))
+  "sessionId",       // Index 6: Session identifier (nullifier-bound)
+  "purposeId",       // Index 7: Purpose/application identifier
 ] as const;
 
 export type SignalName = typeof SIGNAL_NAMES[number];
 
 /**
  * Type-safe mapping from SignalName to index position.
- * Use this to validate signal ordering before building publicInputs array.
  */
-export const SIGNAL_INDEX_MAP = Object.fromEntries(
-  SIGNAL_NAMES.map((name, index) => [name, index]) as [SignalName, number][]
-);
+export const SIGNAL_INDEX_MAP: Record<SignalName, number> =
+  Object.fromEntries(
+    SIGNAL_NAMES.map((name, index) => [name, index])
+  ) as Record<SignalName, number>;
 
 /**
- * Expected number of public signals (enforced at runtime).
+ * Expected number of public signals.
  */
 export const EXPECTED_SIGNAL_COUNT = 30 as const;
 
 /** ==========================================================================
- * CUSTOM ERROR CLASSES WITH CODES
+ * CUSTOM ERROR CLASSES
  * ========================================================================== */
 
 /**
  * Base error class for all SDK-related errors.
- * Includes error code for programmatic error handling.
  */
 export class AegisSDKError extends Error {
   constructor(
@@ -109,6 +127,9 @@ export class AegisSDKError extends Error {
   ) {
     super(message);
     this.name = "AegisSDKError";
+
+    // Required for correct subclass behavior when targeting ES5-like runtimes.
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
@@ -120,28 +141,35 @@ export class InvalidSignalCountError extends AegisSDKError {
     super(
       `Expected ${EXPECTED_SIGNAL_COUNT} public signals, but got ${length}`,
       "INVALID_SIGNAL_COUNT",
-      { expected: EXPECTED_SIGNAL_COUNT, actual: length }
+      {
+        expected: EXPECTED_SIGNAL_COUNT,
+        actual: length,
+      }
     );
+
     this.name = "InvalidSignalCountError";
   }
 }
 
 /**
- * Thrown when signal name mapping fails (missing required signals).
+ * Thrown when signal name mapping fails.
  */
 export class SignalMappingError extends AegisSDKError {
-  constructor(missingSignals: SignalName[]) {
+  constructor(missingSignals: readonly SignalName[]) {
     super(
       `Missing required signals: ${missingSignals.join(", ")}`,
       "INCOMPLETE_SIGNAL_MAPPING",
-      { missing: missingSignals }
+      {
+        missing: [...missingSignals],
+      }
     );
+
     this.name = "SignalMappingError";
   }
 }
 
 /**
- * Thrown when Groth proof structure is invalid (wrong field lengths).
+ * Thrown when Groth proof structure is invalid.
  */
 export class InvalidProofStructureError extends AegisSDKError {
   constructor(
@@ -152,22 +180,31 @@ export class InvalidProofStructureError extends AegisSDKError {
     super(
       `Invalid proof structure: ${field} expected ${expectedLength} fields, got ${actualLength}`,
       "INVALID_PROOF_STRUCTURE",
-      { field, expectedLength, actualLength }
+      {
+        field,
+        expectedLength,
+        actualLength,
+      }
     );
+
     this.name = "InvalidProofStructureError";
   }
 }
 
 /**
- * Thrown when verification key mismatch detected between contract and local copy.
+ * Thrown when verification key mismatch is detected.
  */
 export class VerificationKeyMismatchError extends AegisSDKError {
   constructor(contractHash: string, localHash: string) {
     super(
       `Verification key mismatch: contract hash ${contractHash} ≠ local hash ${localHash}`,
       "VK_MISMATCH",
-      { contractHash, localHash }
+      {
+        contractHash,
+        localHash,
+      }
     );
+
     this.name = "VerificationKeyMismatchError";
   }
 }
@@ -188,32 +225,29 @@ export class GasEstimationError extends AegisSDKError {
 
 /**
  * Validates that public signals array has exactly 30 elements.
- * Throws InvalidSignalCountError if validation fails.
+ *
+ * @throws InvalidSignalCountError
  */
-export function validateSignalCount(signals: readonly string[]): void {
+export function validateSignalCount(
+  signals: readonly string[]
+): void {
   if (signals.length !== EXPECTED_SIGNAL_COUNT) {
     throw new InvalidSignalCountError(signals.length);
   }
 }
 
 /**
- * Converts a named signal object (Record<SignalName, string>) to indexed array.
- * Ensures all required signals are present and in correct order.
+ * Converts a named signal object to an indexed public-signal array.
  *
- * @example
- * ```typescript
- * const input = { timestamp: "1234567890", chainId: "31337", ... };
- * const signals = buildPublicSignals(input);
- * // Result: ["1234567890", "31337", ...] in SSoT order
- * ```
+ * The eight currently defined SSoT signals are placed at indices 0-7.
+ * Reserved indices 8-29 are initialized with "0".
  */
 export function buildPublicSignals(
   input: Record<string, string>
 ): readonly string[] {
-  const requiredSignals: SignalName[] = SIGNAL_NAMES as SignalName[];
+  const requiredSignals: readonly SignalName[] = SIGNAL_NAMES;
   const missing: SignalName[] = [];
 
-  // Check for missing required signals
   for (const name of requiredSignals) {
     if (input[name] === undefined) {
       missing.push(name);
@@ -224,11 +258,10 @@ export function buildPublicSignals(
     throw new SignalMappingError(missing);
   }
 
-  // Build indexed array following SSoT order
-  const arr: string[] = new Array(EXPECTED_SIGNAL_COUNT);
+  const arr: string[] = new Array(EXPECTED_SIGNAL_COUNT).fill("0");
 
-  for (let i = 0; i < EXPECTED_SIGNAL_COUNT; i++) {
-    const name = SIGNAL_NAMES[i] as SignalName;
+  for (let i = 0; i < SIGNAL_NAMES.length; i++) {
+    const name = SIGNAL_NAMES[i];
     const value = input[name];
 
     if (value === undefined) {
@@ -238,25 +271,24 @@ export function buildPublicSignals(
     arr[i] = value;
   }
 
-  return arr as unknown as readonly string[];
+  return arr;
 }
 
 /**
- * Parses a public signals array back into a named object.
- * Useful for debugging and inspection.
+ * Parses a 30-element public-signal array back into the named signals.
+ *
+ * Only the currently defined SSoT signal names are returned.
+ * Reserved indices 8-29 are intentionally ignored.
  */
 export function parsePublicSignals(
   signals: readonly string[]
 ): Record<SignalName, string> {
   validateSignalCount(signals);
 
-  const result: Record<SignalName, string> = {} as Record<
-    SignalName,
-    string
-  >;
+  const result = {} as Record<SignalName, string>;
 
-  for (let i = 0; i < EXPECTED_SIGNAL_COUNT; i++) {
-    const name = SIGNAL_NAMES[i] as SignalName;
+  for (let i = 0; i < SIGNAL_NAMES.length; i++) {
+    const name = SIGNAL_NAMES[i];
     result[name] = signals[i]!;
   }
 
@@ -269,31 +301,40 @@ export function parsePublicSignals(
 
 /**
  * Converts string signals to padded hex calldata format for Solidity uint[30].
- * Each element becomes 64-character zero-padded hex string.
  *
- * @throws InvalidSignalCountError if signals.length !== 30
+ * Each element becomes a 64-character hexadecimal string.
+ *
+ * @throws InvalidSignalCountError
  */
 export function toCalldataSignals(
   signals: readonly string[]
 ): readonly string[] {
   validateSignalCount(signals);
 
-  return signals.map((s) => s.padStart(64, "0"));
+  return signals.map((signal) =>
+    signal.padStart(64, "0")
+  );
 }
 
 /**
- * Converts snarkjs-format GrothProof to Solidity-calldata-compatible format.
- * Handles G2 coordinate swap (y,x → x,y) required by Solidity representation.
+ * Converts snarkjs-format GrothProof to Solidity calldata format.
  *
- * Snarkjs format: pi_b = [[y_lo, y_hi], [x_lo, x_hi]]
- * Solidity expects: [[x_lo, x_hi], [y_lo, y_hi]]
+ * Snarkjs format:
+ *   pi_b = [[y_lo, y_hi], [x_lo, x_hi]]
+ *
+ * Solidity verifier representation:
+ *   pB = [[x_lo, x_hi], [y_lo, y_hi]]
  */
-export function grothProofToCalldata(proof: GrothProof): {
+export function grothProofToCalldata(
+  proof: GrothProof
+): {
   pA: readonly [bigint, bigint];
-  pB: readonly [readonly [bigint, bigint], readonly [bigint, bigint]];
+  pB: readonly [
+    readonly [bigint, bigint],
+    readonly [bigint, bigint]
+  ];
   pC: readonly [bigint, bigint];
 } {
-  // Validate proof structure
   if (proof.pi_a.length !== 2) {
     throw new InvalidProofStructureError(
       "pi_a",
@@ -307,12 +348,15 @@ export function grothProofToCalldata(proof: GrothProof): {
     proof.pi_b[0].length !== 2 ||
     proof.pi_b[1].length !== 2
   ) {
+    const actualLength =
+      proof.pi_b.length +
+      (proof.pi_b[0]?.length ?? 0) +
+      (proof.pi_b[1]?.length ?? 0);
+
     throw new InvalidProofStructureError(
       "pi_b",
-      4 /* [[2],[2]] */,
-      proof.pi_b.length +
-        proof.pi_b[0]?.length +
-        proof.pi_b[1]?.length
+      4,
+      actualLength
     );
   }
 
@@ -324,13 +368,13 @@ export function grothProofToCalldata(proof: GrothProof): {
     );
   }
 
-  // Parse components
   const pA = [
     BigInt(proof.pi_a[0]),
     BigInt(proof.pi_a[1]),
   ] as const;
 
-  // Swap G2 coordinates from snarkjs (y,x) to Solidity (x,y)
+  // Swap G2 coordinates from snarkjs (y,x)
+  // to Solidity verifier order (x,y).
   const pB = [
     [
       BigInt(proof.pi_b[0][1]),
@@ -347,17 +391,30 @@ export function grothProofToCalldata(proof: GrothProof): {
     BigInt(proof.pi_c[1]),
   ] as const;
 
-  return { pA, pB, pC };
+  return {
+    pA,
+    pB,
+    pC,
+  };
 }
 
 /** ==========================================================================
- * CONTRACT INTERACTION HELPERS (VIEM-BASED)
+ * CONTRACT INTERACTION HELPERS
  * ========================================================================== */
 
 /**
- * Creates a VerifierClient configured for the specified chain and verifier address.
+ * Creates a VerifierClient configured for the specified chain ID.
+ *
+ * If a publicClient is supplied, it is reused.
+ * Otherwise a viem public client is created with HTTP transport.
+ *
+ * Note:
+ * chainId is retained as explicit SDK metadata. The SDK does not attempt
+ * to construct a Chain object dynamically from an arbitrary numeric ID.
  */
-export function createVerifierClient(config: VerifierClientConfig) {
+export function createVerifierClient(
+  config: VerifierClientConfig
+): VerifierClient {
   const {
     verifierAddress,
     chainId,
@@ -365,9 +422,8 @@ export function createVerifierClient(config: VerifierClientConfig) {
   } = config;
 
   const client =
-    customClient ||
+    customClient ??
     createPublicClient({
-      chain: Object.values(Chain).find((c) => c.id === chainId),
       transport: http(),
     });
 
@@ -380,7 +436,9 @@ export function createVerifierClient(config: VerifierClientConfig) {
 
 /**
  * Estimates gas cost for verifyProof contract call.
- * Uses viem's estimateGas functionality under the hood.
+ *
+ * Current implementation returns a conservative baseline until the
+ * production verifier ABI is wired into the SDK.
  *
  * @returns Gas estimate in wei (approximate)
  */
@@ -391,22 +449,36 @@ export async function estimateVerifyGas(
   signals: readonly string[]
 ): Promise<bigint> {
   try {
-    // NOTE: In production, load ABI via dynamic import:
-    // import verifierABI from "../../artifacts/contracts/Groth16VerifierV2Production.sol/Groth16VerifierV2Production.json"
+    // Keep parameters referenced while the ABI integration is pending.
+    void client;
+    void verifierAddress;
 
-    const calldataSignals = toCalldataSignals(signals);
-    const { pA, pB, pC } = grothProofToCalldata(proof);
+    const calldataSignals =
+      toCalldataSignals(signals);
 
-    // Return placeholder estimate until ABI loaded
-    // TODO: Replace with actual estimateGas call:
-    // return await client.estimateGas({
+    const { pA, pB, pC } =
+      grothProofToCalldata(proof);
+
+    // Keep generated calldata referenced until ABI integration.
+    void calldataSignals;
+    void pA;
+    void pB;
+    void pC;
+
+    // TODO:
+    // Replace this baseline with an actual estimateGas call once
+    // the production verifier ABI is bundled into the SDK.
+    //
+    // Example:
+    //
+    // return await client.estimateContractGas({
     //   address: verifierAddress,
-    //   abi: verifierABI.abi,
+    //   abi: verifierABI,
     //   functionName: "verifyProof",
     //   args: [pA, pB, pC, calldataSignals],
     // });
 
-    return 120000n; // Conservative baseline estimate
+    return 120000n;
   } catch (error) {
     throw new GasEstimationError(
       error instanceof Error
@@ -418,9 +490,10 @@ export async function estimateVerifyGas(
 
 /**
  * Performs off-chain verification simulation using the verifier contract.
- * Returns VerificationResult with success status and gas estimate.
  *
- * Note: This does NOT execute on-chain; it simulates what would happen.
+ * Note:
+ * This currently uses the gas-estimation path and does not execute an
+ * actual verifier contract call.
  */
 export async function offChainVerify(
   client: ReturnType<typeof createPublicClient>,
@@ -436,16 +509,8 @@ export async function offChainVerify(
       signals
     );
 
-    // TODO: Actually call readContract to get verification result:
-    // const result = await client.readContract({
-    //   address: verifierAddress,
-    //   abi: verifierABI.abi,
-    //   functionName: "verifyProof",
-    //   args: [grothProofToCalldata(proof), toCalldataSignals(signals)],
-    // });
-
     return {
-      success: true, // Placeholder
+      success: true,
       gasEstimate: gas,
     };
   } catch (error) {
@@ -456,15 +521,17 @@ export async function offChainVerify(
         error:
           error instanceof Error
             ? error.message
-            : "Unknown",
+            : "Unknown error",
       },
     };
   }
 }
 
 /**
- * Full on-chain verification flow: calls verifyProof on deployed verifier contract.
- * Must be executed as a view call (no state changes).
+ * Full on-chain verification flow.
+ *
+ * Current implementation is a placeholder until the production verifier
+ * ABI is integrated into the SDK.
  */
 export async function verifyOnChain(
   client: ReturnType<typeof createPublicClient>,
@@ -473,18 +540,28 @@ export async function verifyOnChain(
   signals: readonly string[]
 ): Promise<boolean> {
   try {
-    // TODO: Implement actual contract call:
+    // Keep parameters referenced until ABI integration.
+    void client;
+    void verifierAddress;
+    void proof;
+    void signals;
+
+    // TODO:
+    // Implement actual readContract() against the production verifier ABI.
+    //
+    // Example:
+    //
     // const result = await client.readContract({
     //   address: verifierAddress,
-    //   abi: verifierABI.abi,
+    //   abi: verifierABI,
     //   functionName: "verifyProof",
-    //   args: [grothProofToCalldata(proof), toCalldataSignals(signals)],
+    //   args: [pA, pB, pC, calldataSignals],
     // });
+    //
+    // return Boolean(result);
 
-    // Placeholder for demonstration
     return true;
   } catch (error) {
-    // Capture detailed error information for debugging
     throw new AegisSDKError(
       `On-chain verification failed: ${
         error instanceof Error
@@ -504,66 +581,72 @@ export async function verifyOnChain(
  * ========================================================================== */
 
 /**
- * Decodes contract revert reasons into human-readable format.
- * Extracts error selector and message from hex-encoded revert data.
+ * Decodes contract revert reasons into a human-readable representation.
+ *
+ * Extracts the first 4-byte selector and, when present, the text preceding
+ * the " REVERT" marker.
  */
 export function decodeRevertReason(
   reasonOrData: string
-): { selector?: string; message?: string } | null {
-  if (!reasonOrData || !reasonOrData.startsWith("0x")) {
+): {
+  selector?: string;
+  message?: string;
+} | null {
+  if (
+    !reasonOrData ||
+    !reasonOrData.startsWith("0x")
+  ) {
     return null;
   }
 
-  const data = reasonOrData;
-  const selector = data.slice(0, 10);
+  const selector = reasonOrData.slice(0, 10);
 
-  // Avoid a backtracking regular expression.
-  // Find the " REVERT" marker directly.
-  const revertIndex = data.indexOf(" REVERT");
+  const revertIndex =
+    reasonOrData.indexOf(" REVERT");
 
-  const msg =
+  const message =
     revertIndex >= 0
-      ? data.slice(0, revertIndex)
+      ? reasonOrData.slice(0, revertIndex)
       : undefined;
 
-  return { selector, message: msg };
+  return {
+    selector,
+    message,
+  };
 }
 
 /**
- * Computes a simple hash of proof data for caching/deduplication purposes.
- * Uses BigInt XOR reduction over proof fields.
+ * Computes a simple XOR-based hash of proof data.
+ *
+ * This is intended for caching/deduplication only.
+ * It is NOT a cryptographic hash.
  */
-export function computeProofHash(proof: GrothProof): string {
+export function computeProofHash(
+  proof: GrothProof
+): string {
   const xorValues = [
-    BigInt(proof.pi_a[0]) ^ BigInt(proof.pi_a[1]),
+    BigInt(proof.pi_a[0]) ^
+      BigInt(proof.pi_a[1]),
+
     BigInt(proof.pi_b[0][0]) ^
       BigInt(proof.pi_b[0][1]) ^
       BigInt(proof.pi_b[1][0]) ^
       BigInt(proof.pi_b[1][1]),
-    BigInt(proof.pi_c[0]) ^ BigInt(proof.pi_c[1]),
+
+    BigInt(proof.pi_c[0]) ^
+      BigInt(proof.pi_c[1]),
   ];
 
   const reduced = xorValues.reduce(
-    (acc, val) => acc ^ val,
+    (acc, value) => acc ^ value,
     0n
   );
 
-  return `0x${reduced.toString(16).padStart(64, "0")}`;
+  return `0x${reduced
+    .toString(16)
+    .padStart(64, "0")}`;
 }
 
 /** ==========================================================================
- * EXPORTS
+ * END OF SDK CORE
  * ========================================================================== */
-
-export type {
-  GrothProof,
-  ProofBundle,
-  VerifierClientConfig,
-  VerificationResult,
-};
-
-export {
-  SIGNAL_NAMES,
-  SIGNAL_INDEX_MAP,
-  EXPECTED_SIGNAL_COUNT,
-};
