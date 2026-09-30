@@ -761,29 +761,57 @@ jobs:
           path: benchmarks/reports/hybrid-auth-benchmark.json
           if-no-files-found: warn
 
-
   # ==========================================================================
   # REQUIRED CI GATE
   # ==========================================================================
 
   required-gate:
     name: Required CI gate
+
     needs:
+      # PUSH / PR jobs
       - security-boundary-check
       - fast
       - phase5-readiness
       - tee-layer-regression
       - prover-compatibility
-      - hybrid-auth-research
       - formal-assurance
+
+      # ALL-EVENT job
+      - hybrid-auth-research
+
+      # WEEKLY / MANUAL jobs
+      - full
+      - prover-benchmark
+      - provenance-pqc-hardening
+      - security-penetration-full
+      - phase813-regression
 
     if: ${{ always() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Validate required jobs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+
+          SECURITY_BOUNDARY: ${{ needs.security-boundary-check.result }}
+          FAST: ${{ needs.fast.result }}
+          PHASE5: ${{ needs.phase5-readiness.result }}
+          TEE: ${{ needs.tee-layer-regression.result }}
+          PROVER_COMPATIBILITY: ${{ needs.prover-compatibility.result }}
+          FORMAL_ASSURANCE: ${{ needs.formal-assurance.result }}
+          HYBRID_AUTH: ${{ needs.hybrid-auth-research.result }}
+
+          FULL: ${{ needs.full.result }}
+          PROVER_BENCHMARK: ${{ needs.prover-benchmark.result }}
+          PROVENANCE_PQC: ${{ needs.provenance-pqc-hardening.result }}
+          SECURITY_PENETRATION_FULL: ${{ needs.security-penetration-full.result }}
+          PHASE813: ${{ needs.phase813-regression.result }}
+
         run: |
-          set -e
+          set -euo pipefail
 
           validate() {
             local name="$1"
@@ -797,12 +825,43 @@ jobs:
             fi
           }
 
-          validate "security-boundary-check" "${{ needs.security-boundary-check.result }}"
-          validate "fast" "${{ needs.fast.result }}"
-          validate "phase5-readiness" "${{ needs.phase5-readiness.result }}"
-          validate "tee-layer-regression" "${{ needs.tee-layer-regression.result }}"
-          validate "prover-compatibility" "${{ needs.prover-compatibility.result }}"
-          validate "hybrid-auth-research" "${{ needs.hybrid-auth-research.result }}"
-          validate "formal-assurance" "${{ needs.formal-assurance.result }}"
+          echo "============================================"
+          echo "AegisProof Required CI Gate"
+          echo "event=${EVENT_NAME}"
+          echo "============================================"
 
-          echo "✓ All required jobs passed"
+          case "$EVENT_NAME" in
+
+            push|pull_request)
+              echo "Validating PUSH / PR required jobs..."
+
+              validate "security-boundary-check" "$SECURITY_BOUNDARY"
+              validate "fast" "$FAST"
+              validate "phase5-readiness" "$PHASE5"
+              validate "tee-layer-regression" "$TEE"
+              validate "prover-compatibility" "$PROVER_COMPATIBILITY"
+              validate "formal-assurance" "$FORMAL_ASSURANCE"
+              validate "hybrid-auth-research" "$HYBRID_AUTH"
+
+              echo "✓ All PUSH / PR required jobs passed"
+              ;;
+
+            schedule|workflow_dispatch)
+              echo "Validating WEEKLY / MANUAL required jobs..."
+
+              validate "full" "$FULL"
+              validate "prover-benchmark" "$PROVER_BENCHMARK"
+              validate "provenance-pqc-hardening" "$PROVENANCE_PQC"
+              validate "security-penetration-full" "$SECURITY_PENETRATION_FULL"
+              validate "phase813-regression" "$PHASE813"
+              validate "hybrid-auth-research" "$HYBRID_AUTH"
+
+              echo "✓ All WEEKLY / MANUAL required jobs passed"
+              ;;
+
+            *)
+              echo "ERROR: Unsupported GitHub event: ${EVENT_NAME}"
+              exit 1
+              ;;
+
+          esac
