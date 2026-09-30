@@ -421,7 +421,11 @@ jobs:
           NODE
 
       - name: Compile prover verifier
-        run: npx hardhat compile --config scripts/hardhat-prover.config.ts
+        run: |
+          rm -rf artifacts/hardhat cache/hardhat
+          npx hardhat compile --config scripts/hardhat-prover.config.ts --force
+          test -f artifacts/hardhat/scripts/prover-contracts/Groth16VerifierV2Production.sol/Groth16VerifierV2Production.json
+          echo "PASS: prover verifier artifact exists"
 
       - name: Install rapidsnark (optional)
         continue-on-error: true
@@ -547,7 +551,11 @@ jobs:
             >> "$GITHUB_ENV"
 
       - name: Compile prover verifier artifacts
-        run: npx hardhat compile --config scripts/hardhat-prover.config.ts
+        run: |
+          rm -rf artifacts/hardhat cache/hardhat
+          npx hardhat compile --config scripts/hardhat-prover.config.ts --force
+          test -f artifacts/hardhat/scripts/prover-contracts/Groth16VerifierV2Production.sol/Groth16VerifierV2Production.json
+          echo "PASS: prover verifier artifact exists"
 
       - name: rapidsnark evaluation
         continue-on-error: true
