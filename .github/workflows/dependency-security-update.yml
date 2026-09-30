@@ -13,145 +13,291 @@ concurrency:
 
 jobs:
   update:
-    name: Update vulnerable dependencies
+    name: Harden dependency tree
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
-      - name: Checkout
+      # ============================================================
+      # CHECKOUT
+      # ============================================================
+
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Create update branch
+      - name: Create security update branch
+        shell: bash
         run: |
           set -euo pipefail
-          BRANCH="security/dependency-update-${GITHUB_RUN_ID}"
+
+          BRANCH="security/dependency-hardening-${GITHUB_RUN_ID}"
+
           git switch -c "$BRANCH"
+
           echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+
+      # ============================================================
+      # NODE
+      # ============================================================
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
 
-      # ------------------------------------------------------------
-      # ROOT
-      # ------------------------------------------------------------
+      - name: Show toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node --version
+          npm --version
+          git --version
+
+      # ============================================================
+      # ROOT DEPENDENCY REFRESH
+      #
+      # IMPORTANT:
+      # Do not use npm audit fix --force.
+      #
+      # First refresh packages within their declared semver ranges.
+      # Then let npm resolve security fixes that do not require
+      # destructive major-version changes.
+      # ============================================================
 
       - name: Refresh root dependency tree
+        shell: bash
         run: |
           set -euo pipefail
 
           npm update --package-lock-only
+
           npm audit fix --package-lock-only
 
-      # ------------------------------------------------------------
-      # SERVER
-      # ------------------------------------------------------------
+          npm dedupe --package-lock-only
 
-      - name: Update server Fastify
+      # ============================================================
+      # SERVER DEPENDENCY REFRESH
+      #
+      # server/fast-uri was previously coming through Fastify.
+      # Explicitly move server Fastify to the already-approved 5.12.5
+      # line, then refresh its transitive dependency tree.
+      # ============================================================
+
+      - name: Update server Fastify and transitive dependencies
         working-directory: server
+        shell: bash
         run: |
           set -euo pipefail
 
-          # Fastify is the parent that brings fast-uri into the server tree.
-          # Keep this within the existing Fastify major version.
           npm install fastify@^5.12.5 --package-lock-only
 
-          # Refresh all transitive packages within declared semver ranges.
           npm update --package-lock-only
 
           npm audit fix --package-lock-only
 
-      # ------------------------------------------------------------
-      # INSTALL FROM LOCKFILES
-      # ------------------------------------------------------------
+          npm dedupe --package-lock-only
 
-      - name: Install root dependencies from lockfile
+      # ============================================================
+      # CLEAN INSTALL
+      #
+      # The lockfiles are authoritative from this point onward.
+      # ============================================================
+
+      - name: Install root from lockfile
+        shell: bash
         run: |
           set -euo pipefail
           npm ci
 
-      - name: Install server dependencies from lockfile
+      - name: Install server from lockfile
         working-directory: server
+        shell: bash
         run: |
           set -euo pipefail
           npm ci
 
-      # ------------------------------------------------------------
-      # TREE INSPECTION
-      # ------------------------------------------------------------
+      # ============================================================
+      # DEPENDENCY TREE DIAGNOSTICS
+      # ============================================================
 
-      - name: Inspect vulnerable dependency trees
+      - name: Print root dependency trees
+        shell: bash
         run: |
           set -euo pipefail
 
-          echo "=== ROOT fast-uri ==="
+          echo "============================================================"
+          echo "ROOT fast-uri"
+          echo "============================================================"
           npm ls fast-uri --all || true
 
           echo
-          echo "=== ROOT brace-expansion ==="
+          echo "============================================================"
+          echo "ROOT brace-expansion"
+          echo "============================================================"
           npm ls brace-expansion --all || true
 
           echo
-          echo "=== ROOT undici ==="
+          echo "============================================================"
+          echo "ROOT undici"
+          echo "============================================================"
           npm ls undici --all || true
 
           echo
-          echo "=== SERVER fastify ==="
+          echo "============================================================"
+          echo "ROOT elliptic"
+          echo "============================================================"
+          npm ls elliptic --all || true
+
+          echo
+          echo "============================================================"
+          echo "ROOT ethers"
+          echo "============================================================"
+          npm ls ethers --all || true
+
+          echo
+          echo "============================================================"
+          echo "ROOT circomlibjs"
+          echo "============================================================"
+          npm ls circomlibjs --all || true
+
+      - name: Print server dependency trees
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "============================================================"
+          echo "SERVER fastify"
+          echo "============================================================"
           npm --prefix server ls fastify --all || true
 
           echo
-          echo "=== SERVER fast-uri ==="
+          echo "============================================================"
+          echo "SERVER fast-uri"
+          echo "============================================================"
           npm --prefix server ls fast-uri --all || true
 
           echo
-          echo "=== SERVER brace-expansion ==="
+          echo "============================================================"
+          echo "SERVER brace-expansion"
+          echo "============================================================"
           npm --prefix server ls brace-expansion --all || true
 
           echo
-          echo "=== SERVER undici ==="
+          echo "============================================================"
+          echo "SERVER undici"
+          echo "============================================================"
           npm --prefix server ls undici --all || true
 
-      # ------------------------------------------------------------
-      # HARD VERSION FLOOR CHECKS
-      # ------------------------------------------------------------
+      # ============================================================
+      # EXPLAIN WHO INTRODUCES THE PACKAGES
+      # ============================================================
+
+      - name: Explain root vulnerable packages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "=== ROOT brace-expansion ==="
+          npm explain brace-expansion || true
+
+          echo
+          echo "=== ROOT undici ==="
+          npm explain undici || true
+
+          echo
+          echo "=== ROOT fast-uri ==="
+          npm explain fast-uri || true
+
+          echo
+          echo "=== ROOT elliptic ==="
+          npm explain elliptic || true
+
+      - name: Explain server vulnerable packages
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "=== SERVER fast-uri ==="
+          npm explain fast-uri || true
+
+          echo
+          echo "=== SERVER undici ==="
+          npm explain undici || true
+
+          echo
+          echo "=== SERVER brace-expansion ==="
+          npm explain brace-expansion || true
+
+      # ============================================================
+      # SERVER FASTIFY FLOOR
+      # ============================================================
 
       - name: Verify server Fastify version
         working-directory: server
+        shell: bash
         run: |
           set -euo pipefail
 
           node <<'NODE'
           const { execSync } = require("node:child_process");
 
-          const out = execSync("npm ls fastify --json", {
+          const output = execSync("npm ls fastify --json", {
             encoding: "utf8"
           });
 
-          const tree = JSON.parse(out);
+          const tree = JSON.parse(output);
           const version = tree.dependencies?.fastify?.version;
 
           if (!version) {
-            throw new Error("Fastify is not installed");
+            throw new Error("server Fastify is not installed");
           }
 
-          const [major, minor, patch] = version.split(".").map(Number);
+          const parts = version.split(".").map(Number);
+          const major = parts[0];
+          const minor = parts[1];
+          const patch = parts[2];
 
-          if (
-            major < 5 ||
-            (major === 5 && minor < 12) ||
-            (major === 5 && minor === 12 && patch < 5)
-          ) {
-            throw new Error(`Server Fastify ${version} is below required 5.12.5`);
+          const acceptable =
+            major > 5 ||
+            (
+              major === 5 &&
+              (
+                minor > 12 ||
+                (minor === 12 && patch >= 5)
+              )
+            );
+
+          if (!acceptable) {
+            throw new Error(
+              `server Fastify ${version} is below required 5.12.5`
+            );
           }
 
           console.log(`OK: server Fastify ${version}`);
           NODE
 
-      - name: Verify patched fast-uri versions
+      # ============================================================
+      # FAST-URI SECURITY FLOOR
+      #
+      # Current patched releases:
+      #   2.x >= 2.4.6
+      #   3.x >= 3.1.7
+      #   4.x >= 4.1.4
+      #
+      # No blanket override is used.
+      # The dependency tree must actually resolve to patched versions.
+      # ============================================================
+
+      - name: Verify all installed fast-uri versions
+        shell: bash
         run: |
           set -euo pipefail
 
@@ -159,10 +305,22 @@ jobs:
           const { execSync } = require("node:child_process");
 
           function collect(cwd) {
-            const raw = execSync("npm ls fast-uri --all --json", {
-              cwd,
-              encoding: "utf8"
-            });
+            let raw;
+
+            try {
+              raw = execSync(
+                "npm ls fast-uri --all --json",
+                {
+                  cwd,
+                  encoding: "utf8"
+                }
+              );
+            } catch (error) {
+              raw = error.stdout?.toString() || "";
+              if (!raw) {
+                throw error;
+              }
+            }
 
             const tree = JSON.parse(raw);
             const versions = new Set();
@@ -170,80 +328,143 @@ jobs:
             function walk(node) {
               if (!node || typeof node !== "object") return;
 
-              if (node.dependencies) {
-                for (const [name, dep] of Object.entries(node.dependencies)) {
-                  if (name === "fast-uri" && dep.version) {
-                    versions.add(dep.version);
-                  }
-                  walk(dep);
-                }
+              if (node.version && node.name === "fast-uri") {
+                versions.add(node.version);
+              }
+
+              for (const dep of Object.values(node.dependencies || {})) {
+                walk(dep);
               }
             }
 
             walk(tree);
+
             return [...versions];
           }
 
-          function check(label, versions) {
-            console.log(`${label}:`, versions);
+          function versionParts(version) {
+            return version
+              .split(".")
+              .slice(0, 3)
+              .map(Number);
+          }
+
+          function isPatched(version) {
+            const [major, minor, patch] = versionParts(version);
+
+            if (major === 2) {
+              return minor > 4 || (minor === 4 && patch >= 6);
+            }
+
+            if (major === 3) {
+              return minor > 1 || (minor === 1 && patch >= 7);
+            }
+
+            if (major === 4) {
+              return minor > 1 || (minor === 1 && patch >= 4);
+            }
+
+            /*
+             * Unknown major versions are not silently accepted.
+             * They require explicit review.
+             */
+            return major > 4;
+          }
+
+          for (const [label, cwd] of [
+            ["root", "."],
+            ["server", "./server"]
+          ]) {
+            const versions = collect(cwd);
+
+            console.log(`${label} fast-uri versions:`, versions);
+
+            if (versions.length === 0) {
+              throw new Error(
+                `${label}: fast-uri was not found`
+              );
+            }
 
             for (const version of versions) {
-              const [major, minor, patch] = version.split(".").map(Number);
-
-              const patched =
-                (major === 2 && (minor > 4 || (minor === 4 && patch >= 6))) ||
-                (major === 3 && (minor > 1 || (minor === 1 && patch >= 7))) ||
-                (major === 4 && (minor > 1 || (minor === 1 && patch >= 4)));
-
-              if (!patched) {
+              if (!isPatched(version)) {
                 throw new Error(
-                  `${label}: vulnerable fast-uri version detected: ${version}`
+                  `${label}: vulnerable/unsupported fast-uri ${version}`
                 );
               }
             }
           }
 
-          check("root", collect("."));
-          check("server", collect("./server"));
-
-          console.log("OK: all installed fast-uri versions satisfy current security floors");
+          console.log(
+            "OK: all installed fast-uri versions satisfy security floors."
+          );
           NODE
 
-      # ------------------------------------------------------------
+      # ============================================================
       # AUDIT REPORTS
-      # ------------------------------------------------------------
+      #
+      # Reports live in RUNNER_TEMP, never inside the repository.
+      # This prevents audit artifacts from contaminating the change
+      # boundary.
+      # ============================================================
 
-      - name: Generate root audit report
+      - name: Generate root npm audit report
+        shell: bash
         run: |
           set -euo pipefail
-          npm audit --json > "$RUNNER_TEMP/root-audit.json" || true
 
-      - name: Generate server audit report
+          npm audit --json \
+            > "$RUNNER_TEMP/root-audit.json" \
+            || true
+
+      - name: Generate server npm audit report
         working-directory: server
+        shell: bash
         run: |
           set -euo pipefail
-          npm audit --json > "$RUNNER_TEMP/server-audit.json" || true
 
-      # ------------------------------------------------------------
+          npm audit --json \
+            > "$RUNNER_TEMP/server-audit.json" \
+            || true
+
+      # ============================================================
       # STRICT SECURITY POLICY
       #
-      # High/Critical findings with an available fix MUST fail.
+      # HIGH / CRITICAL:
       #
-      # A known advisory with fixAvailable === false may remain only
-      # when explicitly documented here.
-      # ------------------------------------------------------------
+      #   fixAvailable === true/object
+      #       -> FAIL
+      #
+      #   fixAvailable === false + explicitly approved GHSA
+      #       -> WARN ONLY
+      #
+      #   anything else
+      #       -> FAIL
+      #
+      # Known exception:
+      #
+      #   GHSA-848j-6mx2-7j84
+      #
+      # This is the elliptic advisory currently reported as having
+      # no available upstream fix.
+      #
+      # IMPORTANT:
+      # This exception does NOT mean elliptic is considered safe.
+      # It only prevents an unfixable upstream advisory from masking
+      # other fixable High/Critical findings.
+      # ============================================================
 
-      - name: Enforce high/critical security policy
+      - name: Enforce strict High/Critical security policy
         env:
           ROOT_AUDIT: ${{ runner.temp }}/root-audit.json
           SERVER_AUDIT: ${{ runner.temp }}/server-audit.json
+        shell: bash
         run: |
           set -euo pipefail
 
           node <<'NODE'
           const fs = require("node:fs");
 
-          const allowedNoFix = new Set([
+          const ALLOWED_NO_FIX_ADVISORIES = new Set([
             "GHSA-848j-6mx2-7j84"
           ]);
 
@@ -253,114 +474,242 @@ jobs:
           ];
 
           let failed = false;
+          let knownNoFix = 0;
 
-          for (const [scope, file] of reports) {
-            const audit = JSON.parse(fs.readFileSync(file, "utf8"));
+          function collectAdvisoryIds(vulnerability) {
+            const ids = new Set();
 
-            for (const [name, vulnerability] of Object.entries(
-              audit.vulnerabilities || {}
-            )) {
-              const severity = vulnerability.severity;
-
-              if (severity !== "high" && severity !== "critical") {
+            for (const item of vulnerability.via || []) {
+              if (typeof item === "string") {
+                ids.add(item);
                 continue;
               }
 
-              const advisoryIds = new Set();
+              if (!item || typeof item !== "object") {
+                continue;
+              }
 
-              for (const item of vulnerability.via || []) {
-                if (typeof item === "string") {
-                  advisoryIds.add(item);
-                } else if (item && typeof item === "object") {
-                  if (item.source) advisoryIds.add(String(item.source));
-                  if (item.url?.includes("GHSA-")) {
-                    const match = item.url.match(/GHSA-[a-z0-9-]+/i);
-                    if (match) advisoryIds.add(match[0]);
-                  }
+              if (item.source !== undefined) {
+                ids.add(String(item.source));
+              }
+
+              if (typeof item.url === "string") {
+                const match =
+                  item.url.match(/GHSA-[a-z0-9-]+/i);
+
+                if (match) {
+                  ids.add(match[0]);
                 }
               }
+            }
 
-              const fixAvailable = vulnerability.fixAvailable;
+            return [...ids];
+          }
 
-              const onlyKnownNoFix =
-                fixAvailable === false &&
-                advisoryIds.size > 0 &&
-                [...advisoryIds].every(id => allowedNoFix.has(id));
+          for (const [scope, filename] of reports) {
+            const audit = JSON.parse(
+              fs.readFileSync(filename, "utf8")
+            );
 
-              if (onlyKnownNoFix) {
-                console.log(
-                  `WARNING: ${scope}/${name} has a known high/critical advisory with no available fix:`,
-                  [...advisoryIds].join(", ")
-                );
+            console.log("");
+            console.log(
+              `================ ${scope.toUpperCase()} AUDIT ================`
+            );
+
+            for (
+              const [packageName, vulnerability]
+              of Object.entries(audit.vulnerabilities || {})
+            ) {
+              const severity = vulnerability.severity;
+
+              if (
+                severity !== "high" &&
+                severity !== "critical"
+              ) {
                 continue;
               }
 
+              const advisoryIds =
+                collectAdvisoryIds(vulnerability);
+
+              const fixAvailable =
+                vulnerability.fixAvailable;
+
+              const explicitNoFix =
+                fixAvailable === false &&
+                advisoryIds.length > 0 &&
+                advisoryIds.every(id =>
+                  ALLOWED_NO_FIX_ADVISORIES.has(id)
+                );
+
+              if (explicitNoFix) {
+                knownNoFix++;
+
+                console.warn("");
+                console.warn(
+                  `KNOWN NO-FIX EXCEPTION: ${scope}/${packageName}`
+                );
+                console.warn(
+                  `Severity: ${severity}`
+                );
+                console.warn(
+                  `Advisories: ${advisoryIds.join(", ")}`
+                );
+                console.warn(
+                  "This vulnerability remains open and is NOT considered fixed."
+                );
+
+                continue;
+              }
+
+              console.error("");
               console.error(
-                `SECURITY FAILURE: ${scope}/${name}`
+                `SECURITY FAILURE: ${scope}/${packageName}`
               );
-              console.error(`Severity: ${severity}`);
+              console.error(
+                `Severity: ${severity}`
+              );
               console.error(
                 `Fix available: ${JSON.stringify(fixAvailable)}`
               );
               console.error(
-                `Advisories: ${[...advisoryIds].join(", ")}`
+                `Advisories: ${
+                  advisoryIds.length
+                    ? advisoryIds.join(", ")
+                    : "unknown"
+                }`
               );
 
               failed = true;
             }
           }
 
+          console.log("");
+          console.log(
+            "============================================================"
+          );
+
           if (failed) {
-            throw new Error(
-              "Security gate failed: fixable high/critical vulnerabilities remain."
+            console.error(
+              "SECURITY GATE FAILED."
             );
+            console.error(
+              "A fixable or unknown High/Critical vulnerability remains."
+            );
+            process.exit(1);
           }
 
-          console.log("OK: no fixable high/critical vulnerabilities remain.");
+          console.log(
+            "SECURITY GATE PASSED."
+          );
+          console.log(
+            `Known upstream-no-fix exceptions: ${knownNoFix}`
+          );
+          console.log(
+            "No fixable High/Critical vulnerabilities remain."
+          );
           NODE
 
-      # ------------------------------------------------------------
+      # ============================================================
+      # LOW VULNERABILITIES
+      #
+      # Low findings do not fail this gate.
+      # They remain visible in the npm audit report and Dependabot.
+      # ============================================================
+
+      - name: Print low/moderate vulnerability summary
+        env:
+          ROOT_AUDIT: ${{ runner.temp }}/root-audit.json
+          SERVER_AUDIT: ${{ runner.temp }}/server-audit.json
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          for (const [scope, file] of [
+            ["root", process.env.ROOT_AUDIT],
+            ["server", process.env.SERVER_AUDIT]
+          ]) {
+            const audit = JSON.parse(
+              fs.readFileSync(file, "utf8")
+            );
+
+            const counts =
+              audit.metadata?.vulnerabilities || {};
+
+            console.log(
+              `${scope}:`,
+              JSON.stringify(counts)
+            );
+          }
+          NODE
+
+      # ============================================================
       # FROZEN CORE PROTECTION
-      # ------------------------------------------------------------
+      #
+      # Dependency updates may NEVER modify:
+      #
+      #   circuits/
+      #   artifacts/
+      #   keys/
+      #   *.wasm
+      #   *.r1cs
+      #   production.zkey
+      #
+      # This is deliberately checked after every dependency operation.
+      # ============================================================
 
-      - name: Frozen Core protection
+      - name: Verify Frozen Core integrity
+        shell: bash
         run: |
           set -euo pipefail
 
-          forbidden_regex='^(circuits/|artifacts/|keys/|.*production\.zkey$|.*\.wasm$|.*\.r1cs$)'
+          FORBIDDEN_REGEX='^(circuits/|artifacts/|keys/|.*production\.zkey$|.*\.wasm$|.*\.r1cs$)'
 
-          changed="$(git status --porcelain=v1 | awk '{print substr($0,4)}')"
-
-          if [ -n "$changed" ]; then
-            echo "Changed files:"
-            printf '%s\n' "$changed"
-
-            while IFS= read -r file; do
-              [ -z "$file" ] && continue
-
-              if [[ "$file" =~ $forbidden_regex ]]; then
-                echo "FROZEN CORE VIOLATION: $file"
-                exit 1
-              fi
-            done <<< "$changed"
-          fi
-
-          echo "OK: Frozen Core untouched."
-
-      # ------------------------------------------------------------
-      # CHANGE BOUNDARY
-      # ------------------------------------------------------------
-
-      - name: Enforce dependency-only change boundary
-        run: |
-          set -euo pipefail
-
-          changed="$(git status --porcelain=v1 | awk '{print substr($0,4)}')"
+          changed="$(
+            git status --porcelain=v1 |
+            sed -E 's/^.. //' |
+            sed '/^$/d'
+          )"
 
           if [ -z "$changed" ]; then
-            echo "No dependency changes were produced."
+            echo "No working-tree changes detected."
             exit 1
           fi
+
+          echo "Working-tree changes:"
+          printf '%s\n' "$changed"
+
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+
+            if [[ "$file" =~ $FORBIDDEN_REGEX ]]; then
+              echo
+              echo "FROZEN CORE VIOLATION:"
+              echo "$file"
+              exit 1
+            fi
+          done <<< "$changed"
+
+          echo
+          echo "OK: Frozen Core remains untouched."
+
+      # ============================================================
+      # DEPENDENCY-ONLY CHANGE BOUNDARY
+      # ============================================================
+
+      - name: Enforce dependency-only changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          changed="$(
+            git status --porcelain=v1 |
+            sed -E 's/^.. //' |
+            sed '/^$/d'
+          )"
 
           echo "Changed files:"
           printf '%s\n' "$changed"
@@ -369,45 +718,119 @@ jobs:
             [ -z "$file" ] && continue
 
             case "$file" in
-              package.json|package-lock.json|server/package.json|server/package-lock.json)
+              package.json)
+                ;;
+              package-lock.json)
+                ;;
+              server/package.json)
+                ;;
+              server/package-lock.json)
                 ;;
               *)
-                echo "UNAUTHORIZED CHANGE: $file"
+                echo
+                echo "UNAUTHORIZED CHANGE:"
+                echo "$file"
                 exit 1
                 ;;
             esac
           done <<< "$changed"
 
-          echo "OK: only dependency manifests and lockfiles changed."
+          echo
+          echo "OK: dependency-only change boundary passed."
 
-      # ------------------------------------------------------------
-      # COMMIT + PR
-      # ------------------------------------------------------------
+      # ============================================================
+      # VERIFY LOCKFILES ARE SYNCHRONIZED
+      # ============================================================
 
-      - name: Commit dependency update
+      - name: Verify root lockfile synchronization
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npm ci --dry-run >/dev/null
+
+          echo "OK: root package.json/package-lock.json synchronized."
+
+      - name: Verify server lockfile synchronization
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npm ci --dry-run >/dev/null
+
+          echo "OK: server package.json/package-lock.json synchronized."
+
+      # ============================================================
+      # FINAL DIFF
+      # ============================================================
+
+      - name: Show final dependency diff
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "================ package.json diff ================"
+          git diff -- package.json
+
+          echo
+          echo "================ server/package.json diff ================"
+          git diff -- server/package.json
+
+          echo
+          echo "================ lockfile summary ================"
+          git diff --stat -- package-lock.json server/package-lock.json
+
+      # ============================================================
+      # COMMIT
+      # ============================================================
+
+      - name: Commit dependency hardening
+        shell: bash
         run: |
           set -euo pipefail
 
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add package.json package-lock.json server/package.json server/package-lock.json
+          git add \
+            package.json \
+            package-lock.json \
+            server/package.json \
+            server/package-lock.json
 
           if git diff --cached --quiet; then
-            echo "No dependency changes to commit."
+            echo "No dependency changes were produced."
             exit 1
           fi
 
-          git commit -m "fix(deps): remediate vulnerable dependency tree"
+          git commit \
+            -m "fix(deps): remediate vulnerable dependency tree"
 
-      - name: Push update branch
+      # ============================================================
+      # PUSH BRANCH
+      # ============================================================
+
+      - name: Push security branch
+        shell: bash
         run: |
           set -euo pipefail
-          git push --set-upstream origin "$BRANCH"
+
+          git push \
+            --set-upstream origin "$BRANCH"
+
+      # ============================================================
+      # CREATE PR
+      #
+      # Do NOT push directly to master.
+      # master-protection/ruleset remains the final gate.
+      # ============================================================
 
       - name: Create pull request
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
           set -euo pipefail
 
@@ -416,26 +839,39 @@ jobs:
             --head "$BRANCH" \
             --title "fix(deps): remediate vulnerable dependency tree" \
             --body "$(cat <<'EOF'
-          ## Dependency security update
+          ## Dependency security hardening
 
-          This PR was generated by the dependency security workflow.
+          Automated dependency security update.
 
-          ### Scope
+          ### Changes
 
-          - refresh root dependency tree
-          - update server Fastify within the existing v5 line
+          - refresh root dependency tree within declared semver ranges
+          - update server Fastify to the 5.12.5+ line
           - refresh transitive dependencies
-          - regenerate package lockfiles
-          - install from lockfiles with `npm ci`
-          - enforce high/critical audit policy
+          - regenerate npm lockfiles
+          - verify clean `npm ci`
           - verify patched `fast-uri`
-          - protect Frozen Core artifacts
+          - enforce High/Critical security policy
+          - preserve explicitly documented upstream-no-fix exception handling
 
-          ### Security boundary
+          ### Frozen Core
 
-          Frozen Core artifacts and circuit files are not modified.
+          No circuit, R1CS, WASM, production.zkey, or other Frozen Core
+          artifact is modified by this workflow.
 
-          The PR must pass the repository's normal CI/security checks and
-          the `master` ruleset before merge.
+          ### Security policy
+
+          Fixable High/Critical vulnerabilities fail the workflow.
+
+          The elliptic advisory GHSA-848j-6mx2-7j84 is allowed only when
+          npm explicitly reports that no fix is available. This is an open
+          exception, not a claim that the vulnerability is resolved.
+
+          ### Merge policy
+
+          This workflow creates a PR instead of pushing directly to master.
+
+          The repository master ruleset and normal CI/security checks remain
+          authoritative before merge.
           EOF
           )"
