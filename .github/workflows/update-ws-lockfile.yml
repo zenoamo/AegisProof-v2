@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify ws version
+      - name: Show installed ws dependency tree
         run: |
           echo "Installed ws dependency tree:"
           npm ls ws
@@ -45,38 +45,89 @@ jobs:
 
           console.log(`Installed ws version: ${version}`);
 
-          if (version !== "8.21.0") {
+          const [major, minor, patch] = version.split(".").map(Number);
+
+          const patched =
+            major > 8 ||
+            (major === 8 && minor > 21) ||
+            (major === 8 && minor === 21 && patch >= 0);
+
+          if (!patched) {
             console.error(
-              `ERROR: Expected ws@8.21.0, but found ws@${version}`
+              `ERROR: ws@8.21.0 or later is required, but found ws@${version}`
             );
             process.exit(1);
           }
 
-          console.log("OK: ws@8.21.0 is installed.");
+          console.log("OK: ws@8.21.0 or later is installed.");
           EOF
 
-      - name: Verify lockfile contains patched ws
+      - name: Verify package-lock.json
         run: |
-          if ! grep -q '"node_modules/ws"' package-lock.json; then
-            echo "ERROR: node_modules/ws entry was not found in package-lock.json."
-            exit 1
-          fi
+          node --input-type=module <<'EOF'
+          import { readFile } from "node:fs/promises";
 
-          if ! grep -q '"version": "8.21.0"' package-lock.json; then
-            echo "ERROR: ws@8.21.0 was not found in package-lock.json."
-            exit 1
-          fi
+          const lock = JSON.parse(
+            await readFile("package-lock.json", "utf8")
+          );
 
-          echo "OK: package-lock.json contains ws@8.21.0."
+          const ws = lock.packages?.["node_modules/ws"];
 
-      - name: Check dependency tree
+          if (!ws) {
+            console.error(
+              "ERROR: node_modules/ws entry was not found in package-lock.json."
+            );
+            process.exit(1);
+          }
+
+          console.log(`Locked ws version: ${ws.version}`);
+
+          const [major, minor, patch] = ws.version.split(".").map(Number);
+
+          const patched =
+            major > 8 ||
+            (major === 8 && minor > 21) ||
+            (major === 8 && minor === 21 && patch >= 0);
+
+          if (!patched) {
+            console.error(
+              `ERROR: package-lock.json contains vulnerable ws version ${ws.version}`
+            );
+            process.exit(1);
+          }
+
+          console.log("OK: package-lock.json contains a patched ws version.");
+          EOF
+
+      - name: Verify dependency tree
         run: |
           npm ls ws --all
 
-      - name: Show dependency changes
+      - name: Check dependency changes
         run: |
+          echo "Git status:"
           git status --short
+
+          echo
+          echo "Dependency diff:"
           git diff -- package.json package-lock.json
+
+      - name: Ensure only dependency files changed
+        run: |
+          changed_files="$(git status --short | awk '{print $2}')"
+
+          for file in $changed_files; do
+            case "$file" in
+              package.json|package-lock.json)
+                ;;
+              *)
+                echo "ERROR: Unexpected modified file: $file"
+                exit 1
+                ;;
+            esac
+          done
+
+          echo "OK: Only package.json/package-lock.json may be committed."
 
       - name: Commit dependency fix
         run: |
@@ -90,5 +141,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "fix(deps): override ws to patched version"
+          git commit -m "fix(deps): align ws override with hardhat"
           git push
