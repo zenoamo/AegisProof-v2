@@ -144,7 +144,11 @@ export class SignalMappingError extends AegisSDKError {
  * Thrown when Groth proof structure is invalid (wrong field lengths).
  */
 export class InvalidProofStructureError extends AegisSDKError {
-  constructor(field: keyof GrothProof, expectedLength: number, actualLength: number) {
+  constructor(
+    field: keyof GrothProof,
+    expectedLength: number,
+    actualLength: number
+  ) {
     super(
       `Invalid proof structure: ${field} expected ${expectedLength} fields, got ${actualLength}`,
       "INVALID_PROOF_STRUCTURE",
@@ -195,7 +199,7 @@ export function validateSignalCount(signals: readonly string[]): void {
 /**
  * Converts a named signal object (Record<SignalName, string>) to indexed array.
  * Ensures all required signals are present and in correct order.
- * 
+ *
  * @example
  * ```typescript
  * const input = { timestamp: "1234567890", chainId: "31337", ... };
@@ -203,34 +207,37 @@ export function validateSignalCount(signals: readonly string[]): void {
  * // Result: ["1234567890", "31337", ...] in SSoT order
  * ```
  */
-export function buildPublicSignals(input: Record<string, string>): readonly string[] {
+export function buildPublicSignals(
+  input: Record<string, string>
+): readonly string[] {
   const requiredSignals: SignalName[] = SIGNAL_NAMES as SignalName[];
   const missing: SignalName[] = [];
-  
+
   // Check for missing required signals
   for (const name of requiredSignals) {
     if (input[name] === undefined) {
       missing.push(name);
     }
   }
-  
+
   if (missing.length > 0) {
     throw new SignalMappingError(missing);
   }
-  
+
   // Build indexed array following SSoT order
   const arr: string[] = new Array(EXPECTED_SIGNAL_COUNT);
+
   for (let i = 0; i < EXPECTED_SIGNAL_COUNT; i++) {
     const name = SIGNAL_NAMES[i] as SignalName;
     const value = input[name];
-    
+
     if (value === undefined) {
       throw new SignalMappingError([name]);
     }
-    
+
     arr[i] = value;
   }
-  
+
   return arr as unknown as readonly string[];
 }
 
@@ -238,15 +245,21 @@ export function buildPublicSignals(input: Record<string, string>): readonly stri
  * Parses a public signals array back into a named object.
  * Useful for debugging and inspection.
  */
-export function parsePublicSignals(signals: readonly string[]): Record<SignalName, string> {
+export function parsePublicSignals(
+  signals: readonly string[]
+): Record<SignalName, string> {
   validateSignalCount(signals);
-  
-  const result: Record<SignalName, string> = {} as Record<SignalName, string>;
+
+  const result: Record<SignalName, string> = {} as Record<
+    SignalName,
+    string
+  >;
+
   for (let i = 0; i < EXPECTED_SIGNAL_COUNT; i++) {
     const name = SIGNAL_NAMES[i] as SignalName;
     result[name] = signals[i]!;
   }
-  
+
   return result;
 }
 
@@ -257,18 +270,21 @@ export function parsePublicSignals(signals: readonly string[]): Record<SignalNam
 /**
  * Converts string signals to padded hex calldata format for Solidity uint[30].
  * Each element becomes 64-character zero-padded hex string.
- * 
+ *
  * @throws InvalidSignalCountError if signals.length !== 30
  */
-export function toCalldataSignals(signals: readonly string[]): readonly string[] {
+export function toCalldataSignals(
+  signals: readonly string[]
+): readonly string[] {
   validateSignalCount(signals);
+
   return signals.map((s) => s.padStart(64, "0"));
 }
 
 /**
  * Converts snarkjs-format GrothProof to Solidity-calldata-compatible format.
  * Handles G2 coordinate swap (y,x → x,y) required by Solidity representation.
- * 
+ *
  * Snarkjs format: pi_b = [[y_lo, y_hi], [x_lo, x_hi]]
  * Solidity expects: [[x_lo, x_hi], [y_lo, y_hi]]
  */
@@ -279,27 +295,58 @@ export function grothProofToCalldata(proof: GrothProof): {
 } {
   // Validate proof structure
   if (proof.pi_a.length !== 2) {
-    throw new InvalidProofStructureError("pi_a", 2, proof.pi_a.length);
+    throw new InvalidProofStructureError(
+      "pi_a",
+      2,
+      proof.pi_a.length
+    );
   }
-  if (proof.pi_b.length !== 2 || proof.pi_b[0].length !== 2 || proof.pi_b[1].length !== 2) {
-    throw new InvalidProofStructureError("pi_b", 4 /* [[2],[2]] */, 
-      proof.pi_b.length + proof.pi_b[0]?.length + proof.pi_b[1]?.length);
+
+  if (
+    proof.pi_b.length !== 2 ||
+    proof.pi_b[0].length !== 2 ||
+    proof.pi_b[1].length !== 2
+  ) {
+    throw new InvalidProofStructureError(
+      "pi_b",
+      4 /* [[2],[2]] */,
+      proof.pi_b.length +
+        proof.pi_b[0]?.length +
+        proof.pi_b[1]?.length
+    );
   }
+
   if (proof.pi_c.length !== 2) {
-    throw new InvalidProofStructureError("pi_c", 2, proof.pi_c.length);
+    throw new InvalidProofStructureError(
+      "pi_c",
+      2,
+      proof.pi_c.length
+    );
   }
-  
+
   // Parse components
-  const pA = [BigInt(proof.pi_a[0]), BigInt(proof.pi_a[1])] as const;
-  
+  const pA = [
+    BigInt(proof.pi_a[0]),
+    BigInt(proof.pi_a[1]),
+  ] as const;
+
   // Swap G2 coordinates from snarkjs (y,x) to Solidity (x,y)
   const pB = [
-    [BigInt(proof.pi_b[0][1]), BigInt(proof.pi_b[0][0])], // G2.x = [lo, hi]
-    [BigInt(proof.pi_b[1][1]), BigInt(proof.pi_b[1][0])], // G2.y = [lo, hi]
+    [
+      BigInt(proof.pi_b[0][1]),
+      BigInt(proof.pi_b[0][0]),
+    ],
+    [
+      BigInt(proof.pi_b[1][1]),
+      BigInt(proof.pi_b[1][0]),
+    ],
   ] as const;
-  
-  const pC = [BigInt(proof.pi_c[0]), BigInt(proof.pi_c[1])] as const;
-  
+
+  const pC = [
+    BigInt(proof.pi_c[0]),
+    BigInt(proof.pi_c[1]),
+  ] as const;
+
   return { pA, pB, pC };
 }
 
@@ -311,13 +358,19 @@ export function grothProofToCalldata(proof: GrothProof): {
  * Creates a VerifierClient configured for the specified chain and verifier address.
  */
 export function createVerifierClient(config: VerifierClientConfig) {
-  const { verifierAddress, chainId, publicClient: customClient } = config;
-  
-  const client = customClient || createPublicClient({
-    chain: Object.values(Chain).find(c => c.id === chainId),
-    transport: http(),
-  });
-  
+  const {
+    verifierAddress,
+    chainId,
+    publicClient: customClient,
+  } = config;
+
+  const client =
+    customClient ||
+    createPublicClient({
+      chain: Object.values(Chain).find((c) => c.id === chainId),
+      transport: http(),
+    });
+
   return {
     verifierAddress,
     chainId,
@@ -328,7 +381,7 @@ export function createVerifierClient(config: VerifierClientConfig) {
 /**
  * Estimates gas cost for verifyProof contract call.
  * Uses viem's estimateGas functionality under the hood.
- * 
+ *
  * @returns Gas estimate in wei (approximate)
  */
 export async function estimateVerifyGas(
@@ -340,10 +393,10 @@ export async function estimateVerifyGas(
   try {
     // NOTE: In production, load ABI via dynamic import:
     // import verifierABI from "../../artifacts/contracts/Groth16VerifierV2Production.sol/Groth16VerifierV2Production.json"
-    
+
     const calldataSignals = toCalldataSignals(signals);
     const { pA, pB, pC } = grothProofToCalldata(proof);
-    
+
     // Return placeholder estimate until ABI loaded
     // TODO: Replace with actual estimateGas call:
     // return await client.estimateGas({
@@ -352,12 +405,13 @@ export async function estimateVerifyGas(
     //   functionName: "verifyProof",
     //   args: [pA, pB, pC, calldataSignals],
     // });
-    
+
     return 120000n; // Conservative baseline estimate
-    
   } catch (error) {
     throw new GasEstimationError(
-      error instanceof Error ? error.message : "Unknown error during gas estimation"
+      error instanceof Error
+        ? error.message
+        : "Unknown error during gas estimation"
     );
   }
 }
@@ -365,7 +419,7 @@ export async function estimateVerifyGas(
 /**
  * Performs off-chain verification simulation using the verifier contract.
  * Returns VerificationResult with success status and gas estimate.
- * 
+ *
  * Note: This does NOT execute on-chain; it simulates what would happen.
  */
 export async function offChainVerify(
@@ -375,8 +429,13 @@ export async function offChainVerify(
   signals: readonly string[]
 ): Promise<VerificationResult> {
   try {
-    const gas = await estimateVerifyGas(client, verifierAddress, proof, signals);
-    
+    const gas = await estimateVerifyGas(
+      client,
+      verifierAddress,
+      proof,
+      signals
+    );
+
     // TODO: Actually call readContract to get verification result:
     // const result = await client.readContract({
     //   address: verifierAddress,
@@ -384,17 +443,21 @@ export async function offChainVerify(
     //   functionName: "verifyProof",
     //   args: [grothProofToCalldata(proof), toCalldataSignals(signals)],
     // });
-    
+
     return {
       success: true, // Placeholder
       gasEstimate: gas,
     };
-    
   } catch (error) {
     return {
       success: false,
       gasEstimate: 0n,
-      context: { error: error instanceof Error ? error.message : "Unknown" },
+      context: {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unknown",
+      },
     };
   }
 }
@@ -417,16 +480,21 @@ export async function verifyOnChain(
     //   functionName: "verifyProof",
     //   args: [grothProofToCalldata(proof), toCalldataSignals(signals)],
     // });
-    
+
     // Placeholder for demonstration
     return true;
-    
   } catch (error) {
     // Capture detailed error information for debugging
     throw new AegisSDKError(
-      `On-chain verification failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `On-chain verification failed: ${
+        error instanceof Error
+          ? error.message
+          : "Unknown error"
+      }`,
       "ON_CHAIN_VERIFICATION_FAILED",
-      { proofHash: JSON.stringify(proof).slice(0, 100) }
+      {
+        proofHash: JSON.stringify(proof).slice(0, 100),
+      }
     );
   }
 }
@@ -439,18 +507,25 @@ export async function verifyOnChain(
  * Decodes contract revert reasons into human-readable format.
  * Extracts error selector and message from hex-encoded revert data.
  */
-export function decodeRevertReason(reasonOrData: string): { selector?: string; message?: string } | null {
+export function decodeRevertReason(
+  reasonOrData: string
+): { selector?: string; message?: string } | null {
   if (!reasonOrData || !reasonOrData.startsWith("0x")) {
     return null;
   }
-  
+
   const data = reasonOrData;
   const selector = data.slice(0, 10);
-const revertIndex = data.indexOf(" REVERT");
-const msg = revertIndex >= 0
-  ? data.slice(0, revertIndex)
-  : undefined;
-  
+
+  // Avoid a backtracking regular expression.
+  // Find the " REVERT" marker directly.
+  const revertIndex = data.indexOf(" REVERT");
+
+  const msg =
+    revertIndex >= 0
+      ? data.slice(0, revertIndex)
+      : undefined;
+
   return { selector, message: msg };
 }
 
@@ -461,11 +536,18 @@ const msg = revertIndex >= 0
 export function computeProofHash(proof: GrothProof): string {
   const xorValues = [
     BigInt(proof.pi_a[0]) ^ BigInt(proof.pi_a[1]),
-    BigInt(proof.pi_b[0][0]) ^ BigInt(proof.pi_b[0][1]) ^ BigInt(proof.pi_b[1][0]) ^ BigInt(proof.pi_b[1][1]),
+    BigInt(proof.pi_b[0][0]) ^
+      BigInt(proof.pi_b[0][1]) ^
+      BigInt(proof.pi_b[1][0]) ^
+      BigInt(proof.pi_b[1][1]),
     BigInt(proof.pi_c[0]) ^ BigInt(proof.pi_c[1]),
   ];
-  
-  const reduced = xorValues.reduce((acc, val) => acc ^ val, 0n);
+
+  const reduced = xorValues.reduce(
+    (acc, val) => acc ^ val,
+    0n
+  );
+
   return `0x${reduced.toString(16).padStart(64, "0")}`;
 }
 
@@ -473,6 +555,15 @@ export function computeProofHash(proof: GrothProof): string {
  * EXPORTS
  * ========================================================================== */
 
-export type { GrothProof, ProofBundle, VerifierClientConfig, VerificationResult };
-export { SIGNAL_NAMES, SIGNAL_INDEX_MAP, EXPECTED_SIGNAL_COUNT };
+export type {
+  GrothProof,
+  ProofBundle,
+  VerifierClientConfig,
+  VerificationResult,
+};
 
+export {
+  SIGNAL_NAMES,
+  SIGNAL_INDEX_MAP,
+  EXPECTED_SIGNAL_COUNT,
+};
