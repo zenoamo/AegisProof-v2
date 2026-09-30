@@ -45,6 +45,17 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: aegis-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: "22"
+
 jobs:
 
   # ==========================================================================
@@ -64,8 +75,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -116,8 +130,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -179,8 +196,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -227,8 +247,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install root dependencies
         run: npm ci
@@ -325,8 +348,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -352,8 +378,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -472,8 +501,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -538,8 +570,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -627,8 +662,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -658,8 +696,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -689,8 +730,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/sdk/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -712,3 +756,43 @@ jobs:
           name: hybrid-auth-benchmark
           path: benchmarks/reports/hybrid-auth-benchmark.json
           if-no-files-found: warn
+
+
+  # ==========================================================================
+  # REQUIRED CI GATE
+  # ==========================================================================
+
+  required-gate:
+    name: Required CI gate
+    needs:
+      - security-boundary-check
+      - fast
+      - phase5-readiness
+      - tee-layer-regression
+      - prover-compatibility
+      - hybrid-auth-research
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required jobs
+        run: |
+          set -e
+
+          validate() {
+            local name="$1"
+            local result="$2"
+            echo "${name}=${result}"
+            if [[ "$result" != "success" ]]; then
+              echo "ERROR: Required job '${name}' did not succeed"
+              exit 1
+            fi
+          }
+
+          validate "security-boundary-check" "${{ needs.security-boundary-check.result }}"
+          validate "fast" "${{ needs.fast.result }}"
+          validate "phase5-readiness" "${{ needs.phase5-readiness.result }}"
+          validate "tee-layer-regression" "${{ needs.tee-layer-regression.result }}"
+          validate "prover-compatibility" "${{ needs.prover-compatibility.result }}"
+          validate "hybrid-auth-research" "${{ needs.hybrid-auth-research.result }}"
+
+          echo "✓ All required jobs passed"
