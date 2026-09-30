@@ -1,0 +1,232 @@
+name: Update URI dependencies
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Update fast-uri and brace-expansion
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Show Node and npm versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Show current dependency state
+        run: |
+          echo "=== fast-uri ==="
+          npm ls fast-uri --all || true
+
+          echo
+          echo "=== brace-expansion ==="
+          npm ls brace-expansion --all || true
+
+      - name: Update package-lock.json
+        run: |
+          npm update fast-uri brace-expansion --package-lock-only
+
+      - name: Show package-lock.json diff
+        run: |
+          echo "=== package-lock.json diff ==="
+          git diff -- package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Verify fast-uri dependency tree
+        run: |
+          echo "=== Installed fast-uri tree ==="
+          npm ls fast-uri --all
+
+      - name: Verify brace-expansion dependency tree
+        run: |
+          echo "=== Installed brace-expansion tree ==="
+          npm ls brace-expansion --all
+
+      - name: Verify fast-uri versions
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile } from "node:fs/promises";
+
+          const lock = JSON.parse(
+            await readFile("package-lock.json", "utf8")
+          );
+
+          const entries = Object.entries(lock.packages ?? {})
+            .filter(([path]) => path.endsWith("/node_modules/fast-uri"));
+
+          if (entries.length === 0) {
+            console.error(
+              "ERROR: No fast-uri entries found in package-lock.json."
+            );
+            process.exit(1);
+          }
+
+          for (const [path, pkg] of entries) {
+            console.log(`${path}: ${pkg.version}`);
+          }
+
+          const vulnerable = entries.filter(
+            ([, pkg]) => {
+              const [major, minor, patch] =
+                pkg.version.split(".").map(Number);
+
+              return (
+                major < 4 ||
+                (major === 4 && minor < 2) ||
+                (major === 4 && minor === 2 && patch < 1)
+              );
+            }
+          );
+
+          if (vulnerable.length > 0) {
+            console.error(
+              "ERROR: Vulnerable fast-uri version detected."
+            );
+            process.exit(1);
+          }
+
+          console.log(
+            "OK: all locked fast-uri versions are >= 4.2.1."
+          );
+          EOF
+
+      - name: Verify brace-expansion versions
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile } from "node:fs/promises";
+
+          const lock = JSON.parse(
+            await readFile("package-lock.json", "utf8")
+          );
+
+          const entries = Object.entries(lock.packages ?? {})
+            .filter(([path]) =>
+              path.endsWith("/node_modules/brace-expansion")
+            );
+
+          if (entries.length === 0) {
+            console.error(
+              "ERROR: No brace-expansion entries found in package-lock.json."
+            );
+            process.exit(1);
+          }
+
+          for (const [path, pkg] of entries) {
+            console.log(`${path}: ${pkg.version}`);
+          }
+
+          console.log(
+            "OK: brace-expansion entries detected."
+          );
+          EOF
+
+      - name: Verify Hardhat
+        run: |
+          npm ls hardhat --depth=0
+
+      - name: Verify adm-zip
+        run: |
+          npm ls adm-zip --all
+
+      - name: Verify dependency tree
+        run: |
+          npm ls fast-uri brace-expansion --all
+
+      - name: Check changed files
+        run: |
+          echo "=== Git status ==="
+          git status --short
+
+          echo
+          echo "=== package.json diff ==="
+          git diff -- package.json
+
+          echo
+          echo "=== package-lock.json diff ==="
+          git diff -- package-lock.json
+
+      - name: Ensure package.json was not changed
+        run: |
+          if git diff --quiet -- package.json; then
+            echo "OK: package.json was not changed."
+          else
+            echo "ERROR: package.json was changed."
+            git diff -- package.json
+            exit 1
+          fi
+
+      - name: Ensure only package-lock.json changed
+        run: |
+          changed_files="$(git status --short | awk '{$1=""; sub(/^ /,""); print}')"
+
+          if [ -z "$changed_files" ]; then
+            echo "ERROR: No changes detected."
+            exit 1
+          fi
+
+          echo "Changed files:"
+          echo "$changed_files"
+
+          while IFS= read -r file; do
+            case "$file" in
+              package-lock.json)
+                ;;
+              *)
+                echo "ERROR: Unexpected modified file: $file"
+                exit 1
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          echo "OK: Only package-lock.json changed."
+
+      - name: Commit package-lock.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add package-lock.json
+
+          if git diff --cached --quiet; then
+            echo "ERROR: No staged package-lock.json changes."
+            exit 1
+          fi
+
+          git commit \
+            -m "fix(deps): update vulnerable URI dependencies"
+
+      - name: Push dependency update
+        run: |
+          git push
+
+      - name: Final summary
+        run: |
+          echo "========================================"
+          echo "URI dependency update complete"
+          echo "========================================"
+          echo
+          echo "Updated and verified:"
+          echo "  - fast-uri"
+          echo "  - brace-expansion"
+          echo
+          echo "Preserved:"
+          echo "  - package.json"
+          echo "  - Frozen Core"
+          echo "  - production artifacts"
+          echo "  - existing dependency declarations"
