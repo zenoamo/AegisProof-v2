@@ -34,7 +34,9 @@ async function main() {
   const bundle: ProofBundle = { proof, publicSignals };
 
   const { viem } = await network.connect();
-  const verifier = await viem.deployContract("Groth16VerifierV2Production");
+  const verifier = await viem.deployContract(
+    "scripts/prover-contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production"
+  );
   const { pA, pB, pC } = calldata(bundle);
   const ok = await verifier.read.verifyProof([
     pA,
