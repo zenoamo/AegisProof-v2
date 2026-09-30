@@ -1,4 +1,4 @@
-name: Dependency Security Gate
+name: AegisProof Security Gate
 
 on:
   pull_request:
@@ -7,8 +7,13 @@ on:
       - "package-lock.json"
       - "server/package.json"
       - "server/package-lock.json"
-      - ".github/dependabot.yml"
-      - ".github/workflows/**"
+      - "scripts/**"
+      - "checksums.sha256"
+      - "*.wasm"
+      - "*.r1cs"
+      - "*.zkey"
+      - "publicSignals.json"
+      - ".github/**"
 
   push:
     branches:
@@ -25,100 +30,82 @@ permissions:
   contents: read
 
 concurrency:
-  group: dependency-security-${{ github.workflow }}-${{ github.ref }}
+  group: aegisproof-security-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  dependency-security:
-    name: Dependency Security
+
+  # ============================================================
+  # ROOT DEPENDENCY SECURITY
+  # ============================================================
+
+  root-security:
+    name: Root Dependency Security
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - name: root
-            directory: "."
-          - name: server
-            directory: "server"
-
-    defaults:
-      run:
-        working-directory: ${{ matrix.project.directory }}
-
     steps:
-      # ------------------------------------------------------------
-      # 1. Checkout
-      # ------------------------------------------------------------
 
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      # ------------------------------------------------------------
-      # 2. Node.js
-      # ------------------------------------------------------------
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            server/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      # ------------------------------------------------------------
-      # 3. Validate lockfile
-      # ------------------------------------------------------------
+      # ----------------------------------------------------------
+      # Lockfile integrity
+      # ----------------------------------------------------------
 
-      - name: Validate package-lock.json
+      - name: Verify package-lock
         run: |
-          npm install --package-lock-only --ignore-scripts
+          npm install \
+            --package-lock-only \
+            --ignore-scripts
+
           git diff --exit-code -- package-lock.json
 
-      # ------------------------------------------------------------
-      # 4. Deterministic install
-      # ------------------------------------------------------------
+      # ----------------------------------------------------------
+      # Deterministic install
+      # ----------------------------------------------------------
 
       - name: npm ci
-        run: npm ci --ignore-scripts
-
-      # ------------------------------------------------------------
-      # 5. Show dependency tree
-      # ------------------------------------------------------------
-
-      - name: Show fast-uri dependency tree
         run: |
-          echo "======================================"
+          npm ci --ignore-scripts
+
+      # ----------------------------------------------------------
+      # fast-uri
+      # ----------------------------------------------------------
+
+      - name: Inspect fast-uri
+        run: |
+          echo "========================================"
           echo "fast-uri dependency tree"
-          echo "======================================"
+          echo "========================================"
 
           npm ls fast-uri --all || true
 
           echo
-          echo "======================================"
+          echo "========================================"
           echo "npm why fast-uri"
-          echo "======================================"
+          echo "========================================"
 
           npm why fast-uri || true
 
-      # ------------------------------------------------------------
-      # 6. fast-uri security gate
-      # ------------------------------------------------------------
-
-      - name: Verify fast-uri version
+      - name: fast-uri security gate
         shell: bash
         run: |
           node <<'NODE'
-          const { execFileSync } = require("node:child_process");
           const fs = require("node:fs");
 
           const lockfile = "package-lock.json";
 
           if (!fs.existsSync(lockfile)) {
-            console.log("No package-lock.json found.");
+            console.log("package-lock.json not found.");
             process.exit(0);
           }
 
@@ -128,7 +115,9 @@ jobs:
 
           const versions = new Set();
 
-          // npm lockfile v3
+          /*
+           * npm lockfile v3
+           */
           if (lock.packages) {
             for (const [path, pkg] of Object.entries(lock.packages)) {
               if (
@@ -140,61 +129,70 @@ jobs:
             }
           }
 
-          // Fallback for older lockfiles
-          function walkDependencies(deps) {
+          /*
+           * Older lockfile fallback
+           */
+          function walk(deps) {
             if (!deps) return;
 
             for (const [name, dep] of Object.entries(deps)) {
-              if (name === "fast-uri" && dep.version) {
+
+              if (
+                name === "fast-uri" &&
+                dep.version
+              ) {
                 versions.add(dep.version);
               }
 
-              walkDependencies(dep.dependencies);
+              walk(dep.dependencies);
             }
           }
 
-          walkDependencies(lock.dependencies);
+          walk(lock.dependencies);
 
           const found = [...versions];
 
-          console.log("Detected fast-uri versions:");
-
-          for (const version of found) {
-            console.log(`  - ${version}`);
-          }
+          console.log(
+            "Detected fast-uri versions:",
+            found
+          );
 
           if (found.length === 0) {
-            console.log("fast-uri is not present.");
+            console.log(
+              "fast-uri not found."
+            );
             process.exit(0);
           }
 
-          /*
-           * Minimum patched versions:
-           *
-           * 2.x -> 2.4.6+
-           * 3.x -> 3.1.7+
-           * 4.x -> 4.1.4+
-           *
-           * Current 4.x releases may be newer.
-           */
-
-          function versionParts(version) {
-            const match = version.match(
+          function parse(version) {
+            const m = version.match(
               /^(\\d+)\\.(\\d+)\\.(\\d+)/
             );
 
-            if (!match) {
+            if (!m) {
               throw new Error(
-                `Unable to parse version: ${version}`
+                `Invalid version: ${version}`
               );
             }
 
-            return match.slice(1).map(Number);
+            return [
+              Number(m[1]),
+              Number(m[2]),
+              Number(m[3])
+            ];
           }
 
-          function isSafe(version) {
+          function safe(version) {
             const [major, minor, patch] =
-              versionParts(version);
+              parse(version);
+
+            /*
+             * Known patched baselines.
+             *
+             * 2.x >= 2.4.6
+             * 3.x >= 3.1.7
+             * 4.x >= 4.1.4
+             */
 
             if (major === 2) {
               return (
@@ -218,77 +216,524 @@ jobs:
             }
 
             /*
-             * Unknown major:
-             *
-             * Fail closed rather than assuming safety.
+             * Fail closed for unknown major versions.
              */
             return false;
           }
 
           const unsafe = found.filter(
-            version => !isSafe(version)
+            v => !safe(v)
           );
 
           if (unsafe.length > 0) {
+
             console.error("");
             console.error(
-              "SECURITY GATE FAILED"
+              "========================================"
             );
             console.error(
-              "Unsafe fast-uri version(s):"
+              "FAST-URI SECURITY GATE FAILED"
+            );
+            console.error(
+              "========================================"
+            );
+
+            console.error(
+              "Unsafe versions:"
             );
 
             for (const version of unsafe) {
-              console.error(`  - ${version}`);
+              console.error(
+                `  - ${version}`
+              );
             }
 
             console.error("");
-            console.error(
-              "Update fast-uri to a patched release."
-            );
 
             process.exit(1);
           }
 
-          console.log("");
           console.log(
-            "fast-uri version gate: PASS"
+            "fast-uri security gate: PASS"
           );
           NODE
 
-      # ------------------------------------------------------------
-      # 7. npm audit
-      # ------------------------------------------------------------
+      # ----------------------------------------------------------
+      # npm audit
+      # ----------------------------------------------------------
 
       - name: npm audit
         run: |
           npm audit --audit-level=high
 
-      # ------------------------------------------------------------
-      # 8. Dependency production install test
-      # ------------------------------------------------------------
 
-      - name: npm install integrity check
+  # ============================================================
+  # SERVER DEPENDENCY SECURITY
+  # ============================================================
+
+  server-security:
+    name: Server Dependency Security
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Verify server package-lock
+        working-directory: server
+        run: |
+          npm install \
+            --package-lock-only \
+            --ignore-scripts
+
+          git diff --exit-code -- package-lock.json
+
+      - name: npm ci
+        working-directory: server
         run: |
           npm ci --ignore-scripts
 
-      # ------------------------------------------------------------
-      # 9. Package metadata
-      # ------------------------------------------------------------
+      # ----------------------------------------------------------
+      # fast-uri
+      # ----------------------------------------------------------
 
-      - name: Dependency summary
+      - name: Inspect server fast-uri
+        working-directory: server
         run: |
-          echo "Node:"
-          node --version
+          echo "========================================"
+          echo "server fast-uri"
+          echo "========================================"
 
-          echo
-          echo "npm:"
-          npm --version
-
-          echo
-          echo "fast-uri:"
           npm ls fast-uri --all || true
+          npm why fast-uri || true
 
-          echo
-          echo "Audit:"
+      - name: Server fast-uri security gate
+        working-directory: server
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const lock = JSON.parse(
+            fs.readFileSync(
+              "package-lock.json",
+              "utf8"
+            )
+          );
+
+          const versions = new Set();
+
+          if (lock.packages) {
+            for (
+              const [path, pkg]
+              of Object.entries(lock.packages)
+            ) {
+              if (
+                path.endsWith("node_modules/fast-uri") &&
+                pkg.version
+              ) {
+                versions.add(pkg.version);
+              }
+            }
+          }
+
+          function walk(deps) {
+            if (!deps) return;
+
+            for (
+              const [name, dep]
+              of Object.entries(deps)
+            ) {
+
+              if (
+                name === "fast-uri" &&
+                dep.version
+              ) {
+                versions.add(dep.version);
+              }
+
+              walk(dep.dependencies);
+            }
+          }
+
+          walk(lock.dependencies);
+
+          const found = [...versions];
+
+          console.log(
+            "Detected fast-uri:",
+            found
+          );
+
+          if (found.length === 0) {
+            process.exit(0);
+          }
+
+          function safe(version) {
+            const m = version.match(
+              /^(\\d+)\\.(\\d+)\\.(\\d+)/
+            );
+
+            if (!m) {
+              return false;
+            }
+
+            const major = Number(m[1]);
+            const minor = Number(m[2]);
+            const patch = Number(m[3]);
+
+            if (major === 2) {
+              return (
+                minor > 4 ||
+                (minor === 4 && patch >= 6)
+              );
+            }
+
+            if (major === 3) {
+              return (
+                minor > 1 ||
+                (minor === 1 && patch >= 7)
+              );
+            }
+
+            if (major === 4) {
+              return (
+                minor > 1 ||
+                (minor === 1 && patch >= 4)
+              );
+            }
+
+            return false;
+          }
+
+          const unsafe =
+            found.filter(v => !safe(v));
+
+          if (unsafe.length) {
+            console.error(
+              "Unsafe fast-uri:",
+              unsafe
+            );
+            process.exit(1);
+          }
+
+          console.log(
+            "Server fast-uri gate: PASS"
+          );
+          NODE
+
+      # ----------------------------------------------------------
+      # npm audit
+      # ----------------------------------------------------------
+
+      - name: Server npm audit
+        working-directory: server
+        run: |
           npm audit --audit-level=high
+
+
+  # ============================================================
+  # FROZEN CORE
+  # ============================================================
+
+  frozen-core:
+    name: Frozen Core Integrity
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ----------------------------------------------------------
+      # Frozen Core paths
+      # ----------------------------------------------------------
+
+      - name: Create Frozen Core manifest
+        shell: bash
+        run: |
+          cat > frozen-core-paths.txt <<'EOF'
+          circuit.wasm
+          circuit.r1cs
+          production.zkey
+          publicSignals.json
+          EOF
+
+          cat frozen-core-paths.txt
+
+      # ----------------------------------------------------------
+      # Detect modification
+      # ----------------------------------------------------------
+
+      - name: Block Frozen Core modifications
+        shell: bash
+        run: |
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+
+            git fetch \
+              origin \
+              "${{ github.base_ref }}" \
+              --depth=1
+
+            CHANGED_FILES="$(
+              git diff \
+                --name-only \
+                "origin/${{ github.base_ref }}...HEAD"
+            )"
+
+          else
+
+            CHANGED_FILES="$(
+              git diff-tree \
+                --no-commit-id \
+                --name-only \
+                -r \
+                HEAD
+            )"
+
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          while IFS= read -r file; do
+
+            [[ -z "$file" ]] && continue
+
+            if echo "$CHANGED_FILES" |
+              grep -Fxq "$file"; then
+
+              echo ""
+              echo "========================================"
+              echo "FROZEN CORE MODIFICATION DETECTED"
+              echo "========================================"
+              echo "$file"
+
+              exit 1
+            fi
+
+          done < frozen-core-paths.txt
+
+          echo "Frozen Core boundary: PASS"
+
+      # ----------------------------------------------------------
+      # SHA-256
+      # ----------------------------------------------------------
+
+      - name: Verify Frozen Core SHA-256
+        shell: bash
+        run: |
+
+          if [[ ! -f checksums.sha256 ]]; then
+            echo "checksums.sha256 not found."
+            exit 1
+          fi
+
+          sha256sum -c checksums.sha256
+
+      - name: Print Frozen Core hashes
+        run: |
+          sha256sum \
+            circuit.wasm \
+            circuit.r1cs \
+            production.zkey \
+            publicSignals.json
+
+
+  # ============================================================
+  # PUBLIC SIGNALS
+  # ============================================================
+
+  public-signals:
+    name: publicSignals Integrity
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify publicSignals
+        shell: bash
+        run: |
+
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const FILE =
+            "publicSignals.json";
+
+          const EXPECTED_COUNT = 30;
+
+          if (!fs.existsSync(FILE)) {
+            console.error(
+              `${FILE} not found`
+            );
+            process.exit(1);
+          }
+
+          const signals = JSON.parse(
+            fs.readFileSync(FILE, "utf8")
+          );
+
+          if (!Array.isArray(signals)) {
+            console.error(
+              "publicSignals must be an array"
+            );
+            process.exit(1);
+          }
+
+          if (
+            signals.length !==
+            EXPECTED_COUNT
+          ) {
+
+            console.error(
+              "publicSignals count mismatch"
+            );
+
+            console.error(
+              `Expected: ${EXPECTED_COUNT}`
+            );
+
+            console.error(
+              `Actual: ${signals.length}`
+            );
+
+            process.exit(1);
+          }
+
+          console.log(
+            `publicSignals integrity: PASS`
+          );
+
+          console.log(
+            `Count: ${signals.length}`
+          );
+          NODE
+
+
+  # ============================================================
+  # T1 - T9 REGRESSION
+  # ============================================================
+
+  regression:
+    name: T1-T9 Regression
+    runs-on: ubuntu-latest
+
+    needs:
+      - root-security
+      - server-security
+      - frozen-core
+      - public-signals
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: npm ci
+        run: |
+          npm ci --ignore-scripts
+
+      # ----------------------------------------------------------
+      # T1
+      # ----------------------------------------------------------
+
+      - name: T1
+        run: |
+          npm run test:T1
+
+      # ----------------------------------------------------------
+      # T2
+      # ----------------------------------------------------------
+
+      - name: T2
+        run: |
+          npm run test:T2
+
+      # ----------------------------------------------------------
+      # T3
+      # ----------------------------------------------------------
+
+      - name: T3
+        run: |
+          npm run test:T3
+
+      # ----------------------------------------------------------
+      # T4
+      # ----------------------------------------------------------
+
+      - name: T4
+        run: |
+          npm run test:T4
+
+      # ----------------------------------------------------------
+      # T5
+      # ----------------------------------------------------------
+
+      - name: T5
+        run: |
+          npm run test:T5
+
+      # ----------------------------------------------------------
+      # T6
+      # ----------------------------------------------------------
+
+      - name: T6
+        run: |
+          npm run test:T6
+
+      # ----------------------------------------------------------
+      # T7
+      # ----------------------------------------------------------
+
+      - name: T7
+        run: |
+          npm run test:T7
+
+      # ----------------------------------------------------------
+      # T8
+      # ----------------------------------------------------------
+
+      - name: T8
+        run: |
+          npm run test:T8
+
+      # ----------------------------------------------------------
+      # T9
+      # ----------------------------------------------------------
+
+      - name: T9
+        run: |
+          npm run test:T9
+
+      # ----------------------------------------------------------
+      # Final working tree check
+      # ----------------------------------------------------------
+
+      - name: Verify clean working tree
+        run: |
+          git diff --exit-code
