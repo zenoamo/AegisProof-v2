@@ -43,7 +43,7 @@
     {
       "artifact": "production-vkey.json",
       "path": "crypto-artifacts/phase4/production-vkey.json",
-      "sha256": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+      "sha256": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
       "size": 9078,
       "createdAt": "2026-08-05T03:57:14.187Z",
       "source": "crypto-artifacts",
