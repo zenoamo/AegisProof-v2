@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   update-lockfile:
-    name: Update package-lock.json
+    name: Update ws lockfile
     runs-on: ubuntu-latest
 
     steps:
@@ -21,21 +21,64 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Update lockfile
+      - name: Update package-lock.json
         run: npm install --package-lock-only
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Verify ws version
         run: |
+          echo "Installed ws dependency tree:"
           npm ls ws
-          node -e "
-            const p = require('./node_modules/ws/package.json');
-            console.log('ws:', p.version);
-          " 2>/dev/null || true
 
-      - name: Check git diff
-        run: git diff -- package.json package-lock.json
+      - name: Verify patched ws version
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile } from "node:fs/promises";
 
-      - name: Commit lockfile update
+          const packageJson = JSON.parse(
+            await readFile("node_modules/ws/package.json", "utf8")
+          );
+
+          const version = packageJson.version;
+
+          console.log(`Installed ws version: ${version}`);
+
+          if (version !== "8.21.0") {
+            console.error(
+              `ERROR: Expected ws@8.21.0, but found ws@${version}`
+            );
+            process.exit(1);
+          }
+
+          console.log("OK: ws@8.21.0 is installed.");
+          EOF
+
+      - name: Verify lockfile contains patched ws
+        run: |
+          if ! grep -q '"node_modules/ws"' package-lock.json; then
+            echo "ERROR: node_modules/ws entry was not found in package-lock.json."
+            exit 1
+          fi
+
+          if ! grep -q '"version": "8.21.0"' package-lock.json; then
+            echo "ERROR: ws@8.21.0 was not found in package-lock.json."
+            exit 1
+          fi
+
+          echo "OK: package-lock.json contains ws@8.21.0."
+
+      - name: Check dependency tree
+        run: |
+          npm ls ws --all
+
+      - name: Show dependency changes
+        run: |
+          git status --short
+          git diff -- package.json package-lock.json
+
+      - name: Commit dependency fix
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
