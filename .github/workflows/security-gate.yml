@@ -602,6 +602,10 @@ jobs:
       # T1-T9 contract and keeps CI aligned with the documented regression
       # definitions.
 
+      - name: Compile prover verifier artifacts
+        run: |
+          npx hardhat compile --config scripts/hardhat-prover.config.ts
+
       - name: T1-T9 Prover compatibility regression
         run: |
           npm run test:prover-compat
