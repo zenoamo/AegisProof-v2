@@ -289,6 +289,7 @@ function saveCache(keys) {
 // ----------------------------------------------------------------------------
 async function runSetup(force) {
   const keys = computeCacheKeys();
+
   if (!force) {
     const v = validateCache(keys);
     if (v.valid && fs.existsSync(PATHS.ptau) && fs.existsSync(PATHS.zkey)) {
@@ -299,33 +300,170 @@ async function runSetup(force) {
   } else {
     log("[SETUP] forced regeneration of DEVELOPMENT setup");
   }
-  log("[SETUP] NOTE: this is a Phase 2 development setup. Production trusted setup (multi-contributor + beacon) is Phase 4 and is NOT performed here.");
+
+  log(
+    "[SETUP] NOTE: this is a Phase 2 development setup. " +
+    "Production trusted setup (multi-contributor + beacon) is Phase 4 and is NOT performed here."
+  );
+
+  // --------------------------------------------------------------------------
+  // Ensure all Phase 2 setup output directories exist.
+  // CI checkouts may not contain artifacts/phase2/setup.
+  // --------------------------------------------------------------------------
+  const setupDir = path.join(P2, "setup");
+  fs.mkdirSync(setupDir, { recursive: true });
+
+  // Also ensure the final artifact/cache/report directories exist before
+  // any snarkjs operation starts.
+  fs.mkdirSync(path.dirname(PATHS.ptau), { recursive: true });
+  fs.mkdirSync(path.dirname(PATHS.zkey), { recursive: true });
+  fs.mkdirSync(path.dirname(PATHS.vkey), { recursive: true });
+  fs.mkdirSync(PATHS.cacheDir, { recursive: true });
+
   const curve = await snarkjs.curves.getCurveFromName("bn128");
+
   // Circuit needs 2*nConstraints = 13180 domain points -> power >= 14.
   const POT_POWER = 14;
-  const potTmp = path.join(P2, "setup/pot_dev_tmp.ptau");
-  const potContrib = path.join(P2, "setup/pot_dev_contrib.ptau");
-  await strictCall("powersoftau new", () => snarkjs.powersOfTau.newAccumulator(curve, POT_POWER, potTmp, silentLogger));
-  log(`[SETUP] powersoftau new (2^${POT_POWER}) done`);
-  await strictCall("powersoftau contribute", () => snarkjs.powersOfTau.contribute(potTmp, potContrib, "phase2-dev-contrib", crypto.randomBytes(32).toString("hex"), silentLogger));
-  log("[SETUP] powersoftau contribute done (no -v: verbose disabled)");
-  await strictCall("powersoftau prepare", () => snarkjs.powersOfTau.preparePhase2(potContrib, PATHS.ptau, silentLogger));
-  assertValidBinFile(PATHS.ptau, "ptau");
-  log("[SETUP] powersoftau prepare done");
-  const zkeyTmp = path.join(P2, "setup/aegis_v2_dev_tmp.zkey");
-  await strictCall("zkey new", () => snarkjs.zKey.newZKey(PATHS.r1cs, PATHS.ptau, zkeyTmp, silentLogger));
-  assertValidBinFile(zkeyTmp, "zkey");
-  log("[SETUP] zkey new done");
-  await strictCall("zkey contribute", () => snarkjs.zKey.contribute(zkeyTmp, PATHS.zkey, "phase2-dev-zkey-contrib", crypto.randomBytes(32).toString("hex"), silentLogger));
-  assertValidBinFile(PATHS.zkey, "zkey");
-  log("[SETUP] zkey contribute done");
+
+  const potTmp = path.join(setupDir, "pot_dev_tmp.ptau");
+  const potContrib = path.join(setupDir, "pot_dev_contrib.ptau");
+  const zkeyTmp = path.join(setupDir, "aegis_v2_dev_tmp.zkey");
+
+  // --------------------------------------------------------------------------
+  // Remove stale temporary artifacts from an interrupted CI/setup run.
+  // Never reuse partially-written temporary files.
+  // --------------------------------------------------------------------------
   fs.rmSync(potTmp, { force: true });
   fs.rmSync(potContrib, { force: true });
   fs.rmSync(zkeyTmp, { force: true });
+
+  // --------------------------------------------------------------------------
+  // 1. Powers of Tau accumulator
+  // --------------------------------------------------------------------------
+  await strictCall(
+    "powersoftau new",
+    () =>
+      snarkjs.powersOfTau.newAccumulator(
+        curve,
+        POT_POWER,
+        potTmp,
+        silentLogger
+      )
+  );
+
+  assertValidBinFile(potTmp, "ptau");
+  log(`[SETUP] powersoftau new (2^${POT_POWER}) done`);
+
+  // --------------------------------------------------------------------------
+  // 2. Development contribution
+  // --------------------------------------------------------------------------
+  await strictCall(
+    "powersoftau contribute",
+    () =>
+      snarkjs.powersOfTau.contribute(
+        potTmp,
+        potContrib,
+        "phase2-dev-contrib",
+        crypto.randomBytes(32).toString("hex"),
+        silentLogger
+      )
+  );
+
+  assertValidBinFile(potContrib, "ptau");
+  log("[SETUP] powersoftau contribute done (no -v: verbose disabled)");
+
+  // --------------------------------------------------------------------------
+  // 3. Prepare Phase 2 Powers of Tau
+  // --------------------------------------------------------------------------
+  await strictCall(
+    "powersoftau prepare",
+    () =>
+      snarkjs.powersOfTau.preparePhase2(
+        potContrib,
+        PATHS.ptau,
+        silentLogger
+      )
+  );
+
+  assertValidBinFile(PATHS.ptau, "ptau");
+  log("[SETUP] powersoftau prepare done");
+
+  // --------------------------------------------------------------------------
+  // 4. Generate development zkey
+  // --------------------------------------------------------------------------
+  await strictCall(
+    "zkey new",
+    () =>
+      snarkjs.zKey.newZKey(
+        PATHS.r1cs,
+        PATHS.ptau,
+        zkeyTmp,
+        silentLogger
+      )
+  );
+
+  assertValidBinFile(zkeyTmp, "zkey");
+  log("[SETUP] zkey new done");
+
+  // --------------------------------------------------------------------------
+  // 5. Development zkey contribution
+  // --------------------------------------------------------------------------
+  await strictCall(
+    "zkey contribute",
+    () =>
+      snarkjs.zKey.contribute(
+        zkeyTmp,
+        PATHS.zkey,
+        "phase2-dev-zkey-contrib",
+        crypto.randomBytes(32).toString("hex"),
+        silentLogger
+      )
+  );
+
+  assertValidBinFile(PATHS.zkey, "zkey");
+  log("[SETUP] zkey contribute done");
+
+  // --------------------------------------------------------------------------
+  // 6. Remove temporary setup artifacts.
+  // --------------------------------------------------------------------------
+  fs.rmSync(potTmp, { force: true });
+  fs.rmSync(potContrib, { force: true });
+  fs.rmSync(zkeyTmp, { force: true });
+
+  // --------------------------------------------------------------------------
+  // 7. Export verification key
+  // --------------------------------------------------------------------------
   fs.mkdirSync(path.dirname(PATHS.vkey), { recursive: true });
-  const vkey = await snarkjs.zKey.exportVerificationKey(PATHS.zkey, silentLogger);
-  fs.writeFileSync(PATHS.vkey, JSON.stringify(vkey, null, 2), "utf8");
+
+  const vkey = await snarkjs.zKey.exportVerificationKey(
+    PATHS.zkey,
+    silentLogger
+  );
+
+  fs.writeFileSync(
+    PATHS.vkey,
+    JSON.stringify(vkey, null, 2),
+    "utf8"
+  );
+
+  // Verify the exported VK is actually readable before declaring setup success.
+  const exportedVkey = JSON.parse(fs.readFileSync(PATHS.vkey, "utf8"));
+
+  if (!Array.isArray(exportedVkey.IC)) {
+    throw new Error("exported verification key has no IC array");
+  }
+
+  if (exportedVkey.IC.length !== 31) {
+    throw new Error(
+      `exported verification key has unexpected IC length: ${exportedVkey.IC.length} (expected 31)`
+    );
+  }
+
   log("[SETUP] verification key exported (development only)");
+
+  // --------------------------------------------------------------------------
+  // 8. Persist cache only after every setup artifact has been validated.
+  // --------------------------------------------------------------------------
   saveCache(keys);
   log("[SETUP] cache manifest written");
 }
