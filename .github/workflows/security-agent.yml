@@ -11,7 +11,6 @@ on:
 permissions:
   contents: read
   security-events: write
-  pull-requests: write
 
 concurrency:
   group: security-agent-${{ github.event.pull_request.number || github.ref }}
@@ -21,6 +20,10 @@ env:
   NODE_VERSION: "22"
 
 jobs:
+  # Canonical dependency and AegisProof integrity gates live in
+  # security-gate.yml. This workflow focuses on source/workflow
+  # security signals so the same checks are not run twice.
+
   codeql:
     name: CodeQL security analysis
     runs-on: ubuntu-latest
@@ -30,43 +33,27 @@ jobs:
       matrix:
         language: [javascript-typescript]
     steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
-      - uses: github/codeql-action/analyze@v3
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
         with:
           category: /language:${{ matrix.language }}
-
-  dependency-review:
-    name: Dependency vulnerability review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: always
-
-  npm-audit:
-    name: npm dependency audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm audit --audit-level=high
 
   secret-and-malware-heuristics:
     name: Secret and suspicious-code heuristics
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout full history
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -74,7 +61,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE             --exclude-dir=.git             --exclude-dir=node_modules             --exclude='*.lock'             '(BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})'             .; then
+
+          if grep -RInE \
+            --exclude-dir=.git \
+            --exclude-dir=node_modules \
+            --exclude='*.lock' \
+            '(BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})' \
+            .; then
             echo "::error::Potential credential material detected."
             exit 1
           fi
@@ -86,7 +79,11 @@ jobs:
           findings=0
 
           while IFS= read -r pattern; do
-            if grep -RInE               --exclude-dir=.git               --exclude-dir=node_modules               --exclude='*.lock'               "$pattern" .; then
+            if grep -RInE \
+              --exclude-dir=.git \
+              --exclude-dir=node_modules \
+              --exclude='*.lock' \
+              "$pattern" .; then
               findings=1
             fi
           done <<'PATTERNS'
@@ -98,7 +95,9 @@ jobs:
           PATTERNS
 
           if [ "$findings" -ne 0 ]; then
-            echo "::warning::Suspicious execution pattern(s) detected. Review required; this job does not claim malware detection."
+            echo "::warning::Suspicious execution pattern(s) detected. Manual review is required."
+          else
+            echo "No configured suspicious-execution heuristics matched."
           fi
 
       - name: Inspect package lifecycle hooks
@@ -106,14 +105,20 @@ jobs:
         run: |
           set -euo pipefail
           node <<'NODE'
-          import fs from "node:fs";
+          const fs = require("node:fs");
 
-          const files = ["package.json", "server/package.json", "packages/sdk/package.json"];
+          const files = [
+            "package.json",
+            "server/package.json",
+            "packages/sdk/package.json"
+          ];
 
           for (const file of files) {
             if (!fs.existsSync(file)) continue;
+
             const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
             const scripts = pkg.scripts ?? {};
+
             for (const name of ["preinstall", "install", "postinstall"]) {
               if (scripts[name]) {
                 console.log(`[REVIEW] ${file} -> ${name}: ${scripts[name]}`);
@@ -122,22 +127,43 @@ jobs:
           }
           NODE
 
-      - name: Scan tracked executable/binary files
+      - name: Inventory tracked executable and binary files
         shell: bash
         run: |
           set -euo pipefail
-          find .             -path './.git' -prune -o             -path './node_modules' -prune -o             -type f             \( -perm -111 -o -name '*.exe' -o -name '*.dll' -o -name '*.so' -o -name '*.dylib' \)             -print
+
+          found=0
+
+          while IFS= read -r file; do
+            found=1
+            echo "::warning::Executable/binary tracked file: $file"
+          done < <(
+            git ls-files -z |
+            tr '\0' '\n' |
+            while IFS= read -r file; do
+              [ -f "$file" ] || continue
+              if [ -x "$file" ] || [[ "$file" =~ \.(exe|dll|so|dylib)$ ]]; then
+                printf '%s\n' "$file"
+              fi
+            done
+          )
+
+          if [ "$found" -eq 0 ]; then
+            echo "No tracked executable/binary files found."
+          fi
 
   actions-audit:
     name: GitHub Actions security audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Audit workflow files
         shell: bash
         run: |
           set -euo pipefail
+
           for file in .github/workflows/*.yml .github/workflows/*.yaml; do
             [ -f "$file" ] || continue
             echo "Auditing $file"
@@ -150,35 +176,29 @@ jobs:
               echo "::error::$file uses a mutable Action reference."
               exit 1
             fi
+
+            if grep -qE '^[[:space:]]*run:[[:space:]].*(curl|wget).*(sh|bash)' "$file"; then
+              echo "::error::$file contains a remote-download-to-shell pattern."
+              exit 1
+            fi
           done
 
-  aegisproof-integrity:
-    name: AegisProof integrity regression
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm run check:sensitive-files
-      - run: npm run test:sensitive-files-boundary
-      - run: npm run test:penetration
-      - run: npm run verify:provenance -- --live
-      - run: npm run test:prover-compat
-      - run: npm run verify:signals
+      - name: Verify required security workflows exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f .github/workflows/security-gate.yml
+          test -f .github/workflows/aegis_repro_ci.yml
+
+          echo "Canonical security and reproducibility workflows are present."
 
   security-summary:
-    name: Security gate summary
+    name: Security Agent summary
     needs:
       - codeql
-      - dependency-review
-      - npm-audit
       - secret-and-malware-heuristics
       - actions-audit
-      - aegisproof-integrity
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -186,18 +206,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           echo "CodeQL: ${{ needs.codeql.result }}"
-          echo "Dependency Review: ${{ needs.dependency-review.result }}"
-          echo "npm audit: ${{ needs.npm-audit.result }}"
           echo "Heuristics: ${{ needs.secret-and-malware-heuristics.result }}"
           echo "Actions audit: ${{ needs.actions-audit.result }}"
-          echo "AegisProof integrity: ${{ needs.aegisproof-integrity.result }}"
 
-          for result in             "${{ needs.codeql.result }}"             "${{ needs.npm-audit.result }}"             "${{ needs.secret-and-malware-heuristics.result }}"             "${{ needs.actions-audit.result }}"             "${{ needs.aegisproof-integrity.result }}"; do
+          for result in \
+            "${{ needs.codeql.result }}" \
+            "${{ needs.secret-and-malware-heuristics.result }}" \
+            "${{ needs.actions-audit.result }}"; do
             if [ "$result" != "success" ]; then
-              echo "::error::Security Gate failed."
+              echo "::error::Security Agent failed."
               exit 1
             fi
           done
 
-          echo "Security Gate: PASS"
+          echo "Security Agent: PASS"
+          echo "Dependency and Frozen Core integrity gates remain authoritative in security-gate.yml."
