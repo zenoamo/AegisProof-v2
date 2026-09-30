@@ -1,0 +1,135 @@
+name: Server fast-uri Security Update
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Update vulnerable fast-uri dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: Update root dependencies
+        run: |
+          npm install --package-lock-only
+          npm install --package-lock-only fast-uri@3.1.8
+          npm install --package-lock-only fast-uri@4.2.1 --save-dev
+
+      - name: Update server dependencies
+        working-directory: server
+        run: |
+          npm install --package-lock-only
+          npm install --package-lock-only fast-uri@3.1.8
+          npm install --package-lock-only fast-uri@4.2.1 --save-dev
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Verify fast-uri
+        run: |
+          echo "=== Root fast-uri ==="
+          npm ls fast-uri --all
+
+          echo "=== Server fast-uri ==="
+          npm ls fast-uri --all
+
+      - name: Verify no vulnerable fast-uri versions
+        run: |
+          for lockfile in package-lock.json server/package-lock.json; do
+            echo "Checking $lockfile"
+
+            if grep -E \
+              '"version": "(3\.(0\.[0-9]+|1\.[0-7])|4\.(0\.[0-9]+|1\.[0-5]))"' \
+              "$lockfile" >/dev/null; then
+              echo "ERROR: Vulnerable fast-uri version remains in $lockfile."
+              exit 1
+            fi
+          done
+
+          echo "OK: no known vulnerable fast-uri 3.x/4.x versions found."
+
+      - name: Verify Frozen Core
+        run: |
+          changed="$(git diff --name-only)"
+
+          if echo "$changed" | grep -E \
+            '^(circuits/|artifacts/|keys/|wasm/|production\.zkey|publicSignals|contracts/)' \
+            >/dev/null; then
+            echo "ERROR: Frozen Core was modified."
+            exit 1
+          fi
+
+          echo "OK: Frozen Core untouched."
+
+      - name: Verify changed files
+        run: |
+          changed="$(git diff --name-only)"
+
+          echo "$changed"
+
+          if echo "$changed" | grep -vE \
+            '^(package-lock\.json|server/package-lock\.json)$' \
+            >/dev/null; then
+            echo "ERROR: Unexpected files changed."
+            exit 1
+          fi
+
+      - name: Create update branch
+        run: |
+          branch="security/fast-uri-update-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$branch"
+          echo "BRANCH=$branch" >> "$GITHUB_ENV"
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add package-lock.json server/package-lock.json
+
+          git commit \
+            -m "fix(deps): update fast-uri to patched versions"
+
+      - name: Push update branch
+        run: |
+          git push --set-upstream origin "$BRANCH"
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --base master \
+            --head "$BRANCH" \
+            --title "fix(deps): update fast-uri security dependencies" \
+            --body "Updates fast-uri dependencies to patched releases.
+
+Targets:
+- fast-uri 3.x → 3.1.8
+- fast-uri 4.x → 4.2.1
+
+Frozen Core was verified as untouched.
+
+Changed files:
+- package-lock.json
+- server/package-lock.json"
