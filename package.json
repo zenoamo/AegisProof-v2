@@ -46,7 +46,7 @@
     "verify:provenance": "node scripts/verify-provenance-manifest.mjs",
     "bench:provenance": "node scripts/bench-provenance-verify.mjs",
     "bench:hybrid-auth": "node scripts/bench-hybrid-auth.mjs",
-    "bench:research-pipeline": "node scripts/bench-research-pipeline.mjs",\n    "check:bench-drift": "node scripts/check-bench-drift.mjs",
+    "bench:research-pipeline": "node scripts/bench-research-pipeline.mjs",
     "demo:research-pipeline": "node scripts/demo-research-pipeline.mjs",
     "verify:signals": "tsx scripts/verify-signals.ts",
     "sync:signals": "tsx scripts/sync-signals.ts",
