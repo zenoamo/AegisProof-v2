@@ -7,14 +7,21 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: fast-uri-security-update
+  cancel-in-progress: false
+
 jobs:
   update:
-    name: Update vulnerable fast-uri dependencies
+    name: Update vulnerable dependencies
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -25,52 +32,185 @@ jobs:
             package-lock.json
             server/package-lock.json
 
-      - name: Update root dependencies
-        run: |
-          npm install --package-lock-only
-          npm install --package-lock-only fast-uri@3.1.8
-          npm install --package-lock-only fast-uri@4.2.1 --save-dev
+      # ------------------------------------------------------------
+      # Root dependency update
+      # ------------------------------------------------------------
 
-      - name: Update server dependencies
+      - name: Update root fast-uri
+        run: |
+          npm update fast-uri --package-lock-only
+
+      - name: Update root audit fixes
+        run: |
+          npm audit fix --package-lock-only
+
+      # ------------------------------------------------------------
+      # Server dependency update
+      # ------------------------------------------------------------
+
+      - name: Update server fast-uri
         working-directory: server
         run: |
-          npm install --package-lock-only
-          npm install --package-lock-only fast-uri@3.1.8
-          npm install --package-lock-only fast-uri@4.2.1 --save-dev
+          npm update fast-uri --package-lock-only
+
+      - name: Update server audit fixes
+        working-directory: server
+        run: |
+          npm audit fix --package-lock-only
+
+      # ------------------------------------------------------------
+      # Clean installation
+      # ------------------------------------------------------------
 
       - name: Install root dependencies
-        run: npm ci
+        run: |
+          npm ci
 
       - name: Install server dependencies
         working-directory: server
-        run: npm ci
-
-      - name: Verify fast-uri
         run: |
-          echo "=== Root fast-uri ==="
+          npm ci
+
+      # ------------------------------------------------------------
+      # Dependency tree verification
+      # ------------------------------------------------------------
+
+      - name: Verify root fast-uri
+        run: |
+          echo "=== ROOT fast-uri ==="
           npm ls fast-uri --all
 
-          echo "=== Server fast-uri ==="
+      - name: Verify server fast-uri
+        working-directory: server
+        run: |
+          echo "=== SERVER fast-uri ==="
           npm ls fast-uri --all
 
-      - name: Verify no vulnerable fast-uri versions
+      # ------------------------------------------------------------
+      # Exact fast-uri version verification
+      # ------------------------------------------------------------
+
+      - name: Verify installed fast-uri versions
         run: |
-          for lockfile in package-lock.json server/package-lock.json; do
-            echo "Checking $lockfile"
+          node <<'NODE'
+          const { execFileSync } = require("node:child_process");
 
-            if grep -E \
-              '"version": "(3\.(0\.[0-9]+|1\.[0-7])|4\.(0\.[0-9]+|1\.[0-5]))"' \
-              "$lockfile" >/dev/null; then
-              echo "ERROR: Vulnerable fast-uri version remains in $lockfile."
-              exit 1
-            fi
-          done
+          function getVersions(cwd) {
+            const output = execFileSync(
+              "npm",
+              ["ls", "fast-uri", "--all", "--json"],
+              {
+                cwd,
+                encoding: "utf8",
+                stdio: ["ignore", "pipe", "pipe"]
+              }
+            );
 
-          echo "OK: no known vulnerable fast-uri 3.x/4.x versions found."
+            const tree = JSON.parse(output);
+            const versions = new Set();
+
+            function walk(node) {
+              if (!node) return;
+
+              if (node.name === "fast-uri" && node.version) {
+                versions.add(node.version);
+              }
+
+              for (const child of Object.values(node.dependencies || {})) {
+                walk(child);
+              }
+            }
+
+            walk(tree);
+            return [...versions].sort();
+          }
+
+          const targets = [
+            ["root", process.cwd()],
+            ["server", "server"]
+          ];
+
+          const minimums = {
+            2: [4, 7],
+            3: [1, 8],
+            4: [2, 1]
+          };
+
+          function isPatched(version) {
+            const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+
+            if (!match) {
+              return false;
+            }
+
+            const major = Number(match[1]);
+            const minor = Number(match[2]);
+            const patch = Number(match[3]);
+
+            const minimum = minimums[major];
+
+            if (!minimum) {
+              return true;
+            }
+
+            if (minor > minimum[0]) {
+              return true;
+            }
+
+            if (minor < minimum[0]) {
+              return false;
+            }
+
+            return patch >= minimum[1];
+          }
+
+          let failed = false;
+
+          for (const [name, cwd] of targets) {
+            const versions = getVersions(cwd);
+
+            console.log(`${name} fast-uri versions:`, versions);
+
+            for (const version of versions) {
+              if (!isPatched(version)) {
+                console.error(
+                  `ERROR: ${name} contains vulnerable fast-uri ${version}`
+                );
+                failed = true;
+              }
+            }
+          }
+
+          if (failed) {
+            process.exit(1);
+          }
+
+          console.log("OK: all installed fast-uri versions are patched.");
+          NODE
+
+      # ------------------------------------------------------------
+      # Full dependency audit
+      # ------------------------------------------------------------
+
+      - name: Audit root dependencies
+        run: |
+          npm audit --audit-level=low
+
+      - name: Audit server dependencies
+        working-directory: server
+        run: |
+          npm audit --audit-level=low
+
+      # ------------------------------------------------------------
+      # Frozen Core protection
+      # ------------------------------------------------------------
 
       - name: Verify Frozen Core
         run: |
           changed="$(git diff --name-only)"
+
+          echo "=== Changed files ==="
+          echo "$changed"
 
           if echo "$changed" | grep -E \
             '^(circuits/|artifacts/|keys/|wasm/|production\.zkey|publicSignals|contracts/)' \
@@ -81,54 +221,103 @@ jobs:
 
           echo "OK: Frozen Core untouched."
 
+      # ------------------------------------------------------------
+      # Changed-file boundary
+      # ------------------------------------------------------------
+
       - name: Verify changed files
         run: |
           changed="$(git diff --name-only)"
 
+          if [ -z "$changed" ]; then
+            echo "No dependency changes were produced."
+            exit 0
+          fi
+
           echo "$changed"
 
           if echo "$changed" | grep -vE \
-            '^(package-lock\.json|server/package-lock\.json)$' \
+            '^(package\.json|package-lock\.json|server/package\.json|server/package-lock\.json)$' \
             >/dev/null; then
             echo "ERROR: Unexpected files changed."
             exit 1
           fi
 
+          echo "OK: only dependency manifests/lockfiles changed."
+
+      # ------------------------------------------------------------
+      # Create branch
+      # ------------------------------------------------------------
+
       - name: Create update branch
         run: |
           branch="security/fast-uri-update-$(date +%Y%m%d-%H%M%S)"
+
           git checkout -b "$branch"
+
           echo "BRANCH=$branch" >> "$GITHUB_ENV"
 
-      - name: Commit changes
+      # ------------------------------------------------------------
+      # Commit
+      # ------------------------------------------------------------
+
+      - name: Commit dependency updates
         run: |
+          if git diff --quiet; then
+            echo "No dependency changes to commit."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add package-lock.json server/package-lock.json
+          git add \
+            package.json \
+            package-lock.json \
+            server/package.json \
+            server/package-lock.json
 
           git commit \
             -m "fix(deps): update fast-uri to patched versions"
 
+      # ------------------------------------------------------------
+      # Push branch
+      # ------------------------------------------------------------
+
       - name: Push update branch
         run: |
           git push --set-upstream origin "$BRANCH"
+
+      # ------------------------------------------------------------
+      # Create PR
+      # ------------------------------------------------------------
 
       - name: Create pull request
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > pr-body.md <<'EOF'
-          Updates fast-uri dependencies to patched releases.
+          Updates vulnerable npm dependencies and refreshes fast-uri versions.
 
-          Targets:
-          - fast-uri 3.x -> 3.1.8
-          - fast-uri 4.x -> 4.2.1
+          Security targets:
+          - fast-uri 2.x -> >= 2.4.7
+          - fast-uri 3.x -> >= 3.1.8
+          - fast-uri 4.x -> >= 4.2.1
+
+          Verification performed:
+          - npm ci
+          - npm ls fast-uri --all
+          - patched-version validation
+          - npm audit --audit-level=low
+          - Frozen Core protection check
+          - changed-file boundary check
 
           Frozen Core was verified as untouched.
 
-          Changed files:
+          Expected changed files are limited to:
+          - package.json
           - package-lock.json
+          - server/package.json
           - server/package-lock.json
           EOF
 
