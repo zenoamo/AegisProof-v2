@@ -166,7 +166,7 @@ jobs:
 
           function parse(version) {
             const m = version.match(
-              /^(\\d+)\\.(\\d+)\\.(\\d+)/
+              /^(\d+)\\.(\d+)\\.(\d+)/
             );
 
             if (!m) {
@@ -381,7 +381,7 @@ jobs:
 
           function safe(version) {
             const m = version.match(
-              /^(\\d+)\\.(\\d+)\\.(\\d+)/
+              /^(\d+)\\.(\d+)\\.(\d+)/
             );
 
             if (!m) {
