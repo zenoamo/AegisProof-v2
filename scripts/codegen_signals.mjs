@@ -1,7 +1,7 @@
 // ============================================================================
 // SSoT-driven code generation (#7)
 // ----------------------------------------------------------------------------
-// Reads specs/aegis-protocol.v2.json (the ONLY source of truth) and emits:
+// Reads protocol/specs (the ONLY source of truth) and emits:
 //   generated/AegisSignals.ts              — TypeScript constants
 //   contracts/generated/AegisSignals.sol   — Solidity library constants
 //     (under contracts/ so hardhat compiles it together with AegisShieldV2)
@@ -13,9 +13,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ssot = JSON.parse(fs.readFileSync(path.join(ROOT, "specs/aegis-protocol.v2.json"), "utf8"));
+const ssot = JSON.parse(fs.readFileSync(path.join(ROOT, "protocol/specs"), "utf8"));
 const outDir = path.join(ROOT, "generated");
-const solOutDir = path.join(ROOT, "contracts/generated");
+const solOutDir = path.join(ROOT, "protocol/contracts/generated");
 fs.mkdirSync(outDir, { recursive: true });
 fs.mkdirSync(solOutDir, { recursive: true });
 
@@ -26,7 +26,7 @@ const DOMAIN = ssot.domainSeparation.domainNullifierV2;
 
 // ---------------------------- TypeScript ------------------------------------
 const tsLines = [
-  "// GENERATED FILE — do not edit. Source: specs/aegis-protocol.v2.json",
+  "// GENERATED FILE — do not edit. Source: protocol/specs",
   "// Regenerate: node scripts/codegen_signals.mjs",
   "",
   `export const PROTOCOL_VERSION = ${ssot.version} as const;`,
@@ -57,7 +57,7 @@ const solLines = [
   "// SPDX-License-Identifier: MIT",
   "pragma solidity ^0.8.28;",
   "",
-  "// GENERATED FILE — do not edit. Source: specs/aegis-protocol.v2.json",
+  "// GENERATED FILE — do not edit. Source: protocol/specs",
   "// Regenerate: node scripts/codegen_signals.mjs",
   "library AegisSignals {",
   `    uint256 internal constant PROTOCOL_VERSION = ${ssot.version};`,
