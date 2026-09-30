@@ -3,7 +3,7 @@
   "dependencies": {
     "circomlib": "^2.0.5",
     "dotenv": "^17.4.2",
-    "fastify": "^5.11.0",
+    "fastify": "^5.12.5",
     "viem": "^2.55.10"
   },
   "devDependencies": {
@@ -58,8 +58,8 @@
     "@azure/identity": "^4.12.0",
     "google-auth-library": "^10.3.0"
   },
-"overrides": {
-  "ws": "8.21.1",
-  "adm-zip": "0.6.1"
-}
+  "overrides": {
+    "ws": "8.21.1",
+    "adm-zip": "0.6.1"
+  }
 }
