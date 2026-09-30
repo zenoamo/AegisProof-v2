@@ -58,8 +58,10 @@
     "@azure/identity": "^4.12.0",
     "google-auth-library": "^10.3.0"
   },
-  "overrides": {
-    "ws": "8.21.1",
-    "adm-zip": "0.6.1"
-  }
+"overrides": {
+  "ws": "8.21.1",
+  "adm-zip": "0.6.1",
+  "fast-uri": ">=4.2.1",
+  "underscore": ">=1.13.8"
+}
 }
