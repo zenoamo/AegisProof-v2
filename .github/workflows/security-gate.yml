@@ -588,7 +588,7 @@ jobs:
           const fs = require("node:fs");
 
           const FILE =
-            "protocol/specs/aegis-protocol.v2.json";
+            "specs/aegis-protocol.v2.json";
 
           const EXPECTED_COUNT = 30;
 
