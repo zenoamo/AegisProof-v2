@@ -9,7 +9,7 @@
 
 - [ ] Production VK hash verified: `d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec`
 - [ ] Production verifier contract IC constants cross-checked (31/31 match)
-- [ ] Manifest verification passes: `node scripts/verify_manifest.mjs` (expect 28/28 PASS)
+- [ ] Deployment manifest validation passes: `npm run validate:deployment-manifest`
 - [ ] All gates pass: `node scripts/gates/run_all.mjs` (expect 42/42 PASS)
 - [ ] Dev zkey/vkey excluded from deployment artifacts
 - [ ] No secrets committed to repository
@@ -21,17 +21,22 @@
 ## Deployment steps
 
 ### 1. Local Hardhat dry-run
-- [ ] Deploy verifier (`Groth16VerifierV2Production.sol`)
-- [ ] Deploy shield with verifier address and operator
-- [ ] Run test suite (local)
-- [ ] Verify bytecode matches expected
+- [ ] Run `npx hardhat run scripts/deploy.ts`
+- [ ] Confirm this is the **dev verifier** local fixture, not a production deployment
+- [ ] Confirm canonical registry address matches `deployments/manifest.json`
+- [ ] Run the local regression suite
+- [ ] Verify deployed bytecode is present and constructor state matches expected addresses
 
-### 2. Sepolia testnet
-- [ ] Set `.env` with RPC and wallet key (never commit)
-- [ ] Deploy verifier → capture address TX hash
-- [ ] Deploy shield with captured verifier address
+### 2. Sepolia testnet (authorization-gated)
+- [ ] Authorized deployment tooling exists and has passed review
+- [ ] Add the Sepolia chain entry to `deployments/manifest.json`
+- [ ] Pin the canonical registry in `AegisCanonicalRegistry`
+- [ ] Deploy production verifier and capture address + bytecode hash
+- [ ] Deploy canonical registry + Shield and capture addresses + hashes
+- [ ] Authorize the Shield in the registry
 - [ ] Etherscan verification
-- [ ] On-chain tests pass (5/5)
+- [ ] On-chain tests pass
+- [ ] Re-run manifest validation after recording independently verified addresses
 
 ### 3. Mainnet (future authorization required)
 - [ ] Stakeholder review completed
