@@ -7,7 +7,7 @@
     "viem": "^2.55.10"
   },
   "devDependencies": {
-    "@noble/post-quantum": "^0.6.1",
+    "@noble/post-quantum": "^0.7.1",
     "@nomicfoundation/hardhat-toolbox": "^7.0.0",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
     "@nomicfoundation/hardhat-viem": "^3.0.9",
