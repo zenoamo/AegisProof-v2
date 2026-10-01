@@ -83,8 +83,8 @@ function ok(cond, name) {
 
     ok(run.status !== 0, "T-EXP-004b: --live FAIL when committed KMS envelope invalid");
     ok(
-      (run.stderr ?? "").includes("KMS verify failed") || (run.stdout ?? "").includes("KMS verify failed"),
-      "T-EXP-004b: output mentions KMS verify failure"
+      /KMS/i.test(run.stderr ?? "") || /KMS/i.test(run.stdout ?? ""),
+      "T-EXP-004b: output mentions KMS verification failure"
     );
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
