@@ -1,0 +1,225 @@
+name: AegisProof Security Agent
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: security-agent-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  # Canonical dependency and AegisProof integrity gates live in
+  # security-gate.yml. This workflow focuses on source/workflow
+  # security signals so the same checks are not run twice.
+
+  codeql:
+    name: CodeQL security analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          category: /language:${{ matrix.language }}
+
+  secret-and-malware-heuristics:
+    name: Secret and suspicious-code heuristics
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Detect credential material
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -RInE \
+            --exclude-dir=.git \
+            --exclude-dir=node_modules \
+            --exclude='*.lock' \
+            '(BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})' \
+            .; then
+            echo "::error::Potential credential material detected."
+            exit 1
+          fi
+
+      - name: Detect suspicious execution patterns
+        shell: bash
+        run: |
+          set -euo pipefail
+          findings=0
+
+          while IFS= read -r pattern; do
+            if grep -RInE \
+              --exclude-dir=.git \
+              --exclude-dir=node_modules \
+              --exclude='*.lock' \
+              "$pattern" .; then
+              findings=1
+            fi
+          done <<'PATTERNS'
+          (curl|wget)[[:space:]].*\|[[:space:]]*(sh|bash)
+          (curl|wget)[[:space:]].*-[oO][[:space:]]*/tmp/
+          base64[[:space:]]+(-d|--decode).*(sh|bash|node|python)
+          (eval|Function)[[:space:]]*\(
+          child_process\.(exec|execSync|spawn|spawnSync)
+          PATTERNS
+
+          if [ "$findings" -ne 0 ]; then
+            echo "::warning::Suspicious execution pattern(s) detected. Manual review is required."
+          else
+            echo "No configured suspicious-execution heuristics matched."
+          fi
+
+      - name: Inspect package lifecycle hooks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const files = [
+            "package.json",
+            "server/package.json",
+            "packages/sdk/package.json"
+          ];
+
+          for (const file of files) {
+            if (!fs.existsSync(file)) continue;
+
+            const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
+            const scripts = pkg.scripts ?? {};
+
+            for (const name of ["preinstall", "install", "postinstall"]) {
+              if (scripts[name]) {
+                console.log(`[REVIEW] ${file} -> ${name}: ${scripts[name]}`);
+              }
+            }
+          }
+          NODE
+
+      - name: Inventory tracked executable and binary files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          found=0
+
+          while IFS= read -r file; do
+            found=1
+            echo "::warning::Executable/binary tracked file: $file"
+          done < <(
+            git ls-files -z |
+            tr '\0' '\n' |
+            while IFS= read -r file; do
+              [ -f "$file" ] || continue
+              if [ -x "$file" ] || [[ "$file" =~ \.(exe|dll|so|dylib)$ ]]; then
+                printf '%s\n' "$file"
+              fi
+            done
+          )
+
+          if [ "$found" -eq 0 ]; then
+            echo "No tracked executable/binary files found."
+          fi
+
+  actions-audit:
+    name: GitHub Actions security audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Audit workflow files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for file in .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ -f "$file" ] || continue
+            echo "Auditing $file"
+
+            if grep -q "pull_request_target" "$file"; then
+              echo "::warning::$file uses pull_request_target; review untrusted-code boundaries."
+            fi
+
+            if grep -qE 'uses:[[:space:]]+[^@]+@(main|master|latest)$' "$file"; then
+              echo "::error::$file uses a mutable Action reference."
+              exit 1
+            fi
+
+            if grep -qE '^[[:space:]]*run:[[:space:]].*(curl|wget).*(sh|bash)' "$file"; then
+              echo "::error::$file contains a remote-download-to-shell pattern."
+              exit 1
+            fi
+          done
+
+      - name: Verify required security workflows exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f .github/workflows/security-gate.yml
+          test -f .github/workflows/aegis_repro_ci.yml
+
+          echo "Canonical security and reproducibility workflows are present."
+
+  security-summary:
+    name: Security Agent summary
+    needs:
+      - codeql
+      - secret-and-malware-heuristics
+      - actions-audit
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate results
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "CodeQL: ${{ needs.codeql.result }}"
+          echo "Heuristics: ${{ needs.secret-and-malware-heuristics.result }}"
+          echo "Actions audit: ${{ needs.actions-audit.result }}"
+
+          for result in \
+            "${{ needs.codeql.result }}" \
+            "${{ needs.secret-and-malware-heuristics.result }}" \
+            "${{ needs.actions-audit.result }}"; do
+            if [ "$result" != "success" ]; then
+              echo "::error::Security Agent failed."
+              exit 1
+            fi
+          done
+
+          echo "Security Agent: PASS"
+          echo "Dependency and Frozen Core integrity gates remain authoritative in security-gate.yml."
