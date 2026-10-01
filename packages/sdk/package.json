@@ -24,7 +24,8 @@
     "ethers": "~6.0.0"
   },
   "devDependencies": {
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "tsx": "^4.23.15"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
