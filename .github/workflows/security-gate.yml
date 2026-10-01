@@ -19,6 +19,7 @@ on:
       - "circuits/**"
       - "packages/sdk/**"
       - "tests/**"
+      - "deployments/**"
 
   push:
     branches:
@@ -684,6 +685,14 @@ jobs:
       - name: T1-T9
         run: |
           npm run test:prover-compat
+
+      # ----------------------------------------------------------
+      # Deployment manifest integrity
+      # ----------------------------------------------------------
+
+      - name: Deployment manifest integrity
+        run: |
+          npm run validate:deployment-manifest
 
       # ----------------------------------------------------------
       # Final working tree check
