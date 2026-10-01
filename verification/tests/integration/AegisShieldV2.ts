@@ -80,6 +80,12 @@ async function main() {
     deployer.account.address,
   ]);
 
+  await expectRevert(
+    registry.write.consume([BigInt(NULLIFIER)], { account: outsider.account }),
+    "Unauthorized consumer",
+    "unauthorized registry consumer rejected"
+  );
+
   const shield = await viem.deployContract("AegisShieldV2", [
     verifier.address,
     deployer.account.address,
