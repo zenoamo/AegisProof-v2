@@ -28,7 +28,7 @@ try {
   process.env.LOCAL_OPENSSL_KEY_ID = "aegis-ci-mldsa87-v1";
   process.env.VAULT_TOKEN = "test-vault-token";
   delete process.env.VAULT_TRANSIT_TOKEN;
-  process.env.KMS_BACKEND_MODE = "live";
+  process.env.KMS_BACKEND_MODE = "stub";
 
   let signCalls = 0;
   let verifyCalls = 0;
