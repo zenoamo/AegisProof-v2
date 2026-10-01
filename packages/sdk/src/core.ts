@@ -1,4 +1,4 @@
-// ============================================================================
+//\n\n/** Verify that the SDK client is connected to the configured chain. */\nexport async function assertVerifierClientChainId(\n  client: ReturnType<typeof createPublicClient>,\n  expectedChainId: number,\n): Promise<void> {\n  const actualChainId = await client.getChainId();\n  if (actualChainId !== expectedChainId) {\n    throw new ChainIdMismatchError(expectedChainId, actualChainId);\n  }\n}\n ============================================================================
 // Phase 6 — AegisProof TypeScript SDK (v2.0 Enhanced)
 // ----------------------------------------------------------------------------
 // Strongly typed APIs for proof verification, calldata generation, and contract
@@ -218,6 +218,17 @@ export class GasEstimationError extends AegisSDKError {
   constructor(message: string) {
     super(message, "GAS_ESTIMATION_FAILED");
     this.name = "GasEstimationError";
+  }
+}
+
+export class ChainIdMismatchError extends AegisSDKError {
+  constructor(expectedChainId: number, actualChainId: number) {
+    super(
+      `RPC chain ID mismatch: expected ${expectedChainId}, got ${actualChainId}`,
+      "CHAIN_ID_MISMATCH",
+      { expectedChainId, actualChainId },
+    );
+    this.name = "ChainIdMismatchError";
   }
 }
 
