@@ -51,7 +51,7 @@ Defined in [protocol/specs](../../protocol/specs) (canonical 30-signal SSoT). Ke
 | Timestamp binding | Untrusted metadata; excluded from commitment/nullifier |
 | ChainId binding | Signal included in nullifier; enforced against `block.chainid` |
 | Session binding | sessionId nullifier-bound + session registry on-chain |
-| Replay protection | Used-nullifier set in Shield contract |
+| Replay protection | Chain-wide `AegisNullifierRegistry` + Shield-local observability state |
 | Timestamp window | Contract-side: `now ∈ [ts - MAX_AGE - SKEW, ts + SKEW]` |
 | Versions | `SUPPORTED_PROTOCOL_VERSION = 2`; future upgrades via versioning |
 
@@ -65,7 +65,8 @@ Defined in [protocol/specs](../../protocol/specs) (canonical 30-signal SSoT). Ke
 #### Shield
 
 - `protocol/contracts/AegisShieldV2.sol`: immutable; operator-controlled session lifecycle; proof acceptance policy.
-- Constructor parameters: `_verifierAddress`, `_operator`.
+- `protocol/contracts/AegisNullifierRegistry.sol`: chain-wide replay registry shared by all Shield deployments.
+- Constructor parameters: `_verifierAddress`, `_operator`, `_nullifierRegistry`.
 - Constants: `DEPLOYMENT_DOMAIN`, `SUPPORTED_PROTOCOL_VERSION`, `MAX_AGE_seconds`, `CLOCK_SKEW_seconds`.
 
 ### 4. SDK & tooling

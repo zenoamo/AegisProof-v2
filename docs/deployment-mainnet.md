@@ -71,6 +71,10 @@ contractVerifier.verifierAddress() == <deployed_address>
 
 ---
 
+### Step 1a: Deploy Shared Nullifier Registry
+
+Deploy exactly one `AegisNullifierRegistry` for the target chain. Record its address as part of the deployment manifest. Every `AegisShieldV2` deployment on that chain MUST use this same registry, and each Shield address MUST be explicitly authorized in the registry before proof acceptance.
+
 ### Step 2: Deploy Shield Contract
 
 **Contract:** `AegisShieldV2.sol`
@@ -80,18 +84,21 @@ contractVerifier.verifierAddress() == <deployed_address>
 |---|---|---|---|
 | `_verifierAddress` | `address` | <from step 1> | Address of deployed verifier |
 | `_operator` | `address` | `<operator_wallet>` | Account authorized for session management |
+| `_nullifierRegistry` | `address` | <from step 1a> | Shared chain-wide replay registry; MUST be reused by every Shield deployment on this chain |
 
 **Deployment command (dry-run):**
 ```bash
 npx hardhat run scripts/deploy_shield_mainnet.mjs \
   --network mainnet \
   --verifier-address <VERIFIER_CONTRACT_ADDRESS> \
-  --operator <OPERATOR_WALLET_ADDRESS>
+  --operator <OPERATOR_WALLET_ADDRESS> \
+  --nullifier-registry <NULLIFIER_REGISTRY_ADDRESS>
 ```
 
 **Constants baked into Shield:**
 - `SUPPORTED_PROTOCOL_VERSION = 2`
-- `DEPLOYMENT_DOMAIN = keccak256("AEGIS_SHIELD_V2")`
+- `DEPLOYMENT_DOMAIN = keccak256("AEGIS_SHIELD_V2")` (protocol identifier, not deployment-unique)
+- Cross-deployment replay protection: shared `AegisNullifierRegistry`
 - `MAX_AGE_seconds = 86400` (24 hours)
 - `CLOCK_SKEW_seconds = 300` (5 minutes)
 

@@ -14,6 +14,8 @@ on:
       - "*.zkey"
       - "publicSignals.json"
       - ".github/**"
+      - "protocol/**"
+      - "verification/**"
 
   push:
     branches:

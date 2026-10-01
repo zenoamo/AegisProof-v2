@@ -46,6 +46,8 @@ Do not deploy a different verifier that does not match these IC constants.
 
 2. Deploy the production verifier **on-chain** in the same transaction sequence as Shields will use. Replace `<OPERATOR_ADDRESS>` with an account controlled in your local testnet.
 
+   Deploy one `AegisNullifierRegistry` per chain and reuse that registry for every `AegisShieldV2` deployment on the chain. Authorize each Shield address in the registry before accepting proofs.
+
    ```bash
    node scripts/deploy_local.mjs --network default \
      --verifier protocol/contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production \
@@ -54,7 +56,9 @@ Do not deploy a different verifier that does not match these IC constants.
 
    On the local Hardhat node, the verifier address will be printed along with bytecode verification confirmation (local-only). The script also confirms the IC hash matches the production vkey.
 
-3. (Optional) Run the SDK integration smoke tests after deployment:
+3. Deploy `AegisShieldV2` with the verifier, operator, and the shared `_nullifierRegistry` address. Do not create a separate registry for each Shield.
+
+4. (Optional) Run the SDK integration smoke tests after deployment:
 
    ```bash
    npx hardhat run scripts/sdk_integration_test.mjs --network default
@@ -107,12 +111,13 @@ The `hardhat.config.ts` file configures:
    - Transaction hash for verification
    - IC hash verification message confirming it matches the production vkey
 
-3. Deploy the Shield with the produced verifier address:
+3. Deploy the shared `AegisNullifierRegistry` first, then deploy the Shield with the produced verifier address and registry address:
 
    ```bash
    node scripts/deploy_shield_sepolia.mjs --network sepolia \
      --verifier-address <VERIFIER_CONTRACT_ADDRESS> \
      --operator $OPERATOR_ADDRESS \
+     --nullifier-registry <NULLIFIER_REGISTRY_ADDRESS> \
      --deployer-wallet $PRIVATE_KEY
    ```
 
@@ -159,11 +164,13 @@ The **current repository state remains non-deployed on mainnet.** Any future mai
 |---|---|---|---|
 | `_verifierAddress` | `address` | Address of the verifier contract | Must point to Groth16VerifierV2Production.sol (IC hash d012bd29…) |
 | `_operator` | `address` | Account allowed to register/session lifecycle changes | Human-selected; do not hardcode |
+| `_nullifierRegistry` | `address` | Shared chain-wide replay registry | One registry per chain; reuse across all Shield deployments |
 
 Additional constants baked into `AegisShieldV2.sol`:
 
 - `SUPPORTED_PROTOCOL_VERSION = 2`
-- `DEPLOYMENT_DOMAIN = keccak256("AEGIS_SHIELD_V2")`
+- `DEPLOYMENT_DOMAIN = keccak256("AEGIS_SHIELD_V2")` (protocol identifier; not deployment-unique)
+- Cross-deployment replay protection is enforced by the shared `AegisNullifierRegistry`.
 - `MAX_AGE_seconds = 86400`
 - `CLOCK_SKEW_seconds = 300`
 
