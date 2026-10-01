@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   kms-live-smoke:
-    name: OIDC → Vault → sign → verify
+    name: OIDC → Vault → local OpenSSL → sign → verify
     runs-on: ubuntu-latest
     environment: kms-live-smoke
     permissions:
@@ -43,11 +43,13 @@ jobs:
           console.log('OIDC preflight: context ready');
           "
 
-      - name: KMS live smoke (OIDC → Vault Transit)
+      - name: KMS live smoke (OIDC → Vault → local OpenSSL ML-DSA-87)
         env:
           KMS_BACKEND_MODE: live
           AEGIS_PROVENANCE_SIGNING: kms
-          AEGIS_PROVENANCE_BACKEND: vault-transit
+          AEGIS_PROVENANCE_BACKEND: local-openssl
+          LOCAL_OPENSSL_SIGNER_URL: ${{ secrets.LOCAL_OPENSSL_SIGNER_URL }}
+          LOCAL_OPENSSL_KEY_ID: aegis-ci-mldsa87-v1
           AEGIS_PROVENANCE_KEY_ID: aegis-ci-mldsa87-v1
           VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
           VAULT_JWT_ROLE: ci-provenance-signer
