@@ -64,7 +64,18 @@ Environment:
 | `VAULT_TRANSIT_HASH_ALGORITHM` | Override hash algorithm (default `sha2-256`) |
 | `KMS_BACKEND_MODE` | `stub` (default) or `live` |
 
-### 3. `cloud-hsm` (live)
+### 3. `local-openssl` (live, CI smoke bridge)
+
+- Uses a local OpenSSL 3.5 signer service for ML-DSA-87 because Vault OSS Transit does not provide ML-DSA Transit keys.
+- GitHub Actions authenticates to Vault with GitHub OIDC first; the short-lived Vault token is then presented to the local signer service.
+- The signer service checks the Vault token via `auth/token/lookup-self` and requires the `ci-provenance-signer` policy before invoking OpenSSL. The Vault role/policy must therefore grant `read` on `auth/token/lookup-self`; without that capability the signer fails closed with `Vault authorization rejected`. The required policy name can be overridden on the signer host with `LOCAL_OPENSSL_REQUIRED_VAULT_POLICY`.
+- Private key remains on the local signer host; it is never committed, uploaded to GitHub, or returned by the service.
+- Configuration: `LOCAL_OPENSSL_SIGNER_URL`, optional `LOCAL_OPENSSL_KEY_ID` (default `aegis-ci-mldsa87-v1`), and on the signer host `LOCAL_OPENSSL_PRIVATE_KEY_PATH` / `OPENSSL_BIN`.
+- Service entrypoint: `scripts/local-openssl-signer.mjs`.
+- Deployment boundary: the signer service binds to `127.0.0.1` by default. `LOCAL_OPENSSL_SIGNER_URL` must therefore resolve from the GitHub Actions runner to the signer host through an explicitly provisioned network path (for example, a self-hosted runner on the signer host or an approved private/reverse-proxy endpoint). A GitHub-hosted runner cannot reach the signer host simply because the service is running on `127.0.0.1` elsewhere. The protected `KMS Live Smoke` workflow uses a self-hosted runner with labels `self-hosted`, `linux`, and `kms-signer`, starts `scripts/local-openssl-signer.mjs` on that runner, and connects to `http://127.0.0.1:8787`. The runner must provision OpenSSL 3.5 at `/opt/openssl-3.5/bin/openssl` and the ML-DSA-87 private key at `/etc/aegis/kms/aegis-ci-mldsa87-v1.pem`; the private key is never stored in GitHub.
+- The live smoke first probes `/healthz`; signing is attempted only after the endpoint reports `backend=local-openssl` and `algorithm=ML-DSA-87`.
+
+### 4. `cloud-hsm` (live)
 
 Providers via `CLOUD_HSM_PROVIDER`:
 
@@ -116,7 +127,7 @@ Native AWS/GCP/Azure KMS APIs document ECDSA/RSA/Ed25519 — not ML-DSA-87 in th
 
 ```javascript
 {
-  backend: "mock-hsm" | "vault-transit" | "cloud-hsm",
+  backend: "mock-hsm" | "vault-transit" | "local-openssl" | "cloud-hsm",
   keyId: "test-provenance-kms-01",  // test- prefix required for mock-hsm
   role: "provenance" | "operator-pqc" | "operator-classical",
   algorithm: "ML-DSA-87",           // optional; inferred from role
@@ -140,6 +151,7 @@ Native AWS/GCP/Azure KMS APIs document ECDSA/RSA/Ed25519 — not ML-DSA-87 in th
 | T-KMS-08 | Cloud HSM HTTP gateway sign/verify | same |
 | T-KMS-09 | AWS KMS rejects ML-DSA provenance role | same |
 | T-KMS-10–18 | Live mode, auth, timeout, validation, redaction | `kms-backend-hardening.test.mjs` |
+| T-LOCAL-01–05 | Local OpenSSL sign/verify, key binding, response/error handling | `local-openssl-backend.test.mjs` |
 
 Run: `npm run test:kms-signer`
 
@@ -150,6 +162,18 @@ Run: `npm run test:kms-signer`
 `security-boundary-check` job runs `npm run test:kms-signer` after penetration tests.
 
 ---
+
+## Phase 8.14 Task 4 live path
+
+The live smoke path is intentionally split into two trust boundaries:
+
+```text
+GitHub Actions OIDC → Vault JWT auth/claims → short-lived Vault token → local OpenSSL signer → ML-DSA-87
+```
+
+Vault OSS remains the authentication/policy gate; OpenSSL 3.5 performs the ML-DSA-87 cryptographic operation. This avoids claiming that Vault OSS Transit performs ML-DSA-87 when it does not.
+
+The workflow uses the protected `kms-live-smoke` environment and requires the `LOCAL_OPENSSL_SIGNER_URL` environment secret in addition to `VAULT_ADDR`.
 
 ## Out of Scope (Task 4+)
 

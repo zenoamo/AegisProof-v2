@@ -65,7 +65,41 @@ async function main() {
   }
   console.log(`PASS Vault auth (${auth.source})`);
 
-  console.log("Step 3: KMS sign + verify");
+  console.log("Step 3: local OpenSSL signer reachability");
+  const signerUrl = (process.env.LOCAL_OPENSSL_SIGNER_URL ?? "").trim();
+  if (!signerUrl) {
+    console.error("FAIL LOCAL_OPENSSL_SIGNER_URL is required");
+    process.exit(1);
+  }
+  let healthUrl;
+  try {
+    healthUrl = new URL("/healthz", signerUrl).toString();
+  } catch {
+    console.error("FAIL LOCAL_OPENSSL_SIGNER_URL is invalid");
+    process.exit(1);
+  }
+  try {
+    const health = await fetch(healthUrl, { method: "GET" });
+    if (!health.ok) {
+      console.error(`FAIL local signer healthz HTTP ${health.status}`);
+      process.exit(1);
+    }
+    const body = await health.json();
+    if (body?.backend !== "local-openssl" || body?.algorithm !== "ML-DSA-87") {
+      console.error("FAIL local signer healthz identity mismatch");
+      process.exit(1);
+    }
+    console.log("PASS local OpenSSL signer reachable");
+  } catch (err) {
+    console.error("FAIL local OpenSSL signer unreachable");
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+
+  console.log("Step 4: KMS sign + verify");
+  console.log("  backend: local-openssl");
+  console.log("  algorithm: ML-DSA-87");
+  console.log("  keyId: " + (process.env.LOCAL_OPENSSL_KEY_ID ?? "aegis-ci-mldsa87-v1"));
   const signer = createProvenanceKmsSigner();
   const signed = await signEntryWithKms(testEntry, signer);
   const verify = await verifyEntryKms(signed, signer);

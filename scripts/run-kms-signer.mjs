@@ -7,6 +7,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const suites = [
   path.join(ROOT, "tests", "security", "kms-signer.test.mjs"),
   path.join(ROOT, "tests", "security", "kms-backend-hardening.test.mjs"),
+  path.join(ROOT, "tests", "security", "local-openssl-backend.test.mjs"),
 ];
 
 let failed = false;
