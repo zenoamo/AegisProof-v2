@@ -149,7 +149,8 @@ jobs:
 
           git diff --exit-code -- \
             generated/AegisSignals.ts \
-            contracts/generated/AegisSignals.sol
+            contracts/generated/AegisSignals.sol \
+            packages/sdk/src/generated/AegisSignals.ts
 
       # NOTE:
       # Do NOT call scripts/verify_manifest.mjs.
