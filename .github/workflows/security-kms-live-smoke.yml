@@ -5,7 +5,7 @@
 name: KMS Live Smoke
 
 on:
-  workflow_dispatch:
+  workflow_dispatch
 
 permissions:
   id-token: write
@@ -34,6 +34,7 @@ jobs:
         env:
           LOCAL_OPENSSL_PRIVATE_KEY_PATH: /etc/aegis/kms/aegis-ci-mldsa87-v1.pem
           OPENSSL_BIN: /opt/openssl-3.5/bin/openssl
+          LD_LIBRARY_PATH: /opt/openssl-3.5/lib64
         run: |
           test -f "$LOCAL_OPENSSL_PRIVATE_KEY_PATH" || { echo "FAIL private key not provisioned"; exit 1; }
           test -x "$OPENSSL_BIN" || { echo "FAIL OpenSSL 3.5 binary not provisioned"; exit 1; }
@@ -45,6 +46,7 @@ jobs:
           LOCAL_OPENSSL_KEY_ID: aegis-ci-mldsa87-v1
           LOCAL_OPENSSL_PRIVATE_KEY_PATH: /etc/aegis/kms/aegis-ci-mldsa87-v1.pem
           OPENSSL_BIN: /opt/openssl-3.5/bin/openssl
+          LD_LIBRARY_PATH: /opt/openssl-3.5/lib64
           LOCAL_OPENSSL_SIGNER_PORT: 8787
         run: |
           nohup node scripts/local-openssl-signer.mjs > "$RUNNER_TEMP/local-openssl-signer.log" 2>&1 &
