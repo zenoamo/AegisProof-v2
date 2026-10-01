@@ -44,16 +44,18 @@ import {
   CloudHsmError,
 } from "./kms-backends/cloud-hsm.mjs";
 import { isExplicitLiveMode, isVaultForceLive, validateCloudHsmEnv } from "./kms-backends/env.mjs";
+import { isLocalOpenSslConfigured, localOpenSslSign, localOpenSslVerify } from "./kms-backends/local-openssl.mjs";
 
 export const BACKEND_MOCK_HSM = "mock-hsm";
 export const BACKEND_VAULT_TRANSIT = "vault-transit";
 export const BACKEND_CLOUD_HSM = "cloud-hsm";
+export const BACKEND_LOCAL_OPENSSL = "local-openssl";
 
 export const SIGNER_ROLE_PROVENANCE = "provenance";
 export const SIGNER_ROLE_OPERATOR_PQC = "operator-pqc";
 export const SIGNER_ROLE_OPERATOR_CLASSICAL = "operator-classical";
 
-export const SUPPORTED_BACKENDS = [BACKEND_MOCK_HSM, BACKEND_VAULT_TRANSIT, BACKEND_CLOUD_HSM];
+export const SUPPORTED_BACKENDS = [BACKEND_MOCK_HSM, BACKEND_VAULT_TRANSIT, BACKEND_CLOUD_HSM, BACKEND_LOCAL_OPENSSL];
 
 const ROLE_DOMAINS = {
   [SIGNER_ROLE_PROVENANCE]: PROVENANCE_DOMAIN,
@@ -121,7 +123,7 @@ export function verifySignerConfiguration(config) {
     errors.push(`algorithm mismatch for role ${config.role}: expected ${expectedAlgorithm}, got ${algorithm}`);
   }
 
-  if (config.backend === BACKEND_VAULT_TRANSIT || config.backend === BACKEND_CLOUD_HSM) {
+  if (config.backend === BACKEND_VAULT_TRANSIT || config.backend === BACKEND_CLOUD_HSM || config.backend === BACKEND_LOCAL_OPENSSL) {
     const record = loadRegistryPublicKey(config.keyId);
     if (!record) {
       errors.push(`unknown keyId in registry: ${config.keyId}`);
@@ -275,6 +277,12 @@ export function getPublicKeyMetadata(signer) {
     };
   }
 
+  if (signer.backend === BACKEND_LOCAL_OPENSSL) {
+    const record = loadRegistryPublicKey(signer.keyId);
+    if (!record) throw new KmsSecurityError("UNKNOWN_KEY", `unknown keyId: ${signer.keyId}`);
+    return { keyId: signer.keyId, backend: signer.backend, role: signer.role, algorithm: signer.algorithm, domain: signer.domain, version: record.version, publicKey: record.publicKey, purpose: record.purpose, exportAllowed: false, live: isLocalOpenSslConfigured() };
+  }
+
   if (signer.backend === BACKEND_CLOUD_HSM) {
     const record = loadRegistryPublicKey(signer.keyId);
     if (!record) {
@@ -320,6 +328,10 @@ export async function signPayload(signer, payload) {
 
   if (signer.backend === BACKEND_CLOUD_HSM) {
     return signWithCloudHsm(signer, message);
+  }
+
+  if (signer.backend === BACKEND_LOCAL_OPENSSL) {
+    return signWithLocalOpenSsl(signer, message);
   }
 
   throw new KmsSecurityError("NOT_IMPLEMENTED", `unsupported backend: ${signer.backend}`);
@@ -432,6 +444,19 @@ async function signWithVaultTransit(signer, message) {
     signedAt: new Date().toISOString(),
     stub: true,
   };
+}
+
+/** Local OpenSSL 3.5 ML-DSA-87 signer service. */
+async function signWithLocalOpenSsl(signer, message) {
+  if (!isExplicitLiveMode()) throw new KmsSecurityError("LOCAL_OPENSSL_FORBIDDEN_IN_STUB_MODE", "local-openssl outbound signing is forbidden when KMS_BACKEND_MODE=stub");
+  if (!isLocalOpenSslConfigured()) throw new KmsSecurityError("LOCAL_OPENSSL_NOT_CONFIGURED", "LOCAL_OPENSSL_SIGNER_URL is required in live mode");
+  getPublicKeyMetadata(signer);
+  try {
+    const result = await localOpenSslSign({ message, keyId: signer.keyId });
+    return { keyId: signer.keyId, backend: signer.backend, role: signer.role, algorithm: signer.algorithm, domain: signer.domain, version: PQC_VERSION, signature: result.signature, publicKeyId: signer.keyId, signedAt: new Date().toISOString(), live: true, encoding: result.encoding };
+  } catch (err) {
+    throw new KmsSecurityError("LOCAL_OPENSSL_SIGN_FAILED", err instanceof Error ? err.message : String(err));
+  }
 }
 
 /**
@@ -560,6 +585,11 @@ export async function verifySignedPayload(signer, payload, signatureResult) {
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
+  }
+
+  if (signer.backend === BACKEND_LOCAL_OPENSSL && signatureResult.live) {
+    const result = await localOpenSslVerify({ message, signature: signatureResult.signature, keyId: signer.keyId });
+    return result.ok ? { ok: true } : { ok: false, error: result.error };
   }
 
   if (signer.backend === BACKEND_CLOUD_HSM && signatureResult.live) {
