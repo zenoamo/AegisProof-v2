@@ -45,26 +45,19 @@ describe("AegisProof SDK Integration", () => {
   describe("signal mapping", () => {
     
     it("builds public signals from named inputs", () => {
-      const inputs = {
-        timestamp: "1234567890",
-        chainId: "31337",
-        protocolVersion: "2",
-        deviceId: "device-001",
-        commitment: "0xabc",
-        nullifier: "0xdef",
-        sessionId: "777",
-        purposeId: "42",
-      };
-      
-      // Add remaining signals with default values
-      for (let i = 8; i < 30; i++) {
-        inputs[sdk.SIGNAL_NAMES[i]] = "0";
+      const inputs: Record<string, string> = {};
+      for (const [index, name] of sdk.SIGNAL_NAMES.entries()) {
+        inputs[name] = String(index + 1);
       }
+      inputs.timestamp = "1234567890";
+      inputs.chainId = "31337";
       
       const signals = sdk.buildPublicSignals(inputs);
       expect(signals).toHaveLength(30);
-      expect(signals[0]).toBe("1234567890");
-      expect(signals[1]).toBe("31337");
+      expect(signals[0]).toBe("1");
+      expect(signals[22]).toBe("23");
+      expect(signals[24]).toBe("1234567890");
+      expect(signals[29]).toBe("30");
     });
     
     it("throws on missing required signals", () => {
@@ -90,17 +83,18 @@ describe("AegisProof SDK Integration", () => {
   describe("calldata conversion", () => {
     
     it("pads signals to 64 characters", () => {
-      const shortSignal = "1";
-      const padded = sdk.toCalldataSignals([shortSignal]);
+      const signals = Array.from({ length: 30 }, () => "1");
+      const padded = sdk.toCalldataSignals(signals);
       expect(padded[0]).toBe("0".repeat(63) + "1");
+      expect(padded).toHaveLength(30);
     });
     
     it("converts groth proof coordinates correctly", () => {
       const snarkjsProof = {
         pi_a: ["1", "2"],
         pi_b: [
-          ["y1_lo", "y1_hi"],
-          ["x1_lo", "x1_hi"],
+          ["3", "4"],
+          ["5", "6"],
         ],
         pi_c: ["3", "4"],
       };
@@ -112,10 +106,10 @@ describe("AegisProof SDK Integration", () => {
       expect(calldata.pA[1]).toBe(BigInt("2"));
       
       // Verify G2 coordinate swap (snarkjs y,x -> Solidity x,y)
-      expect(calldata.pB[0][0]).toBe(BigInt("x1_lo")); // Should be x component
-      expect(calldata.pB[0][1]).toBe(BigInt("x1_hi"));
-      expect(calldata.pB[1][0]).toBe(BigInt("y1_lo")); // Should be y component
-      expect(calldata.pB[1][1]).toBe(BigInt("y1_hi"));
+      expect(calldata.pB[0][0]).toBe(BigInt("4")); // x component
+      expect(calldata.pB[0][1]).toBe(BigInt("3"));
+      expect(calldata.pB[1][0]).toBe(BigInt("6")); // y component
+      expect(calldata.pB[1][1]).toBe(BigInt("5"));
     });
     
     it("validates proof structure lengths", () => {
@@ -181,7 +175,18 @@ describe("AegisProof SDK Integration", () => {
     });
     
     it("defines all required signal names", () => {
-      const requiredNames = ["timestamp", "chainId", "protocolVersion", "deviceId", "commitment", "nullifier", "sessionId", "purposeId"];
+      const requiredNames = [
+        "expectedPromptRoot",
+        "expectedOutputRoot",
+        "sessionId",
+        "purposeId",
+        "weightsHash",
+        "chainId",
+        "protocolVersion",
+        "timestamp",
+        "commitment",
+        "nullifier",
+      ];
       for (const name of requiredNames) {
         expect(sdk.SIGNAL_NAMES.includes(name as sdk.SignalName)).toBe(true);
       }
