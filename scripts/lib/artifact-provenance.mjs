@@ -301,6 +301,10 @@ export function verifyManifest(manifest, opts = {}) {
     "aegis_commit_core_v2.r1cs",
   ]);
 
+  if (opts.allowMissingProductionZkey) {
+    requiredArtifacts.delete("production.zkey");
+  }
+
   const seen = new Set();
 
   for (const entry of manifest.entries ?? []) {
@@ -442,6 +446,7 @@ export function verifyLiveArtifacts(opts = {}) {
   const pqcRequired = opts.pqcRequired ?? opts.requirePqcSignature ?? false;
   const result = verifyManifest(manifest, {
     allowMissingOptional: true,
+    allowMissingProductionZkey: opts.allowMissingProductionZkey === true,
     pqcRequired,
   });
   result.elapsedMs = Date.now() - t0;
