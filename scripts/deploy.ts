@@ -55,13 +55,17 @@ function syncLocalhostAddresses(
   verifierAddress: string,
   shieldAddress: string
 ) {
-  const existing =
-    fs.existsSync(ENV_PATH)
-      ? fs.readFileSync(
-          ENV_PATH,
-          "utf8"
-        )
-      : "";
+  let existing = "";
+  try {
+    existing = fs.readFileSync(
+      ENV_PATH,
+      "utf8"
+    );
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+  }
 
   let updated = existing;
 
