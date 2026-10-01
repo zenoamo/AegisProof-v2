@@ -44,6 +44,7 @@ jobs:
         env:
           VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
           LOCAL_OPENSSL_KEY_ID: aegis-ci-mldsa87-v1
+          LOCAL_OPENSSL_REQUIRED_VAULT_POLICY: ci-provenance-signer
           LOCAL_OPENSSL_PRIVATE_KEY_PATH: /etc/aegis/kms/aegis-ci-mldsa87-v1.pem
           OPENSSL_BIN: /opt/openssl-3.5/bin/openssl
           LD_LIBRARY_PATH: /opt/openssl-3.5/lib64
