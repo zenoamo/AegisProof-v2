@@ -8,6 +8,9 @@ import {
   parsePublicSignals,
   toCalldataSignals,
   validateSignalCount,
+  validateSignalValues,
+  InvalidSignalValueError,
+  BN254_SCALAR_FIELD,
   InvalidSignalCountError,
   SignalMappingError,
 } from "../src/core";
@@ -45,6 +48,16 @@ assert.throws(
 assert.throws(
   () => validateSignalCount(signals.slice(0, 29)),
   InvalidSignalCountError,
+);
+
+validateSignalValues(signals);
+assert.throws(
+  () => validateSignalValues(signals.map((value, i) => i === 5 ? "01" : value)),
+  InvalidSignalValueError,
+);
+assert.throws(
+  () => validateSignalValues(signals.map((value, i) => i === 5 ? BN254_SCALAR_FIELD.toString() : value)),
+  InvalidSignalValueError,
 );
 
 const calldata = toCalldataSignals(signals);
