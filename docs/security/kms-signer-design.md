@@ -68,7 +68,7 @@ Environment:
 
 - Uses a local OpenSSL 3.5 signer service for ML-DSA-87 because Vault OSS Transit does not provide ML-DSA Transit keys.
 - GitHub Actions authenticates to Vault with GitHub OIDC first; the short-lived Vault token is then presented to the local signer service.
-- The signer service checks the Vault token via `auth/token/lookup-self` and requires the `ci-provenance-signer` policy before invoking OpenSSL. The required policy can be overridden on the signer host with `LOCAL_OPENSSL_REQUIRED_VAULT_POLICY`.
+- The signer service checks the Vault token via `auth/token/lookup-self` and requires the `ci-provenance-signer` policy before invoking OpenSSL. The Vault role/policy must therefore grant `read` on `auth/token/lookup-self`; without that capability the signer fails closed with `Vault authorization rejected`. The required policy name can be overridden on the signer host with `LOCAL_OPENSSL_REQUIRED_VAULT_POLICY`.
 - Private key remains on the local signer host; it is never committed, uploaded to GitHub, or returned by the service.
 - Configuration: `LOCAL_OPENSSL_SIGNER_URL`, optional `LOCAL_OPENSSL_KEY_ID` (default `aegis-ci-mldsa87-v1`), and on the signer host `LOCAL_OPENSSL_PRIVATE_KEY_PATH` / `OPENSSL_BIN`.
 - Service entrypoint: `scripts/local-openssl-signer.mjs`.
