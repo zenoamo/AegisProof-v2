@@ -191,6 +191,18 @@ async function main() {
       [deployer.account.address]
     );
 
+  const canonicalRegistryAddress =
+    "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512";
+
+  if (
+    registry.address.toLowerCase() !==
+    canonicalRegistryAddress
+  ) {
+    throw new Error(
+      `Canonical registry mismatch on localhost: expected ${canonicalRegistryAddress}, got ${registry.address}`
+    );
+  }
+
   // ==========================================
   // 4. Deploy AegisShieldV2
   // ==========================================
