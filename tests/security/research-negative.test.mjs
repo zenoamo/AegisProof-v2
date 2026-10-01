@@ -68,6 +68,18 @@ function restoreEnv(snapshot) {
   const zkeyIdx = stale.entries.findIndex((e) => e.artifact === "production.zkey");
   if (zkeyIdx >= 0) {
     stale.entries[zkeyIdx].sha256 = "0".repeat(64);
+  } else {
+    stale.entries.push({
+      artifact: "production.zkey",
+      path: "crypto-artifacts/phase4/production.zkey",
+      sha256: "0".repeat(64),
+      size: 1,
+      version: "v2",
+      source: "test",
+      present: true,
+      classicalHash: { algorithm: "SHA-256", digest: "0".repeat(64) },
+      pqcSignatureEnvelope: { status: "unsigned" },
+    });
   }
   const result = verifyManifest(stale, { allowMissingOptional: true });
   ok(!result.ok, "T-RES-001: stale zkey hash rejected");
