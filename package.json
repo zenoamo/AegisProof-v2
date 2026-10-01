@@ -54,7 +54,7 @@
   },
   "type": "module",
   "optionalDependencies": {
-    "@aws-sdk/client-kms": "^3.888.0",
+    "@aws-sdk/client-kms": "^3.1141.0",
     "@azure/identity": "^4.13.3",
     "google-auth-library": "^11.1.0"
   },
