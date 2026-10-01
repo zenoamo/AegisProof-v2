@@ -120,8 +120,8 @@ Mock / fixture PASS in CI must **not** be read as live production TEE verificati
 
 See [deployment.md](../deployment.md). Summary:
 
-- **Local Hardhat**: in-process node; deploy verifier + canonical registry + shield; the deployment script fails closed if the registry address drifts.
-- **Sepolia**: live testnet usage; deploy producer verifier; run on-chain verifier tests.
+- **Local Hardhat**: executable development fixture via `scripts/deploy.ts`; deploys the dev verifier + canonical registry + Shield and fails closed if the registry address drifts.
+- **Sepolia**: authorization-gated procedure only; no executable Sepolia deployment script or registered deployment currently exists.
 - **Mainnet**: documentation only at this time; no deployments have been performed.
 
 Deployment model: **immutable**; no proxies or upgradeable patterns in Phase 5.
