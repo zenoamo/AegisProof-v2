@@ -96,7 +96,9 @@ const strictSigned = verifyManifest(signedManifest, { allowMissingOptional: true
 ok(strictSigned.ok || strictSigned.errors.length === 0, "PT-04: strict tier PASS when properly signed");
 
 const tamperedSigned = JSON.parse(JSON.stringify(signedManifest));
-tamperedSigned.entries[0].sha256 = "d".repeat(64);
+const tamperedEntry = tamperedSigned.entries.find((e) => e.artifact === "production-vkey.json");
+assert.ok(tamperedEntry, "PT-04: repository-local signed artifact fixture");
+tamperedEntry.sha256 = "d".repeat(64);
 const p04e = verifyManifest(tamperedSigned, { allowMissingOptional: true, allowMissingProductionZkey: true, pqcRequired: true });
 ok(!p04e.ok, "PT-04: tampered signed manifest REJECT");
 
