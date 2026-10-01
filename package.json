@@ -50,7 +50,8 @@
     "demo:research-pipeline": "node scripts/demo-research-pipeline.mjs",
     "verify:signals": "tsx scripts/verify-signals.ts",
     "sync:signals": "tsx scripts/sync-signals.ts",
-    "aegis:verify": "tsx scripts/aegis-auto-verify.ts"
+    "aegis:verify": "tsx scripts/aegis-auto-verify.ts",
+    "validate:deployment-manifest": "node scripts/validate-deployment-manifest.mjs"
   },
   "type": "module",
   "optionalDependencies": {
