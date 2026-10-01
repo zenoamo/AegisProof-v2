@@ -84,3 +84,8 @@ The following are **read-only** for this audit. No modifications detected:
 ## Verdict
 
 **PASS** — Repository boundary is documented and enforced. Migration debt is acknowledged and allowlisted; does not block public source release with documented caveats.
+
+
+## Migration update — 2026-10-01
+
+Production zkey has been removed from the repository working tree as part of migration. External secure storage provisioning and CI retrieval are still pending, so production artifact verification is expected to remain blocked until the operator completes the secure-storage setup.
