@@ -559,7 +559,6 @@ jobs:
           sha256sum \
             crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm \
             crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs \
-            crypto-artifacts/phase4/production.zkey \
             crypto-artifacts/phase4/production-vkey.json
 
 
