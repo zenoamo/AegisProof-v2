@@ -99,7 +99,7 @@ export const SIGNAL_INDEX_MAP: Record<SignalName, number> = SIGNAL_INDEX;
  */
 export const EXPECTED_SIGNAL_COUNT = N_PUBLIC_SIGNALS as 30;
 
-//** ==========================================================================
+/** ==========================================================================
  * CUSTOM ERROR CLASSES
  * ========================================================================== */
 
