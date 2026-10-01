@@ -23,7 +23,7 @@ async function vaultTokenIsAuthorized(token) {
     console.error("Vault authorization rejected: bearer token missing");
     return false;
   }
-  const res = await fetch(VAULT_ADDR + "/v1/auth/token/lookup-self", { method: "POST", headers: { "X-Vault-Token": token, "Content-Type": "application/json" } });
+  const res = await fetch(VAULT_ADDR + "/v1/auth/token/lookup-self", { method: "GET", headers: { "X-Vault-Token": token } });
   if (!res.ok) {
     console.error("Vault token lookup rejected: HTTP " + res.status);
     return false;
