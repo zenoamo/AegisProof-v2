@@ -377,6 +377,8 @@ jobs:
 
   prover-compatibility:
     name: Prover compatibility
+    # Production zkey is external; enable this job only when provisioned.
+    if: ${{ vars.AEGIS_PRODUCTION_ZKEY_AVAILABLE == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     if: github.event_name == 'push' || github.event_name == 'pull_request'
@@ -864,7 +866,11 @@ jobs:
               validate "fast" "$FAST"
               validate "phase5-readiness" "$PHASE5"
               validate "tee-layer-regression" "$TEE"
-              validate "prover-compatibility" "$PROVER_COMPATIBILITY"
+              if [[ "$PROVER_COMPATIBILITY" == "skipped" ]]; then
+                echo "prover-compatibility=skipped (external production zkey not provisioned)"
+              else
+                validate "prover-compatibility" "$PROVER_COMPATIBILITY"
+              fi
               validate "formal-assurance" "$FORMAL_ASSURANCE"
               validate "hybrid-auth-research" "$HYBRID_AUTH"
 
