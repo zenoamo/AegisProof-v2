@@ -56,7 +56,7 @@
   "optionalDependencies": {
     "@aws-sdk/client-kms": "^3.888.0",
     "@azure/identity": "^4.12.0",
-    "google-auth-library": "^10.3.0"
+    "google-auth-library": "^11.1.0"
   },
   "overrides": {
     "ws": "8.21.1",
