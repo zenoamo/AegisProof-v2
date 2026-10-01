@@ -46,12 +46,12 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -166,7 +166,7 @@ jobs:
 
           function parse(version) {
             const m = version.match(
-              /^(\\d+)\\.(\\d+)\\.(\\d+)/
+              /^(\d+)\.(\d+)\.(\d+)/
             );
 
             if (!m) {
@@ -278,12 +278,12 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -381,7 +381,7 @@ jobs:
 
           function safe(version) {
             const m = version.match(
-              /^(\\d+)\\.(\\d+)\\.(\\d+)/
+              /^(\d+)\.(\d+)\.(\d+)/
             );
 
             if (!m) {
@@ -453,7 +453,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -465,10 +465,10 @@ jobs:
         shell: bash
         run: |
           cat > frozen-core-paths.txt <<'EOF'
-          circuit.wasm
-          circuit.r1cs
-          production.zkey
-          publicSignals.json
+          crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm
+          crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs
+          crypto-artifacts/phase4/production.zkey
+          crypto-artifacts/phase4/production-vkey.json
           EOF
 
           cat frozen-core-paths.txt
@@ -537,20 +537,32 @@ jobs:
         shell: bash
         run: |
 
-          if [[ ! -f checksums.sha256 ]]; then
-            echo "checksums.sha256 not found."
-            exit 1
-          fi
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          import crypto from "node:crypto";
 
-          sha256sum -c checksums.sha256
+          const expected = {
+            "crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
+            "crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs": "3d47226b06d707b1765d7bf35acd01966b9800b0f6fb77cfe084a775f0fa5599",
+            "crypto-artifacts/phase4/production.zkey": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+            "crypto-artifacts/phase4/production-vkey.json": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec"
+          };
+
+          for (const [file, want] of Object.entries(expected)) {
+            if (!fs.existsSync(file)) throw new Error(`missing frozen artifact: ${file}`);
+            const got = crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+            if (got !== want) throw new Error(`SHA-256 mismatch: ${file} got ${got}`);
+            console.log(`PASS ${file} ${got}`);
+          }
+          NODE
 
       - name: Print Frozen Core hashes
         run: |
           sha256sum \
-            circuit.wasm \
-            circuit.r1cs \
-            production.zkey \
-            publicSignals.json
+            crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm \
+            crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs \
+            crypto-artifacts/phase4/production.zkey \
+            crypto-artifacts/phase4/production-vkey.json
 
 
   # ============================================================
@@ -564,7 +576,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Verify publicSignals
         shell: bash
@@ -574,7 +586,7 @@ jobs:
           const fs = require("node:fs");
 
           const FILE =
-            "publicSignals.json";
+            "specs/aegis-protocol.v2.json";
 
           const EXPECTED_COUNT = 30;
 
@@ -585,9 +597,10 @@ jobs:
             process.exit(1);
           }
 
-          const signals = JSON.parse(
+          const protocol = JSON.parse(
             fs.readFileSync(FILE, "utf8")
           );
+          const signals = protocol.publicSignals;
 
           if (!Array.isArray(signals)) {
             console.error(
@@ -643,12 +656,12 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -659,76 +672,16 @@ jobs:
           npm ci --ignore-scripts
 
       # ----------------------------------------------------------
-      # T1
+      # T1-T9
       # ----------------------------------------------------------
 
-      - name: T1
+      - name: Compile prover verifier
         run: |
-          npm run test:T1
+          npx hardhat compile --config scripts/hardhat-prover.config.ts
 
-      # ----------------------------------------------------------
-      # T2
-      # ----------------------------------------------------------
-
-      - name: T2
+      - name: T1-T9
         run: |
-          npm run test:T2
-
-      # ----------------------------------------------------------
-      # T3
-      # ----------------------------------------------------------
-
-      - name: T3
-        run: |
-          npm run test:T3
-
-      # ----------------------------------------------------------
-      # T4
-      # ----------------------------------------------------------
-
-      - name: T4
-        run: |
-          npm run test:T4
-
-      # ----------------------------------------------------------
-      # T5
-      # ----------------------------------------------------------
-
-      - name: T5
-        run: |
-          npm run test:T5
-
-      # ----------------------------------------------------------
-      # T6
-      # ----------------------------------------------------------
-
-      - name: T6
-        run: |
-          npm run test:T6
-
-      # ----------------------------------------------------------
-      # T7
-      # ----------------------------------------------------------
-
-      - name: T7
-        run: |
-          npm run test:T7
-
-      # ----------------------------------------------------------
-      # T8
-      # ----------------------------------------------------------
-
-      - name: T8
-        run: |
-          npm run test:T8
-
-      # ----------------------------------------------------------
-      # T9
-      # ----------------------------------------------------------
-
-      - name: T9
-        run: |
-          npm run test:T9
+          npm run test:prover-compat
 
       # ----------------------------------------------------------
       # Final working tree check

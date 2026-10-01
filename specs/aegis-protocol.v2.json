@@ -1,0 +1,103 @@
+{
+  "protocol": "AegisProof",
+  "version": 2,
+  "status": "approved-phase1-implemented-phase2",
+  "approval": {
+    "decision": "PHASE 2 AUTHORIZATION / AUTHORIZED",
+    "layout": "Option X (chainId included) + Phase 1 recommended 30-signal arrangement",
+    "sessionBinding": "Option A (sessionId bound to Nullifier only)",
+    "timestampPolicy": "excluded from commitment; contract validity window only",
+    "crossContract": "contract-layer DEPLOYMENT_DOMAIN (address not in nullifier)",
+    "trustedSetup": "multi-contributor + beacon (Phase 4; NOT executed in Phase 2)",
+    "additionalConditions": { "MAX_AGE_seconds": 86400, "CLOCK_SKEW_seconds": 300 }
+  },
+  "curve": "bn128",
+  "domainSeparation": {
+    "encoding": "UTF-8 bytes -> big-endian integer (must fit in one field element, <=31 bytes) -> Poseidon([fieldElement])",
+    "domainNullifierV2Label": "AEGIS_NULLIFIER_V2",
+    "domainNullifierV2": "20148535406093122816468858649806210947444276317485944952083069500197208546562",
+    "derivation": "nothing-up-my-sleeve; MUST NOT be hand-picked; consumers MUST verify against this derivation, never re-derive independently with a different encoding"
+  },
+  "commitment": {
+    "hash": "Poseidon(6)",
+    "semantics": "content identity: what was proven; session-independent",
+    "inputs": [
+      "expectedPromptRoot",
+      "expectedOutputRoot",
+      "modelManifestCommitment",
+      "executionEnvCommitment",
+      "generationCommitment",
+      "protocolVersion"
+    ],
+    "excluded": {
+      "sessionId": "usage context, bound via nullifier (Option A)",
+      "purposeId": "usage context, bound via nullifier",
+      "timestamp": "untrusted prover-chosen metadata; not content identity"
+    }
+  },
+  "nullifier": {
+    "hash": "Poseidon(8)",
+    "semantics": "consumption domain identifier: consumed exactly once per (identity, device, purpose, session, content, protocol version, chain)",
+    "inputs": [
+      "DOMAIN_NULLIFIER_V2",
+      "secretKey",
+      "deviceId",
+      "purposeId",
+      "sessionId",
+      "commitment",
+      "protocolVersion",
+      "chainId"
+    ],
+    "collisionAssumption": "under Poseidon collision resistance, distinct consumption domains collide only with negligible probability (NOT unconditional injectivity)"
+  },
+  "publicSignals": [
+    { "index": 0,  "name": "expectedPromptRoot",       "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:commitment", "contract:log"], "public": true,  "binding": "commitment-input", "inCommitment": true,  "inNullifier": false, "description": "Merkle root identifying the prompt content" },
+    { "index": 1,  "name": "expectedOutputRoot",       "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:commitment", "contract:log"], "public": true,  "binding": "commitment-input", "inCommitment": true,  "inNullifier": false, "description": "Merkle root identifying the output content" },
+    { "index": 2,  "name": "sessionId",                "type": "field", "role": "context",  "producer": "prover",  "consumers": ["circuit:nullifier", "contract:session-check"], "public": true, "binding": "nullifier-input", "inCommitment": false, "inNullifier": true, "description": "consumption-domain session identifier; MUST be nonzero" },
+    { "index": 3,  "name": "purposeId",                "type": "field", "role": "context",  "producer": "prover",  "consumers": ["circuit:nullifier", "contract:allowedPurposes"], "public": true, "binding": "nullifier-input", "inCommitment": false, "inNullifier": true, "description": "usage purpose; whitelist enforced at contract layer" },
+    { "index": 4,  "name": "weightsHash",              "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:modelManifest"], "public": true, "binding": "commitment-input(via modelManifestCommitment)", "inCommitment": true, "inNullifier": false, "description": "model weights identifier" },
+    { "index": 5,  "name": "tokenizerHash",            "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:modelManifest"], "public": true, "binding": "commitment-input(via modelManifestCommitment)", "inCommitment": true, "inNullifier": false, "description": "tokenizer identifier" },
+    { "index": 6,  "name": "systemPromptHash",         "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:modelManifest"], "public": true, "binding": "commitment-input(via modelManifestCommitment)", "inCommitment": true, "inNullifier": false, "description": "system prompt identifier" },
+    { "index": 7,  "name": "loraHash",                 "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:modelManifest"], "public": true, "binding": "commitment-input(via modelManifestCommitment)", "inCommitment": true, "inNullifier": false, "description": "LoRA adapter identifier" },
+    { "index": 8,  "name": "adapterHash",              "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:modelManifest"], "public": true, "binding": "commitment-input(via modelManifestCommitment)", "inCommitment": true, "inNullifier": false, "description": "adapter identifier" },
+    { "index": 9,  "name": "safetyLayerHash",          "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:modelManifest"], "public": true, "binding": "commitment-input(via modelManifestCommitment)", "inCommitment": true, "inNullifier": false, "description": "safety layer identifier" },
+    { "index": 10, "name": "quantizationHash",         "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:executionEnv"], "public": true, "binding": "commitment-input(via executionEnvCommitment)", "inCommitment": true, "inNullifier": false, "description": "quantization identifier" },
+    { "index": 11, "name": "precisionHash",            "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:executionEnv"], "public": true, "binding": "commitment-input(via executionEnvCommitment)", "inCommitment": true, "inNullifier": false, "description": "precision identifier" },
+    { "index": 12, "name": "runtimeHash",              "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:executionEnv"], "public": true, "binding": "commitment-input(via executionEnvCommitment)", "inCommitment": true, "inNullifier": false, "description": "runtime identifier" },
+    { "index": 13, "name": "driverHash",               "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:executionEnv"], "public": true, "binding": "commitment-input(via executionEnvCommitment)", "inCommitment": true, "inNullifier": false, "description": "driver identifier" },
+    { "index": 14, "name": "temperature",              "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:generation"], "public": true, "binding": "commitment-input(via generationCommitment)", "inCommitment": true, "inNullifier": false, "description": "sampling temperature" },
+    { "index": 15, "name": "topP",                     "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:generation"], "public": true, "binding": "commitment-input(via generationCommitment)", "inCommitment": true, "inNullifier": false, "description": "nucleus sampling p" },
+    { "index": 16, "name": "topK",                     "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:generation"], "public": true, "binding": "commitment-input(via generationCommitment)", "inCommitment": true, "inNullifier": false, "description": "top-k sampling" },
+    { "index": 17, "name": "seed",                     "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:generation"], "public": true, "binding": "commitment-input(via generationCommitment)", "inCommitment": true, "inNullifier": false, "description": "generation seed" },
+    { "index": 18, "name": "repetitionPenalty",        "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:generation"], "public": true, "binding": "commitment-input(via generationCommitment)", "inCommitment": true, "inNullifier": false, "description": "repetition penalty" },
+    { "index": 19, "name": "presencePenalty",          "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:generation"], "public": true, "binding": "commitment-input(via generationCommitment)", "inCommitment": true, "inNullifier": false, "description": "presence penalty" },
+    { "index": 20, "name": "frequencyPenalty",         "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:generation"], "public": true, "binding": "commitment-input(via generationCommitment)", "inCommitment": true, "inNullifier": false, "description": "frequency penalty" },
+    { "index": 21, "name": "maxTokens",                "type": "field", "role": "content",  "producer": "prover",  "consumers": ["circuit:generation"], "public": true, "binding": "commitment-input(via generationCommitment)", "inCommitment": true, "inNullifier": false, "description": "max tokens" },
+    { "index": 22, "name": "chainId",                  "type": "field", "role": "domain",   "producer": "prover",  "consumers": ["circuit:nullifier", "contract:==block.chainid"], "public": true, "binding": "nullifier-input", "inCommitment": false, "inNullifier": true, "description": "consumption chain; contract validates against block.chainid" },
+    { "index": 23, "name": "protocolVersion",          "type": "field", "role": "domain",   "producer": "prover",  "consumers": ["circuit:commitment", "circuit:nullifier", "contract:version-check"], "public": true, "binding": "commitment-input+nullifier-input", "inCommitment": true, "inNullifier": true, "description": "protocol semantic version; binds both hashes" },
+    { "index": 24, "name": "timestamp",                "type": "field", "role": "metadata", "producer": "prover",  "consumers": ["contract:validity-window"], "public": true, "binding": "none (untrusted metadata)", "inCommitment": false, "inNullifier": false, "description": "generation-time claim; NOT authenticated; window-checked only; MUST NOT drive replay protection" },
+    { "index": 25, "name": "modelManifestCommitment",  "type": "field", "role": "content",  "producer": "circuit(provided+constrained)", "consumers": ["circuit:commitment"], "public": true, "binding": "commitment-input", "inCommitment": true, "inNullifier": false, "description": "Poseidon tree over model identity hashes" },
+    { "index": 26, "name": "executionEnvCommitment",   "type": "field", "role": "content",  "producer": "circuit(provided+constrained)", "consumers": ["circuit:commitment"], "public": true, "binding": "commitment-input", "inCommitment": true, "inNullifier": false, "description": "Poseidon over execution environment hashes" },
+    { "index": 27, "name": "generationCommitment",     "type": "field", "role": "content",  "producer": "circuit(provided+constrained)", "consumers": ["circuit:commitment"], "public": true, "binding": "commitment-input", "inCommitment": true, "inNullifier": false, "description": "Poseidon tree over generation parameters" },
+    { "index": 28, "name": "commitment",               "type": "field", "role": "derived",  "producer": "circuit(provided+equality-constrained)", "consumers": ["contract:record", "circuit:nullifier"], "public": true, "binding": "equality-constrained Poseidon(6) output", "inCommitment": false, "inNullifier": true, "description": "content identity; input-flip: provided as public input, constrained equal to recomputation" },
+    { "index": 29, "name": "nullifier",                "type": "field", "role": "derived",  "producer": "circuit(provided+equality-constrained)", "consumers": ["contract:usedNullifiers"], "public": true, "binding": "equality-constrained Poseidon(8) output", "inCommitment": false, "inNullifier": false, "description": "consumption-domain identifier; input-flip: provided as public input, constrained equal to recomputation" }
+  ],
+  "privateSignals": [
+    { "name": "secretKey", "role": "identity", "binding": "nullifier-input" },
+    { "name": "deviceId",  "role": "identity", "binding": "nullifier-input" }
+  ],
+  "circuitMechanism": {
+    "name": "input-flip",
+    "rationale": "circom allocates OUTPUT wires 1..N first, which caused AF-1 (outputs-first layout). All 30 public signals are declared as inputs in canonical order; commitment/nullifier are provided by the prover and equality-constrained to in-circuit Poseidon recomputations.",
+    "outputs": 0,
+    "publicInputs": 30,
+    "privateInputs": 2
+  },
+  "contractPolicy": {
+    "timestampWindow": { "MAX_AGE_seconds": 86400, "CLOCK_SKEW_seconds": 300 },
+    "chainCheck": "pubSignals[22] == block.chainid",
+    "versionCheck": "pubSignals[23] == SUPPORTED_PROTOCOL_VERSION (2)",
+    "zeroChecks": ["sessionId != 0", "purposeId != 0", "commitment != 0", "nullifier != 0"],
+    "crossContract": "DEPLOYMENT_DOMAIN identifier validated at contract layer; contract address intentionally NOT in nullifier (undetermined at proving time)"
+  }
+}
