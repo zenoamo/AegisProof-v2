@@ -1,6 +1,6 @@
 # AegisShield Deployment Information
 
-This document records the final local deployment used for verification testing.
+> **Historical/local-only record.** This file describes an old Hardhat localhost deployment and is not a production deployment manifest. Do not use its addresses, signal layout, verifier, or test credentials for deployment.
 
 ## Final Deployment Details
 
@@ -15,7 +15,7 @@ This document records the final local deployment used for verification testing.
 
 ### Operator
 - **Operator Address**: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
-- **Operator Private Key**: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+- **Operator Private Key**: **REDACTED** (Hardhat's well-known local test key; never use outside localhost)
 
 ### Circuit Information
 - **Circuit**: aegis_commit_core.circom

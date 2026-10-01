@@ -99,6 +99,10 @@ export const SIGNAL_INDEX_MAP: Record<SignalName, number> = SIGNAL_INDEX;
  */
 export const EXPECTED_SIGNAL_COUNT = N_PUBLIC_SIGNALS as 30;
 
+/** BN254 scalar field modulus used by the frozen Groth16 circuit. */
+export const BN254_SCALAR_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+
 /** ==========================================================================
  * CUSTOM ERROR CLASSES
  * ========================================================================== */
@@ -158,6 +162,17 @@ export class SignalMappingError extends AegisSDKError {
 /**
  * Thrown when Groth proof structure is invalid.
  */
+export class InvalidSignalValueError extends AegisSDKError {
+  constructor(index: number, value: string) {
+    super(
+      `Invalid public signal at index ${index}: expected a canonical BN254 field element, got ${value}`,
+      "INVALID_SIGNAL_VALUE",
+      { index, value },
+    );
+    this.name = "InvalidSignalValueError";
+  }
+}
+
 export class InvalidProofStructureError extends AegisSDKError {
   constructor(
     field: keyof GrothProof,
@@ -220,6 +235,27 @@ export function validateSignalCount(
 ): void {
   if (signals.length !== EXPECTED_SIGNAL_COUNT) {
     throw new InvalidSignalCountError(signals.length);
+  }
+}
+
+/**
+ * Validates canonical decimal BN254 field elements before ABI conversion.
+ * This prevents ambiguous/invalid numeric representations from crossing the
+ * SDK boundary and makes the SDK's accepted wire domain explicit.
+ */
+export function validateSignalValues(
+  signals: readonly string[]
+): void {
+  validateSignalCount(signals);
+  for (let index = 0; index < signals.length; index++) {
+    const value = signals[index]!;
+    if (!/^(0|[1-9][0-9]*)$/.test(value)) {
+      throw new InvalidSignalValueError(index, value);
+    }
+    const n = BigInt(value);
+    if (n >= BN254_SCALAR_FIELD) {
+      throw new InvalidSignalValueError(index, value);
+    }
   }
 }
 
@@ -431,7 +467,7 @@ const VERIFIER_ABI = [
 ] as const;
 
 function verifierArgs(proof: GrothProof, signals: readonly string[]) {
-  validateSignalCount(signals);
+  validateSignalValues(signals);
   const { pA, pB, pC } = grothProofToCalldata(proof);
   const pubSignals = signals.map((signal) => BigInt(signal)) as [
     bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint,

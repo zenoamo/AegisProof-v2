@@ -1,3 +1,5 @@
+> **HISTORICAL / SUPERSEDED:** This document describes an earlier repository revision and is not the current AegisProof v2 audit/deployment scope. Do not use its commit hashes, contract paths, verifier names, signal layouts, or deployment instructions as current authoritative values. For the current scope, use the files under `specs/`, `protocol/`, `verification/`, `packages/sdk/`, and the current CI/security-gate configuration.
+
 # AegisProof v2 - External Audit Package
 
 **Document Version:** 1.0  

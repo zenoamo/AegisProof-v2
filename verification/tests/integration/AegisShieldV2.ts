@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { network } from "hardhat";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(__dirname, "../../..");
 
 // SSoT policy values (specs/aegis-protocol.v2.json contractPolicy)
 const MAX_AGE = 86400n;
@@ -181,6 +181,26 @@ async function main() {
     "Session inactive",
     "deactivated session rejected"
   );
+
+  // ------------------------------------------------- negative: deactivated session cannot be re-registered
+  await expectRevert(
+    shield.write.registerSession([SESSION_ID, PURPOSE_ID]),
+    "Session already exists",
+    "deactivated session id cannot be re-registered"
+  );
+  ok(
+    !(await shield.read.sessions([SESSION_ID])).active,
+    "deactivation preserves terminal session state"
+  );
+
+  // ------------------------------------------------- negative: disabled purpose blocks new sessions
+  await shield.write.setPurposeAllowed([PURPOSE_ID, false]);
+  await expectRevert(
+    shield.write.registerSession([SESSION_ID + 1n, PURPOSE_ID]),
+    "Purpose not allowed",
+    "disabled purpose blocks new session registration"
+  );
+  await shield.write.setPurposeAllowed([PURPOSE_ID, true]);
 
   // ------------------------------------------------- negative: timestamp too old
   // (last: jumps the clock past the validity window permanently)

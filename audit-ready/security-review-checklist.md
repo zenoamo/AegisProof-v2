@@ -118,7 +118,7 @@ This checklist covers all security-critical components of AegisProof v2. Each it
 - [ ] **operator-access-control**: Only operator can call registerSession() / deactivateSession()
 - [ ] **purpose-allowed-flag**: SetPurposeAllowed toggles boolean flag controlling acceptance policy
 - [ ] **emergency-disable-pathway**: setPurposeAllowed(purposeId, false) disables specific purpose immediately
-- [ ] **deactivate-session-thorough**: Deactivation removes session from both session mapping and used-nullifier set
+- [ ] **deactivate-session-terminal**: Deactivation marks the existing session inactive; the session ID remains reserved and cannot be re-registered
 - [ ] **timestamp-window-checked**: verifyAndAccept validates timestamp window before processing
 - [ ] **no-reentrancy-guards**: State changes occur before external calls (prevents reentrancy)
 
