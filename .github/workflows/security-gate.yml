@@ -16,6 +16,9 @@ on:
       - ".github/**"
       - "protocol/**"
       - "verification/**"
+      - "circuits/**"
+      - "packages/sdk/**"
+      - "tests/**"
 
   push:
     branches:
