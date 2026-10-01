@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { network } from "hardhat";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(__dirname, "../../..");
 
 // SSoT policy values (specs/aegis-protocol.v2.json contractPolicy)
 const MAX_AGE = 86400n;
