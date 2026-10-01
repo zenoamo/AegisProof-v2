@@ -13,6 +13,8 @@ import {
   BN254_SCALAR_FIELD,
   InvalidSignalCountError,
   SignalMappingError,
+  ChainIdMismatchError,
+  assertVerifierClientChainId,
 } from "../src/core";
 
 assert.equal(EXPECTED_SIGNAL_COUNT, 30);
@@ -79,3 +81,16 @@ assert.deepEqual(proofCalldata.pB, [[4n, 3n], [6n, 5n]]);
 assert.deepEqual(proofCalldata.pC, [7n, 8n]);
 
 console.log("SDK unit tests: PASS");
+
+
+const matchingClient = { getChainId: async () => 31337 } as any;
+await assertVerifierClientChainId(matchingClient, 31337);
+
+const mismatchingClient = { getChainId: async () => 11155111 } as any;
+await assert.rejects(
+  () => assertVerifierClientChainId(mismatchingClient, 31337),
+  (error: unknown) => error instanceof ChainIdMismatchError &&
+    (error as ChainIdMismatchError).code === "CHAIN_ID_MISMATCH",
+);
+
+console.log("SDK chain ID hardening tests: PASS");
