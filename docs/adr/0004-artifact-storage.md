@@ -34,3 +34,8 @@ New production.zkey commits are blocked by `.gitignore` and scanner; existing tr
 - [repository-boundary-report.md](../security/repository-boundary-report.md)
 - [sensitive-file-policy.md](../security/sensitive-file-policy.md)
 - [github-repository-boundary.md](../architecture/github-repository-boundary.md)
+
+
+## Migration update — 2026-10-01
+
+The tracked production.zkey copy has now been removed from the repository in the migration branch. The remaining work is to provision the external secure-storage location and update CI/prover resolution to retrieve it without reintroducing the binary into GitHub.
