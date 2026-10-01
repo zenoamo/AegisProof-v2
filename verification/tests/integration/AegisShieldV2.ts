@@ -182,6 +182,26 @@ async function main() {
     "deactivated session rejected"
   );
 
+  // ------------------------------------------------- negative: deactivated session cannot be re-registered
+  await expectRevert(
+    shield.write.registerSession([SESSION_ID, PURPOSE_ID]),
+    "Session already exists",
+    "deactivated session id cannot be re-registered"
+  );
+  ok(
+    !(await shield.read.sessions([SESSION_ID])).active,
+    "deactivation preserves terminal session state"
+  );
+
+  // ------------------------------------------------- negative: disabled purpose blocks new sessions
+  await shield.write.setPurposeAllowed([PURPOSE_ID, false]);
+  await expectRevert(
+    shield.write.registerSession([SESSION_ID + 1n, PURPOSE_ID]),
+    "Purpose not allowed",
+    "disabled purpose blocks new session registration"
+  );
+  await shield.write.setPurposeAllowed([PURPOSE_ID, true]);
+
   // ------------------------------------------------- negative: timestamp too old
   // (last: jumps the clock past the validity window permanently)
   await setNextTs(PROOF_TS + MAX_AGE + SKEW + 100n);
