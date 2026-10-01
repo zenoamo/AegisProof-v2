@@ -64,7 +64,16 @@ Environment:
 | `VAULT_TRANSIT_HASH_ALGORITHM` | Override hash algorithm (default `sha2-256`) |
 | `KMS_BACKEND_MODE` | `stub` (default) or `live` |
 
-### 3. `cloud-hsm` (live)
+### 3. `local-openssl` (live, CI smoke bridge)
+
+- Uses a local OpenSSL 3.5 signer service for ML-DSA-87 because Vault OSS Transit does not provide ML-DSA Transit keys.
+- GitHub Actions authenticates to Vault with GitHub OIDC first; the short-lived Vault token is then presented to the local signer service.
+- The signer service checks the Vault token via `auth/token/lookup-self` and requires the `kms-provenance` policy before invoking OpenSSL.
+- Private key remains on the local signer host; it is never committed, uploaded to GitHub, or returned by the service.
+- Configuration: `LOCAL_OPENSSL_SIGNER_URL`, optional `LOCAL_OPENSSL_KEY_ID` (default `aegis-ci-mldsa87-v1`), and on the signer host `LOCAL_OPENSSL_PRIVATE_KEY_PATH` / `OPENSSL_BIN`.
+- Service entrypoint: `scripts/local-openssl-signer.mjs`.
+
+### 4. `cloud-hsm` (live)
 
 Providers via `CLOUD_HSM_PROVIDER`:
 
@@ -116,7 +125,7 @@ Native AWS/GCP/Azure KMS APIs document ECDSA/RSA/Ed25519 — not ML-DSA-87 in th
 
 ```javascript
 {
-  backend: "mock-hsm" | "vault-transit" | "cloud-hsm",
+  backend: "mock-hsm" | "vault-transit" | "local-openssl" | "cloud-hsm",
   keyId: "test-provenance-kms-01",  // test- prefix required for mock-hsm
   role: "provenance" | "operator-pqc" | "operator-classical",
   algorithm: "ML-DSA-87",           // optional; inferred from role
@@ -150,6 +159,18 @@ Run: `npm run test:kms-signer`
 `security-boundary-check` job runs `npm run test:kms-signer` after penetration tests.
 
 ---
+
+## Phase 8.14 Task 4 live path
+
+The live smoke path is intentionally split into two trust boundaries:
+
+```text
+GitHub Actions OIDC → Vault JWT auth/claims → short-lived Vault token → local OpenSSL signer → ML-DSA-87
+```
+
+Vault OSS remains the authentication/policy gate; OpenSSL 3.5 performs the ML-DSA-87 cryptographic operation. This avoids claiming that Vault OSS Transit performs ML-DSA-87 when it does not.
+
+The workflow uses the protected `kms-live-smoke` environment and requires the `LOCAL_OPENSSL_SIGNER_URL` environment secret in addition to `VAULT_ADDR`.
 
 ## Out of Scope (Task 4+)
 
