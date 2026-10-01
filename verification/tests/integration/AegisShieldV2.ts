@@ -80,6 +80,25 @@ async function main() {
     deployer.account.address,
   ]);
 
+  assert.equal(
+    registry.address.toLowerCase(),
+    "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "canonical localhost registry address"
+  );
+
+  const rogueRegistry = await viem.deployContract("AegisNullifierRegistry", [
+    deployer.account.address,
+  ]);
+  await expectRevert(
+    viem.deployContract("AegisShieldV2", [
+      verifier.address,
+      deployer.account.address,
+      rogueRegistry.address,
+    ]),
+    "Non-canonical nullifier registry",
+    "non-canonical registry rejected at Shield constructor"
+  );
+
   await expectRevert(
     registry.write.consume([BigInt(NULLIFIER)], { account: outsider.account }),
     "Unauthorized consumer",

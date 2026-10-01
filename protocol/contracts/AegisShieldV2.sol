@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
-
 // ===========================================================================
 // DEVELOPMENT CONTRACT — pairs with the development Groth16VerifierV2
 // (single-contribution dev zkey). NEVER deploy against real value.
@@ -13,6 +10,7 @@ pragma solidity ^0.8.28;
 // ===========================================================================
 
 import { AegisSignals as S } from "./generated/AegisSignals.sol";
+import { AegisCanonicalRegistry } from "./AegisCanonicalRegistry.sol";
 
 interface IAegisVerifierV2 {
     function verifyProof(
@@ -99,6 +97,14 @@ contract AegisShieldV2 {
         require(_verifier != address(0), "Invalid verifier");
         require(_operator != address(0), "Invalid operator");
         require(_nullifierRegistry != address(0), "Invalid nullifier registry");
+
+        address canonicalRegistry =
+            AegisCanonicalRegistry.forChain(block.chainid);
+        require(canonicalRegistry != address(0), "Unsupported chain");
+        require(
+            _nullifierRegistry == canonicalRegistry,
+            "Non-canonical nullifier registry"
+        );
 
         verifier = IAegisVerifierV2(_verifier);
         operator = _operator;
@@ -212,8 +218,8 @@ contract AegisShieldV2 {
         require(allowedPurposes[purposeId], "Purpose not allowed");
 
         // 8. Global replay protection.
-        // The shared registry makes nullifier uniqueness chain-wide across
-        // all AegisShieldV2 deployments that use the same registry.
+        // The shared canonical registry makes nullifier uniqueness chain-wide
+        // across all AegisShieldV2 deployments on the supported chain.
         // Only registered Shield consumers can call consume(), preventing
         // arbitrary third parties from pre-consuming public nullifiers.
         nullifierRegistry.consume(nullifier);

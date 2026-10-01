@@ -7,7 +7,7 @@
     "layout": "Option X (chainId included) + Phase 1 recommended 30-signal arrangement",
     "sessionBinding": "Option A (sessionId bound to Nullifier only)",
     "timestampPolicy": "excluded from commitment; contract validity window only",
-    "crossContract": "chain-wide AegisNullifierRegistry; DEPLOYMENT_DOMAIN is a protocol identifier and is not deployment-unique",
+    "crossContract": "chain-wide canonical AegisNullifierRegistry; supported chains pin the registry address at contract level; DEPLOYMENT_DOMAIN is a protocol identifier and is not deployment-unique",
     "trustedSetup": "multi-contributor + beacon (Phase 4; NOT executed in Phase 2)",
     "additionalConditions": { "MAX_AGE_seconds": 86400, "CLOCK_SKEW_seconds": 300 }
   },

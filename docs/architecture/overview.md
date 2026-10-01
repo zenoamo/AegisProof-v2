@@ -51,7 +51,7 @@ Defined in [specs](../../specs) (canonical 30-signal SSoT). Key policies:
 | Timestamp binding | Untrusted metadata; excluded from commitment/nullifier |
 | ChainId binding | Signal included in nullifier; enforced against `block.chainid` |
 | Session binding | sessionId nullifier-bound + session registry on-chain |
-| Replay protection | Shared `AegisNullifierRegistry` + Shield-local observability state; one canonical registry per chain is an operational deployment invariant |
+| Replay protection | Shared canonical `AegisNullifierRegistry` + Shield-local observability state; supported chains pin the canonical registry address at contract level |
 | Timestamp window | Contract-side: `now ∈ [ts - MAX_AGE - SKEW, ts + SKEW]` |
 | Versions | `SUPPORTED_PROTOCOL_VERSION = 2`; future upgrades via versioning |
 
@@ -65,8 +65,8 @@ Defined in [specs](../../specs) (canonical 30-signal SSoT). Key policies:
 #### Shield
 
 - `protocol/contracts/AegisShieldV2.sol`: immutable; operator-controlled session lifecycle; proof acceptance policy.
-- `protocol/contracts/AegisNullifierRegistry.sol`: replay registry that must be shared by all Shield deployments on a chain. The EVM does not intrinsically enforce singleton-per-chain deployment; deployment manifests and governance must enforce the canonical registry address.
-- Constructor parameters: `_verifierAddress`, `_operator`, `_nullifierRegistry`.
+- `protocol/contracts/AegisNullifierRegistry.sol`: replay registry shared by all Shield deployments on a supported chain. `AegisShieldV2` fail-closes unless the supplied registry equals the chain's canonical address from `AegisCanonicalRegistry`.
+- Constructor parameters: `_verifierAddress`, `_operator`, `_nullifierRegistry`; `_nullifierRegistry` is pinned to the supported chain's canonical registry address.
 - Constants: `DEPLOYMENT_DOMAIN`, `SUPPORTED_PROTOCOL_VERSION`, `MAX_AGE_seconds`, `CLOCK_SKEW_seconds`.
 
 ### 4. SDK & tooling
@@ -120,7 +120,7 @@ Mock / fixture PASS in CI must **not** be read as live production TEE verificati
 
 See [deployment.md](../deployment.md). Summary:
 
-- **Local Hardhat**: in-process node; deploy verifier + shield; verify locally.
+- **Local Hardhat**: in-process node; deploy verifier + canonical registry + shield; the deployment script fails closed if the registry address drifts.
 - **Sepolia**: live testnet usage; deploy producer verifier; run on-chain verifier tests.
 - **Mainnet**: documentation only at this time; no deployments have been performed.
 
