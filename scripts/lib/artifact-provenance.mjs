@@ -260,13 +260,28 @@ export function verifyManifestIntegrity(manifest) {
  * @param {object} manifest
  * @param {{ requirePqcSignature?: boolean, pqcRequired?: boolean, allowMissingOptional?: boolean, requireRegistry?: boolean, maxSignatureAgeMs?: number }} [opts]
  */
-function resolveManifestEntryPath(entryPath) {
+function resolveManifestEntryPath(entryPath, entry = {}) {
   if (typeof entryPath !== "string" || entryPath.length === 0) {
     throw new Error("manifest entry path must be a non-empty string");
   }
 
   const abs = path.resolve(ROOT, entryPath);
   const rootPrefix = ROOT.endsWith(path.sep) ? ROOT : ROOT + path.sep;
+
+  // Production zkey may be intentionally supplied from trusted external storage.
+  // Only the exact path declared by AEGIS_PRODUCTION_ZKEY_PATH is allowed to
+  // escape the repository-root boundary; arbitrary absolute paths remain rejected.
+  const externalZkey = process.env.AEGIS_PRODUCTION_ZKEY_PATH;
+  if (
+    entry.artifact === "production.zkey" &&
+    entry.source === "external" &&
+    externalZkey &&
+    path.isAbsolute(externalZkey) &&
+    path.resolve(externalZkey) === abs
+  ) {
+    return abs;
+  }
+
   if (abs !== ROOT && !abs.startsWith(rootPrefix)) {
     throw new Error(`manifest entry path escapes repository root: ${entryPath}`);
   }
@@ -311,7 +326,7 @@ export function verifyManifest(manifest, opts = {}) {
     seen.add(entry.artifact);
     let abs;
     try {
-      abs = resolveManifestEntryPath(entry.path);
+      abs = resolveManifestEntryPath(entry.path, entry);
     } catch (error) {
       errors.push(`invalid manifest entry path: ${entry.artifact} (${error.message})`);
       continue;
