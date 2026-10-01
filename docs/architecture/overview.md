@@ -43,7 +43,7 @@ The production trusted setup was completed under explicit human authorization in
 
 ### 2. Protocol v2 (SSoT)
 
-Defined in [protocol/specs](../../protocol/specs) (canonical 30-signal SSoT). Key policies:
+Defined in [specs](../../specs) (canonical 30-signal SSoT). Key policies:
 
 | Policy | Value / Rule |
 |---|---|
