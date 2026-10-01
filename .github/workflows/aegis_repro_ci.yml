@@ -267,6 +267,10 @@ jobs:
         working-directory: packages/sdk
         run: npm run build
 
+      - name: SDK unit tests
+        working-directory: packages/sdk
+        run: npm test
+
       - name: SDK pack dry-run
         working-directory: packages/sdk
         run: npm pack --dry-run
