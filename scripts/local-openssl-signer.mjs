@@ -7,6 +7,8 @@ import { execFileSync } from "node:child_process";
 const PORT = Number(process.env.LOCAL_OPENSSL_SIGNER_PORT ?? 8787);
 const VAULT_ADDR = (process.env.VAULT_ADDR ?? "").trim().replace(/\/$/, "");
 const KEY_ID = (process.env.LOCAL_OPENSSL_KEY_ID ?? "aegis-ci-mldsa87-v1").trim();
+const REQUIRED_VAULT_POLICY = (process.env.LOCAL_OPENSSL_REQUIRED_VAULT_POLICY ?? "ci-provenance-signer").trim();
+if (!REQUIRED_VAULT_POLICY) throw new Error("LOCAL_OPENSSL_REQUIRED_VAULT_POLICY must not be empty");
 const PRIVATE_KEY = (process.env.LOCAL_OPENSSL_PRIVATE_KEY_PATH ?? "").trim();
 const OPENSSL = process.env.OPENSSL_BIN?.trim() || "/opt/openssl-3.5/bin/openssl";
 if (!VAULT_ADDR || !PRIVATE_KEY) throw new Error("VAULT_ADDR and LOCAL_OPENSSL_PRIVATE_KEY_PATH are required");
@@ -21,7 +23,7 @@ async function vaultTokenIsAuthorized(token) {
   const res = await fetch(VAULT_ADDR + "/v1/auth/token/lookup-self", { method: "POST", headers: { "X-Vault-Token": token, "Content-Type": "application/json" } });
   if (!res.ok) return false;
   const body = await res.json();
-  return (body?.data?.policies ?? []).includes("kms-provenance");
+  return (body?.data?.policies ?? []).includes(REQUIRED_VAULT_POLICY);
 }
 function readBody(req) {
   return new Promise((resolve, reject) => { let raw = ""; req.on("data", c => { raw += c; }); req.on("end", () => { try { resolve(JSON.parse(raw || "{}")); } catch { reject(new Error("invalid JSON")); } }); req.on("error", reject); });
