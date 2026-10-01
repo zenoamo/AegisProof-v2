@@ -1,5 +1,7 @@
 # Protected live KMS smoke test — workflow_dispatch only (Phase 8.14 Task 4).
 # Does NOT run on PR. Requires protected environment secrets (VAULT_ADDR, etc.).
+# The self-hosted kms-signer runner must have OpenSSL 3.5 and the ML-DSA-87
+# private key provisioned locally; the key never enters GitHub Actions.
 name: KMS Live Smoke
 
 on:
@@ -12,7 +14,7 @@ permissions:
 jobs:
   kms-live-smoke:
     name: OIDC → Vault → local OpenSSL → sign → verify
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, kms-signer]
     environment: kms-live-smoke
     permissions:
       id-token: write
@@ -27,6 +29,35 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate local signer prerequisites
+        env:
+          LOCAL_OPENSSL_PRIVATE_KEY_PATH: /etc/aegis/kms/aegis-ci-mldsa87-v1.pem
+          OPENSSL_BIN: /opt/openssl-3.5/bin/openssl
+        run: |
+          test -f "$LOCAL_OPENSSL_PRIVATE_KEY_PATH" || { echo "FAIL private key not provisioned"; exit 1; }
+          test -x "$OPENSSL_BIN" || { echo "FAIL OpenSSL 3.5 binary not provisioned"; exit 1; }
+          "$OPENSSL_BIN" version
+
+      - name: Start local OpenSSL signer
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          LOCAL_OPENSSL_KEY_ID: aegis-ci-mldsa87-v1
+          LOCAL_OPENSSL_PRIVATE_KEY_PATH: /etc/aegis/kms/aegis-ci-mldsa87-v1.pem
+          OPENSSL_BIN: /opt/openssl-3.5/bin/openssl
+          LOCAL_OPENSSL_SIGNER_PORT: 8787
+        run: |
+          nohup node scripts/local-openssl-signer.mjs > "$RUNNER_TEMP/local-openssl-signer.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/local-openssl-signer.pid"
+          for i in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8787/healthz > "$RUNNER_TEMP/local-openssl-healthz.json"; then
+              cat "$RUNNER_TEMP/local-openssl-healthz.json"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/local-openssl-signer.log"
+          exit 1
 
       - name: OIDC context preflight (presence only)
         run: |
@@ -48,7 +79,7 @@ jobs:
           KMS_BACKEND_MODE: live
           AEGIS_PROVENANCE_SIGNING: kms
           AEGIS_PROVENANCE_BACKEND: local-openssl
-          LOCAL_OPENSSL_SIGNER_URL: ${{ secrets.LOCAL_OPENSSL_SIGNER_URL }}
+          LOCAL_OPENSSL_SIGNER_URL: http://127.0.0.1:8787
           LOCAL_OPENSSL_KEY_ID: aegis-ci-mldsa87-v1
           AEGIS_PROVENANCE_KEY_ID: aegis-ci-mldsa87-v1
           VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
@@ -60,3 +91,13 @@ jobs:
           KMS_OIDC_EXPECT_WORKFLOW: KMS Live Smoke
           KMS_OIDC_EXPECT_ENVIRONMENT: kms-live-smoke
         run: node scripts/run-kms-live-smoke.mjs
+
+      - name: Stop local OpenSSL signer
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/local-openssl-signer.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/local-openssl-signer.pid")" 2>/dev/null || true
+          fi
+          if [ -f "$RUNNER_TEMP/local-openssl-signer.log" ]; then
+            cat "$RUNNER_TEMP/local-openssl-signer.log"
+          fi
