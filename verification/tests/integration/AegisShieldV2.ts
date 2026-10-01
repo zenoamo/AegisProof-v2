@@ -76,10 +76,17 @@ async function main() {
   );
   ok((await publicClient.getBytecode({ address: verifier.address })) !== undefined, "verifier bytecode deployed");
 
+  const registry = await viem.deployContract("AegisNullifierRegistry", [
+    deployer.account.address,
+  ]);
+
   const shield = await viem.deployContract("AegisShieldV2", [
     verifier.address,
     deployer.account.address,
+    registry.address,
   ]);
+
+  await registry.write.setConsumerAuthorized([shield.address, true]);
   ok((await publicClient.getBytecode({ address: shield.address })) !== undefined, "shield bytecode deployed");
 
   assert.equal(
@@ -110,9 +117,10 @@ async function main() {
 
   // ------------------------------------------------- positive: accept proof
   await shield.write.verifyAndAccept([pA, pB, pC, baseline.publicSignals as never, SESSION_ID]);
-  ok(await shield.read.usedNullifiers([BigInt(NULLIFIER)]), "baseline proof accepted; nullifier consumed");
+  ok(await shield.read.usedNullifiers([BigInt(NULLIFIER)]), "baseline proof accepted; local nullifier consumed");
+  ok(await registry.read.usedNullifiers([BigInt(NULLIFIER)]), "baseline proof accepted; global nullifier consumed");
 
-  // ------------------------------------------------- negative: replay
+  // ------------------------------------------------- negative: cross-deployment replay\n  // A second Shield using the same shared registry must reject the same proof.\n  const shieldB = await viem.deployContract("AegisShieldV2", [\n    verifier.address,\n    deployer.account.address,\n    registry.address,\n  ]);\n  await registry.write.setConsumerAuthorized([shieldB.address, true]);\n  await shieldB.write.setPurposeAllowed([PURPOSE_ID, true]);\n  await shieldB.write.registerSession([SESSION_ID, PURPOSE_ID]);\n  await expectRevert(\n    shieldB.write.verifyAndAccept([pA, pB, pC, baseline.publicSignals as never, SESSION_ID]),\n    "Nullifier already used",\n    "cross-deployment replay rejected by shared registry"\n  );\n\n  // ------------------------------------------------- negative: replay
   await expectRevert(
     shield.write.verifyAndAccept([pA, pB, pC, baseline.publicSignals as never, SESSION_ID]),
     "Nullifier already used",
