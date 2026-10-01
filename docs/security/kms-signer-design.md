@@ -72,6 +72,8 @@ Environment:
 - Private key remains on the local signer host; it is never committed, uploaded to GitHub, or returned by the service.
 - Configuration: `LOCAL_OPENSSL_SIGNER_URL`, optional `LOCAL_OPENSSL_KEY_ID` (default `aegis-ci-mldsa87-v1`), and on the signer host `LOCAL_OPENSSL_PRIVATE_KEY_PATH` / `OPENSSL_BIN`.
 - Service entrypoint: `scripts/local-openssl-signer.mjs`.
+- Deployment boundary: the signer service binds to `127.0.0.1` by default. `LOCAL_OPENSSL_SIGNER_URL` must therefore resolve from the GitHub Actions runner to the signer host through an explicitly provisioned network path (for example, a self-hosted runner on the signer host or an approved private/reverse-proxy endpoint). A GitHub-hosted runner cannot reach the signer host simply because the service is running on `127.0.0.1` elsewhere.
+- The live smoke first probes `/healthz`; signing is attempted only after the endpoint reports `backend=local-openssl` and `algorithm=ML-DSA-87`.
 
 ### 4. `cloud-hsm` (live)
 
@@ -149,6 +151,7 @@ Native AWS/GCP/Azure KMS APIs document ECDSA/RSA/Ed25519 — not ML-DSA-87 in th
 | T-KMS-08 | Cloud HSM HTTP gateway sign/verify | same |
 | T-KMS-09 | AWS KMS rejects ML-DSA provenance role | same |
 | T-KMS-10–18 | Live mode, auth, timeout, validation, redaction | `kms-backend-hardening.test.mjs` |
+| T-LOCAL-01–05 | Local OpenSSL sign/verify, key binding, response/error handling | `local-openssl-backend.test.mjs` |
 
 Run: `npm run test:kms-signer`
 
