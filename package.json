@@ -11,7 +11,7 @@
     "@nomicfoundation/hardhat-toolbox": "^7.0.0",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
     "@nomicfoundation/hardhat-viem": "^3.0.9",
-    "@types/node": "^22.20.1",
+    "@types/node": "^26.6.3",
     "circomlibjs": "^0.1.7",
     "hardhat": "^3.12.0",
     "snarkjs": "^0.7.6",
