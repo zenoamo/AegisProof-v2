@@ -77,14 +77,14 @@ ok(!p04d.ok && p04d.error?.includes("missing"), "PT-04: missing signature REJECT
 
 const paths = resolveArtifacts();
 const unsignedManifest = createManifest(paths, { sign: false });
-const defaultVerify = verifyManifest(unsignedManifest, { allowMissingOptional: true, pqcRequired: false });
+const defaultVerify = verifyManifest(unsignedManifest, { allowMissingOptional: true, allowMissingProductionZkey: true, pqcRequired: false });
 ok(defaultVerify.ok, "PT-04: default tier PASS with unsigned (WARN path)");
 ok(
   defaultVerify.warnings.some((w) => w.includes("PQC signature absent") || w.includes("unsigned")),
   "PT-04: default tier emits WARN for unsigned"
 );
 
-const strictVerify = verifyManifest(unsignedManifest, { allowMissingOptional: true, pqcRequired: true });
+const strictVerify = verifyManifest(unsignedManifest, { allowMissingOptional: true, allowMissingProductionZkey: true, pqcRequired: true });
 ok(!strictVerify.ok, "PT-04: strict tier FAIL for missing signature");
 ok(
   strictVerify.errors.some((e) => e.includes("PQC signature required")),
@@ -92,12 +92,14 @@ ok(
 );
 
 const signedManifest = signManifest(unsignedManifest, { secretKey, publicKeyHex });
-const strictSigned = verifyManifest(signedManifest, { allowMissingOptional: true, pqcRequired: true });
+const strictSigned = verifyManifest(signedManifest, { allowMissingOptional: true, allowMissingProductionZkey: true, pqcRequired: true });
 ok(strictSigned.ok || strictSigned.errors.length === 0, "PT-04: strict tier PASS when properly signed");
 
 const tamperedSigned = JSON.parse(JSON.stringify(signedManifest));
-tamperedSigned.entries[0].sha256 = "d".repeat(64);
-const p04e = verifyManifest(tamperedSigned, { allowMissingOptional: true, pqcRequired: true });
+const tamperedEntry = tamperedSigned.entries.find((e) => e.artifact === "production-vkey.json");
+assert.ok(tamperedEntry, "PT-04: repository-local signed artifact fixture");
+tamperedEntry.sha256 = "d".repeat(64);
+const p04e = verifyManifest(tamperedSigned, { allowMissingOptional: true, allowMissingProductionZkey: true, pqcRequired: true });
 ok(!p04e.ok, "PT-04: tampered signed manifest REJECT");
 
 const pqcLayer = verifyPqcSignatureEnvelope(signedManifest, { required: true });

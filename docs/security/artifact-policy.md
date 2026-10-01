@@ -88,3 +88,8 @@ All prover/bench/verify scripts use `resolveArtifacts()` (`scripts/lib/resolve-a
 - [artifact-retention.md](../artifact-retention.md)
 - [github-repository-boundary.md](../architecture/github-repository-boundary.md)
 - ADR [0002-provenance.md](../adr/0002-provenance.md), [0004-artifact-storage.md](../adr/0004-artifact-storage.md)
+
+
+## Migration update — 2026-10-01
+
+production zkey current state: removed from public GitHub working tree; external secure storage provisioning remains pending. During migration, CI/prover workflows must not assume a repository-local production zkey.
