@@ -8,6 +8,7 @@
 // ============================================================================
 
 import { createPublicClient, http } from "viem";
+import { SIGNAL_INDEX, N_PUBLIC_SIGNALS } from "./generated/AegisSignals";
 
 /** ==========================================================================
  * TYPE DEFINITIONS
@@ -80,37 +81,23 @@ export interface VerificationResult {
  * ========================================================================== */
 
 /**
- * Official signal names in SSoT order.
+ * Canonical public-signal names generated directly from the protocol SSoT.
  *
- * Indices 0-29 map to public wires 1-30.
- * Currently defined names occupy indices 0-7.
- * Indices 8-29 are reserved for future extensions.
+ * The array order is the wire order used by Groth16 publicSignals[0..29].
  */
-export const SIGNAL_NAMES = [
-  "timestamp",       // Index 0: Unix timestamp (untrusted metadata)
-  "chainId",         // Index 1: Blockchain chain ID (binding)
-  "protocolVersion", // Index 2: Protocol version number (must be 2)
-  "deviceId",        // Index 3: Unique device identifier
-  "commitment",      // Index 4: Commitment value (Poseidon(6))
-  "nullifier",       // Index 5: Nullifier value (Poseidon(8))
-  "sessionId",       // Index 6: Session identifier (nullifier-bound)
-  "purposeId",       // Index 7: Purpose/application identifier
-] as const;
+export const SIGNAL_NAMES = Object.keys(SIGNAL_INDEX) as Array<keyof typeof SIGNAL_INDEX>;
 
 export type SignalName = typeof SIGNAL_NAMES[number];
 
 /**
- * Type-safe mapping from SignalName to index position.
+ * Type-safe mapping from SignalName to canonical index position.
  */
-export const SIGNAL_INDEX_MAP: Record<SignalName, number> =
-  Object.fromEntries(
-    SIGNAL_NAMES.map((name, index) => [name, index])
-  ) as Record<SignalName, number>;
+export const SIGNAL_INDEX_MAP: Record<SignalName, number> = SIGNAL_INDEX;
 
 /**
  * Expected number of public signals.
  */
-export const EXPECTED_SIGNAL_COUNT = 30 as const;
+export const EXPECTED_SIGNAL_COUNT = N_PUBLIC_SIGNALS as 30;
 
 /** ==========================================================================
  * CUSTOM ERROR CLASSES
@@ -237,62 +224,34 @@ export function validateSignalCount(
 }
 
 /**
- * Converts a named signal object to an indexed public-signal array.
+ * Converts a named signal object to the canonical public-signal array.
  *
- * The eight currently defined SSoT signals are placed at indices 0-7.
- * Reserved indices 8-29 are initialized with "0".
+ * Every one of the 30 SSoT signals is required. No reserved/implicit slots
+ * are synthesized by the SDK.
  */
 export function buildPublicSignals(
   input: Record<string, string>
 ): readonly string[] {
-  const requiredSignals: readonly SignalName[] = SIGNAL_NAMES;
-  const missing: SignalName[] = [];
-
-  for (const name of requiredSignals) {
-    if (input[name] === undefined) {
-      missing.push(name);
-    }
-  }
+  const missing = SIGNAL_NAMES.filter((name) => input[name] === undefined);
 
   if (missing.length > 0) {
     throw new SignalMappingError(missing);
   }
 
-  const arr: string[] = new Array(EXPECTED_SIGNAL_COUNT).fill("0");
-
-  for (let i = 0; i < SIGNAL_NAMES.length; i++) {
-    const name = SIGNAL_NAMES[i];
-    const value = input[name];
-
-    if (value === undefined) {
-      throw new SignalMappingError([name]);
-    }
-
-    arr[i] = value;
-  }
-
-  return arr;
+  return SIGNAL_NAMES.map((name) => input[name]!);
 }
 
 /**
- * Parses a 30-element public-signal array back into the named signals.
- *
- * Only the currently defined SSoT signal names are returned.
- * Reserved indices 8-29 are intentionally ignored.
+ * Parses a canonical 30-element public-signal array back into named signals.
  */
 export function parsePublicSignals(
   signals: readonly string[]
 ): Record<SignalName, string> {
   validateSignalCount(signals);
 
-  const result = {} as Record<SignalName, string>;
-
-  for (let i = 0; i < SIGNAL_NAMES.length; i++) {
-    const name = SIGNAL_NAMES[i];
-    result[name] = signals[i]!;
-  }
-
-  return result;
+  return Object.fromEntries(
+    SIGNAL_NAMES.map((name, index) => [name, signals[index]!])
+  ) as Record<SignalName, string>;
 }
 
 /** ==========================================================================
@@ -434,13 +393,56 @@ export function createVerifierClient(
   };
 }
 
+const VERIFIER_ABI = [
+  {
+    type: "function",
+    name: "verifyProof",
+    stateMutability: "view",
+    inputs: [
+      {
+        name: "_pA",
+        type: "uint256[2]",
+        internalType: "uint256[2]",
+      },
+      {
+        name: "_pB",
+        type: "uint256[2][2]",
+        internalType: "uint256[2][2]",
+      },
+      {
+        name: "_pC",
+        type: "uint256[2]",
+        internalType: "uint256[2]",
+      },
+      {
+        name: "_pubSignals",
+        type: "uint256[30]",
+        internalType: "uint256[30]",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+  },
+] as const;
+
+function verifierArgs(proof: GrothProof, signals: readonly string[]) {
+  validateSignalCount(signals);
+  const { pA, pB, pC } = grothProofToCalldata(proof);
+  const pubSignals = signals.map((signal) => BigInt(signal)) as [
+    bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint,
+    bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint,
+    bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint
+  ];
+  return [pA, pB, pC, pubSignals] as const;
+}
+
 /**
- * Estimates gas cost for verifyProof contract call.
- *
- * Current implementation returns a conservative baseline until the
- * production verifier ABI is wired into the SDK.
- *
- * @returns Gas estimate in wei (approximate)
+ * Estimates gas for the production verifier's actual verifyProof call.
  */
 export async function estimateVerifyGas(
   client: ReturnType<typeof createPublicClient>,
@@ -449,36 +451,14 @@ export async function estimateVerifyGas(
   signals: readonly string[]
 ): Promise<bigint> {
   try {
-    // Keep parameters referenced while the ABI integration is pending.
-    void client;
-    void verifierAddress;
+    const [pA, pB, pC, pubSignals] = verifierArgs(proof, signals);
 
-    const calldataSignals =
-      toCalldataSignals(signals);
-
-    const { pA, pB, pC } =
-      grothProofToCalldata(proof);
-
-    // Keep generated calldata referenced until ABI integration.
-    void calldataSignals;
-    void pA;
-    void pB;
-    void pC;
-
-    // TODO:
-    // Replace this baseline with an actual estimateGas call once
-    // the production verifier ABI is bundled into the SDK.
-    //
-    // Example:
-    //
-    // return await client.estimateContractGas({
-    //   address: verifierAddress,
-    //   abi: verifierABI,
-    //   functionName: "verifyProof",
-    //   args: [pA, pB, pC, calldataSignals],
-    // });
-
-    return 120000n;
+    return await client.estimateContractGas({
+      address: verifierAddress,
+      abi: VERIFIER_ABI,
+      functionName: "verifyProof",
+      args: [pA, pB, pC, pubSignals],
+    });
   } catch (error) {
     throw new GasEstimationError(
       error instanceof Error
@@ -489,11 +469,8 @@ export async function estimateVerifyGas(
 }
 
 /**
- * Performs off-chain verification simulation using the verifier contract.
- *
- * Note:
- * This currently uses the gas-estimation path and does not execute an
- * actual verifier contract call.
+ * Performs a real eth_call against the production verifier without sending a
+ * transaction. This is verification, not a gas-only simulation.
  */
 export async function offChainVerify(
   client: ReturnType<typeof createPublicClient>,
@@ -502,36 +479,34 @@ export async function offChainVerify(
   signals: readonly string[]
 ): Promise<VerificationResult> {
   try {
-    const gas = await estimateVerifyGas(
-      client,
-      verifierAddress,
-      proof,
-      signals
-    );
+    const [pA, pB, pC, pubSignals] = verifierArgs(proof, signals);
+    const result = await client.readContract({
+      address: verifierAddress,
+      abi: VERIFIER_ABI,
+      functionName: "verifyProof",
+      args: [pA, pB, pC, pubSignals],
+    });
 
     return {
-      success: true,
-      gasEstimate: gas,
+      success: Boolean(result),
+      context: { verifierAddress },
     };
   } catch (error) {
     return {
       success: false,
-      gasEstimate: 0n,
       context: {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
+        verifierAddress,
+        error: error instanceof Error ? error.message : "Unknown error",
       },
     };
   }
 }
 
 /**
- * Full on-chain verification flow.
+ * Full on-chain verifier read path.
  *
- * Current implementation is a placeholder until the production verifier
- * ABI is integrated into the SDK.
+ * This performs an eth_call against Groth16VerifierV2Production.verifyProof.
+ * It does not submit a transaction.
  */
 export async function verifyOnChain(
   client: ReturnType<typeof createPublicClient>,
@@ -540,36 +515,24 @@ export async function verifyOnChain(
   signals: readonly string[]
 ): Promise<boolean> {
   try {
-    // Keep parameters referenced until ABI integration.
-    void client;
-    void verifierAddress;
-    void proof;
-    void signals;
+    const [pA, pB, pC, pubSignals] = verifierArgs(proof, signals);
 
-    // TODO:
-    // Implement actual readContract() against the production verifier ABI.
-    //
-    // Example:
-    //
-    // const result = await client.readContract({
-    //   address: verifierAddress,
-    //   abi: verifierABI,
-    //   functionName: "verifyProof",
-    //   args: [pA, pB, pC, calldataSignals],
-    // });
-    //
-    // return Boolean(result);
+    const result = await client.readContract({
+      address: verifierAddress,
+      abi: VERIFIER_ABI,
+      functionName: "verifyProof",
+      args: [pA, pB, pC, pubSignals],
+    });
 
-    return true;
+    return Boolean(result);
   } catch (error) {
     throw new AegisSDKError(
       `On-chain verification failed: ${
-        error instanceof Error
-          ? error.message
-          : "Unknown error"
+        error instanceof Error ? error.message : "Unknown error"
       }`,
       "ON_CHAIN_VERIFICATION_FAILED",
       {
+        verifierAddress,
         proofHash: JSON.stringify(proof).slice(0, 100),
       }
     );

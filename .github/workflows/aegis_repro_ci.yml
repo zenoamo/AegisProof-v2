@@ -149,7 +149,8 @@ jobs:
 
           git diff --exit-code -- \
             generated/AegisSignals.ts \
-            contracts/generated/AegisSignals.sol
+            contracts/generated/AegisSignals.sol \
+            packages/sdk/src/generated/AegisSignals.ts
 
       # NOTE:
       # Do NOT call scripts/verify_manifest.mjs.
@@ -265,6 +266,10 @@ jobs:
       - name: SDK build
         working-directory: packages/sdk
         run: npm run build
+
+      - name: SDK unit tests
+        working-directory: packages/sdk
+        run: npm test
 
       - name: SDK pack dry-run
         working-directory: packages/sdk
