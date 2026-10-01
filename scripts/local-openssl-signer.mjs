@@ -19,11 +19,25 @@ const publicKeyPath = path.join(workDir, "public.pem");
 execFileSync(OPENSSL, ["pkey", "-in", PRIVATE_KEY, "-pubout", "-out", publicKeyPath], { env: { ...process.env, LD_LIBRARY_PATH: process.env.LD_LIBRARY_PATH || "/opt/openssl-3.5/lib64" }, stdio: "ignore" });
 function json(res, status, body) { res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" }); res.end(JSON.stringify(body)); }
 async function vaultTokenIsAuthorized(token) {
-  if (!token) return false;
+  if (!token) {
+    console.error("Vault authorization rejected: bearer token missing");
+    return false;
+  }
   const res = await fetch(VAULT_ADDR + "/v1/auth/token/lookup-self", { method: "POST", headers: { "X-Vault-Token": token, "Content-Type": "application/json" } });
-  if (!res.ok) return false;
+  if (!res.ok) {
+    console.error("Vault token lookup rejected: HTTP " + res.status);
+    return false;
+  }
   const body = await res.json();
-  return (body?.data?.policies ?? []).includes(REQUIRED_VAULT_POLICY);
+  const policies = new Set([
+    ...(Array.isArray(body?.data?.policies) ? body.data.policies : []),
+    ...(Array.isArray(body?.data?.token_policies) ? body.data.token_policies : []),
+  ]);
+  if (!policies.has(REQUIRED_VAULT_POLICY)) {
+    console.error("Vault token missing required policy: " + REQUIRED_VAULT_POLICY);
+    return false;
+  }
+  return true;
 }
 function readBody(req) {
   return new Promise((resolve, reject) => { let raw = ""; req.on("data", c => { raw += c; }); req.on("end", () => { try { resolve(JSON.parse(raw || "{}")); } catch { reject(new Error("invalid JSON")); } }); req.on("error", reject); });
