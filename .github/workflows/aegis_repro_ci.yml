@@ -278,8 +278,10 @@ jobs:
       - name: Documentation link validation
         run: npm run validate:doc-links
 
-      # Verify existence AND canonical production hashes.
+      # Production zkey is external. Verify it only when an operator-provisioned
+      # absolute path is supplied on the runner.
       - name: Verify production prover artifacts
+        if: env.AEGIS_PRODUCTION_ZKEY_PATH != ''
         run: |
           node --input-type=module <<'NODE'
           import fs from "node:fs";
