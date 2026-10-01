@@ -127,9 +127,15 @@ async function strictCall(label, fn) {
   }
 }
 function assertValidBinFile(p, magicAscii) {
-  if (!fs.existsSync(p) || fs.statSync(p).size < 8)
+  let data;
+  try {
+    data = fs.readFileSync(p);
+  } catch {
+    throw new Error(`output artifact missing/unreadable: ${p}`);
+  }
+  if (data.length < 8)
     throw new Error(`output artifact missing/truncated: ${p}`);
-  const head = fs.readFileSync(p).subarray(0, 4).toString("ascii");
+  const head = data.subarray(0, 4).toString("ascii");
   if (head !== magicAscii)
     throw new Error(`output artifact has wrong magic (${head}): ${p}`);
 }
@@ -254,7 +260,6 @@ function computeCacheKeys() {
   };
 }
 function loadCache() {
-  if (!fs.existsSync(PATHS.cache)) return null;
   try {
     return JSON.parse(fs.readFileSync(PATHS.cache, "utf8"));
   } catch {
@@ -269,18 +274,22 @@ function validateCache(keys) {
   }
   // artifact files must exist and their recorded hashes must still match
   for (const [name, p] of Object.entries({ ptau: PATHS.ptau, zkey: PATHS.zkey })) {
-    if (!fs.existsSync(p)) return { valid: false, reason: `missing artifact: ${name}` };
-    if (c[`${name}Hash`] && c[`${name}Hash`] !== sha256File(p))
-      return { valid: false, reason: `artifact hash mismatch: ${name}` };
+    try {
+      const actualHash = sha256File(p);
+      if (c[`${name}Hash`] && c[`${name}Hash`] !== actualHash)
+        return { valid: false, reason: `artifact hash mismatch: ${name}` };
+    } catch {
+      return { valid: false, reason: `missing artifact: ${name}` };
+    }
   }
   return { valid: true };
 }
 function saveCache(keys) {
   fs.mkdirSync(PATHS.cacheDir, { recursive: true });
   const c = { ...keys, createdAt: new Date().toISOString() };
-  if (fs.existsSync(PATHS.ptau)) c.ptauHash = sha256File(PATHS.ptau);
-  if (fs.existsSync(PATHS.zkey)) c.zkeyHash = sha256File(PATHS.zkey);
-  if (fs.existsSync(PATHS.vkey)) c.vkeyHash = sha256File(PATHS.vkey);
+  try { c.ptauHash = sha256File(PATHS.ptau); } catch {}
+  try { c.zkeyHash = sha256File(PATHS.zkey); } catch {}
+  try { c.vkeyHash = sha256File(PATHS.vkey); } catch {}
   fs.writeFileSync(PATHS.cache, JSON.stringify(c, null, 2), "utf8");
 }
 
@@ -473,7 +482,13 @@ async function runSetup(force) {
 // ----------------------------------------------------------------------------
 function phase0Hashes() {
   const out = {};
-  for (const f of PHASE0_FILES) out[f] = fs.existsSync(R(f)) ? sha256File(R(f)) : "MISSING";
+  for (const f of PHASE0_FILES) {
+    try {
+      out[f] = sha256File(R(f));
+    } catch {
+      out[f] = "MISSING";
+    }
+  }
   return out;
 }
 
@@ -597,9 +612,9 @@ async function checkC4(ssot, input, witness) {
 
 async function checkICVK() {
   let vkey;
-  if (fs.existsSync(PATHS.vkey)) {
+  try {
     vkey = JSON.parse(fs.readFileSync(PATHS.vkey, "utf8"));
-  } else {
+  } catch {
     vkey = await snarkjs.zKey.exportVerificationKey(PATHS.zkey, silentLogger);
     fs.mkdirSync(path.dirname(PATHS.vkey), { recursive: true });
     fs.writeFileSync(PATHS.vkey, JSON.stringify(vkey, null, 2), "utf8");
