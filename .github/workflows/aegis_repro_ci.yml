@@ -161,7 +161,12 @@ jobs:
       # Do NOT call scripts/verify_manifest.mjs.
       # The canonical runtime verification path is the provenance verifier.
       - name: Live artifact provenance verification
-        run: npm run verify:provenance -- --live
+        run: |
+          if [[ -n "$AEGIS_PRODUCTION_ZKEY_PATH" ]]; then
+            npm run verify:provenance -- --live
+          else
+            npm run verify:provenance -- --live --allow-missing-production-zkey
+          fi
 
       - name: Standalone build gates
         run: node scripts/gates/run_all.mjs
