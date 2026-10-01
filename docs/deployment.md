@@ -1,12 +1,12 @@
 # AegisProof Deployment Guide
 
-**Scope:** This guide documents deployment **dry-runs** for:
+**Scope:** This guide documents the repository's current deployment tooling and authorization-gated deployment procedures for:
 
-- Local development (Hardhat fork / node)
-- Ethereum Sepolia testnet
-- Ethereum mainnet (read-only documentation; **no deployment performed**)
+- Local Hardhat development (executable via `scripts/deploy.ts`)
+- Ethereum Sepolia testnet (procedure only; no executable Sepolia deployment script is currently committed)
+- Ethereum mainnet (read-only procedure; **no deployment performed**)
 
-**Status:** Production artifacts are **pinned**; **mainnet deployment is NOT ACTIVE / NOT VERIFIED**. Documented commands are planning/dry-run procedures unless you explicitly execute them on your own infrastructure with separate authorization.
+**Status:** Production artifacts are **pinned**; **mainnet deployment is NOT ACTIVE / NOT VERIFIED**. The local script is a development fixture and deploys the dev verifier. Sepolia/Mainnet deployment remains authorization-gated until executable tooling and manifest entries are added.
 
 **Production readiness:** The production verifier smart contract generated from the Phase 4 production zkey is [`protocol/contracts/Groth16VerifierV2Production.sol`](../protocol/contracts/Groth16VerifierV2Production.sol). Its embedded IC constants are verified against `artifacts/phase4/final/production-vkey.json`. The final production verification key hash is:
 
@@ -44,19 +44,17 @@ Do not deploy a different verifier that does not match these IC constants.
    npx hardhat compile
    ```
 
-2. Deploy the production verifier **on-chain** in the same transaction sequence as Shields will use. Replace `<OPERATOR_ADDRESS>` with an account controlled in your local testnet.
-
-   Deploy one `AegisNullifierRegistry` per chain and reuse that registry for every `AegisShieldV2` deployment on the chain. Authorize each Shield address in the registry before accepting proofs.
+2. Run the repository's local deployment script:
 
    ```bash
-   node scripts/deploy_local.mjs --network default \
-     --verifier protocol/contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production \
-     --operator <OPERATOR_ADDRESS>
+   npx hardhat run scripts/deploy.ts
    ```
 
-   On the local Hardhat node, the verifier address will be printed along with bytecode verification confirmation (local-only). The script also confirms the IC hash matches the production vkey.
+   This script intentionally deploys the **dev** `Groth16VerifierV2` plus the canonical local registry and `AegisShieldV2`. It is a local fixture only; it is **not** a production deployment path. The script fails closed if the deterministic Hardhat canonical registry address drifts.
 
-3. Deploy `AegisShieldV2` with the verifier, operator, and the shared `_nullifierRegistry` address. Do not create a separate registry for each Shield.
+   The local flow uses one `AegisNullifierRegistry` for the chain and authorizes the deployed Shield in that registry.
+
+3. Use `deployments/manifest.json` as the canonical deployment metadata source. The current manifest marks chain 31337 as a non-deployable local fixture and intentionally leaves production/testnet addresses unset.
 
 4. (Optional) Run the SDK integration smoke tests after deployment:
 
@@ -78,61 +76,20 @@ The `hardhat.config.ts` file configures:
 
 ## Ethereum Sepolia Testnet
 
-**Note:** Sepolia provides a live EVM environment with real gas fees and persistent state. Do not share private keys. Use a dedicated wallet for testing.
+**Status: authorization-gated; no executable Sepolia deployment path is currently committed.** Do not treat documentation alone as evidence that a Sepolia deployment exists.
 
-### Prerequisites
+Before any Sepolia deployment is authorized, the repository must first register a chain entry in `deployments/manifest.json` containing the canonical registry address, production verifier address, Shield address, and required bytecode hashes. `AegisCanonicalRegistry` must also be updated for the supported chain so the Shield constructor fails closed on registry drift.
 
-- Node.js 22+
-- Sepolia RPC endpoint (Alchemy, Infura, or similar)
-- Sepolia ETH for gas
-- Private key of a wallet with sufficient balance
+The future deployment procedure is:
 
-### Deploy producer verifier + shield
+1. Use an authorized deployment wallet through a reviewed deployment script.
+2. Deploy `Groth16VerifierV2Production.sol` and record its address and bytecode hash.
+3. Deploy `AegisNullifierRegistry` and `AegisShieldV2` using the chain's pinned canonical registry.
+4. Authorize the Shield in the registry.
+5. Run the production verifier/on-chain regression suite against the deployed addresses.
+6. Update and validate `deployments/manifest.json` only after independently verifying the deployed addresses and hashes.
 
-1. Ensure `.env` contains (do NOT commit):
-
-   ```text
-   SEPOLIA_RPC_URL=https://...
-   PRIVATE_KEY=<your-test-wallet-key>
-   OPERATOR_ADDRESS=0x... # the address authorized to manage sessions
-   ```
-
-2. Deploy the production verifier first. Store its address for later Shield deployment.
-
-   ```bash
-   node scripts/deploy_sepolia.mjs --network sepolia \
-     --verifier protocol/contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production \
-     --deployer-wallet $PRIVATE_KEY
-   ```
-
-   The script will print:
-
-   - Verifier contract address (e.g., `0xAbc123...`)
-   - Transaction hash for verification
-   - IC hash verification message confirming it matches the production vkey
-
-3. Deploy the shared `AegisNullifierRegistry` first, then deploy the Shield with the produced verifier address and registry address:
-
-   ```bash
-   node scripts/deploy_shield_sepolia.mjs --network sepolia \
-     --verifier-address <VERIFIER_CONTRACT_ADDRESS> \
-     --operator $OPERATOR_ADDRESS \
-     --nullifier-registry <NULLIFIER_REGISTRY_ADDRESS> \
-     --deployer-wallet $PRIVATE_KEY
-   ```
-
-4. Verify contracts on Etherscan (optional but recommended for transparency):
-
-   ```bash
-   npx hardhat verify --network sepolia <VERIFIER_ADDRESS>
-   npx hardhat verify --network sepolia <SHIELD_ADDRESS>
-   ```
-
-5. Perform a **test end-to-end check** using the canonical witness vector and the production verifier.
-
-   ```bash
-   npx hardhat run test/Groth16VerifierV2Production.ts --network sepolia
-   ```
+Do not copy local 31337 addresses into a Sepolia manifest entry.
 
 ---
 
@@ -186,8 +143,9 @@ Before running any live commands (even on Sepolia), verify:
 4. [ ] No secret keys or private keys committed.
 5. [ ] Deployment dry-run on local Hardhat succeeds.
 6. [ ] On-chain test passes on testnet (5/5 PASS expected).
-7. [ ] Manifest verification passes: `node scripts/verify_manifest.mjs`.
-8. [ ] CI gates pass: `node scripts/gates/run_all.mjs`.
+7. [ ] Deployment manifest validation passes: `npm run validate:deployment-manifest`.
+8. [ ] Artifact provenance verification passes: `npm run verify:provenance -- --live` (when live artifact storage is configured).
+9. [ ] CI security gates pass.
 
 ---
 
