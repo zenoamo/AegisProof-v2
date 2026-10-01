@@ -27,6 +27,16 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Confirm checked-out ref
+        run: |
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GIT_BRANCH=$(git branch --show-current)"
+          git rev-parse HEAD
+          git log -1 --oneline
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          grep -q 'token_policies' scripts/local-openssl-signer.mjs
+
       - name: Install dependencies
         run: npm ci
 
