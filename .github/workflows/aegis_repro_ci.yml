@@ -378,10 +378,11 @@ jobs:
   prover-compatibility:
     name: Prover compatibility
     # Production zkey is external; enable this job only when provisioned.
-    if: ${{ vars.AEGIS_PRODUCTION_ZKEY_AVAILABLE == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'pull_request') &&
+      vars.AEGIS_PRODUCTION_ZKEY_AVAILABLE == 'true'
 
     steps:
       - name: Checkout
