@@ -114,13 +114,13 @@ This checklist covers all security-critical components of AegisProof v2. Each it
 - [ ] **constructor-parameters-valid**: Verifier address and operator address cannot be zero
 - [ ] **protocol-version-hardcoded**: SUPPORTED_PROTOCOL_VERSION = 2 (immutable after deploy)
 - [ ] **used-nullifiers-mapping**: Mapping prevents duplicate nullifier acceptance
-- [ ] **session-tracking-active**: Sessions tracked with validFrom/validUntil timestamps
+- [ ] **session-tracking-active**: Sessions track `purposeId` and `active`; deactivation is terminal and the session ID remains reserved
 - [ ] **operator-access-control**: Only operator can call registerSession() / deactivateSession()
 - [ ] **purpose-allowed-flag**: SetPurposeAllowed toggles boolean flag controlling acceptance policy
 - [ ] **emergency-disable-pathway**: setPurposeAllowed(purposeId, false) disables specific purpose immediately
-- [ ] **deactivate-session-thorough**: Deactivation removes session from both session mapping and used-nullifier set
+- [ ] **deactivate-session-terminal**: Deactivation marks the existing session inactive; the session ID remains reserved and cannot be re-registered
 - [ ] **timestamp-window-checked**: verifyAndAccept validates timestamp window before processing
-- [ ] **no-reentrancy-guards**: State changes occur before external calls (prevents reentrancy)
+- [ ] **registry-call-safety**: `verifyAndAccept()` calls only the pinned canonical `AegisNullifierRegistry`; registry consumption is atomic and no untrusted callback surface is introduced
 
 ---
 
@@ -172,7 +172,7 @@ This checklist covers all security-critical components of AegisProof v2. Each it
 
 ### CI/CD Gates
 
-- [ ] **manifest-verification-ci**: `verify_manifest.mjs` runs on every PR
+- [ ] **manifest-verification-ci**: `validate-deployment-manifest` runs in the Security Gate when deployment metadata changes
 - [ ] **gates-ci-enabled**: All 5 gates run on every push
 - [ ] **codegen-determinism-checked**: Signal generation produces deterministic output
 - [ ] **artifact-hash-pinned**: Phase 0 hashes recorded immutably in manifest
@@ -185,15 +185,15 @@ This checklist covers all security-critical components of AegisProof v2. Each it
 ### Completeness
 
 - [ ] **architecture-doc-updated**: Architecture overview includes deployment topology diagrams
-- [ ] **getting-started-working-example**: Tutorial produces first working verification locally
-- [ ] **deployment-docs-complete**: Local/sepolia/mainnet dry-run instructions all present
+- [ ] **getting-started-working-example**: Tutorial uses the current local `scripts/deploy.ts` fixture and does not reference removed live-deployment scripts
+- [ ] **deployment-docs-complete**: Local executable flow is documented; Sepolia/Mainnet are explicitly authorization-gated until reviewed tooling and verified manifest entries exist
 - [ ] **api-documentation-generated**: SDK API reference available (typedoc or similar)
 - [ ] **faq-addresses-common-questions**: FAQ section covers 10+ frequent questions
 
 ### Accuracy
 
 - [ ] **hash-values-current**: All documentation SHA-256 hashes match actual artifacts
-- [ ] **command-examples-tested**: All example commands verified working (or marked as placeholder)
+- [ ] **command-examples-tested**: Example commands are verified against current scripts, or explicitly marked as non-executable/future procedure
 - [ ] **security-model-consistent**: Security claims match actual implementation details
 - [ ] **threat-model-complete**: Threat model covers all identified attack vectors
 

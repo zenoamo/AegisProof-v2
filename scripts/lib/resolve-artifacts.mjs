@@ -20,7 +20,7 @@ export const WASM_HASH_PREFIX = "a0d3c53f3cdce624";
 
 const R = (p) => path.join(ROOT, p);
 
-/** @typedef {'artifacts/phase2'|'crypto-artifacts'|'override'|'missing'} ArtifactSourceLabel */
+/** @typedef {'artifacts/phase2'|'crypto-artifacts'|'external'|'override'|'missing'} ArtifactSourceLabel */
 
 /** Ordered candidate paths; first existing file wins. */
 const CANDIDATES = {
@@ -130,7 +130,13 @@ export function resolveArtifacts(options = {}) {
   const useDevKeys = profile === "phase2";
   const zkeyCandidates = useDevKeys ? CANDIDATES.devZkey : CANDIDATES.productionZkey;
   const vkeyCandidates = useDevKeys ? CANDIDATES.devVkey : CANDIDATES.productionVkey;
-  const zkeyRes = resolvePathWithSource(zkeyCandidates);
+  const externalProductionZkey = !useDevKeys ? process.env.AEGIS_PRODUCTION_ZKEY_PATH : undefined;
+  if (externalProductionZkey && !path.isAbsolute(externalProductionZkey)) {
+    throw new Error("AEGIS_PRODUCTION_ZKEY_PATH must be an absolute path");
+  }
+  const zkeyRes = externalProductionZkey
+    ? { path: externalProductionZkey, rel: externalProductionZkey, source: "external", exists: fs.existsSync(externalProductionZkey) }
+    : resolvePathWithSource(zkeyCandidates);
   const vkeyRes = resolvePathWithSource(vkeyCandidates);
 
   const badCommitRes = resolvePathWithSource(CANDIDATES.badCommit);

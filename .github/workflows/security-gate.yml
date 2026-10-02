@@ -14,6 +14,12 @@ on:
       - "*.zkey"
       - "publicSignals.json"
       - ".github/**"
+      - "protocol/**"
+      - "verification/**"
+      - "circuits/**"
+      - "packages/sdk/**"
+      - "tests/**"
+      - "deployments/**"
 
   push:
     branches:
@@ -467,7 +473,6 @@ jobs:
           cat > frozen-core-paths.txt <<'EOF'
           crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm
           crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs
-          crypto-artifacts/phase4/production.zkey
           crypto-artifacts/phase4/production-vkey.json
           EOF
 
@@ -544,7 +549,6 @@ jobs:
           const expected = {
             "crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
             "crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs": "3d47226b06d707b1765d7bf35acd01966b9800b0f6fb77cfe084a775f0fa5599",
-            "crypto-artifacts/phase4/production.zkey": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
             "crypto-artifacts/phase4/production-vkey.json": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec"
           };
 
@@ -561,7 +565,6 @@ jobs:
           sha256sum \
             crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm \
             crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs \
-            crypto-artifacts/phase4/production.zkey \
             crypto-artifacts/phase4/production-vkey.json
 
 
@@ -682,6 +685,15 @@ jobs:
       - name: T1-T9
         run: |
           npm run test:prover-compat
+
+      # ----------------------------------------------------------
+      # Deployment manifest integrity
+      # ----------------------------------------------------------
+
+      - name: Deployment manifest integrity
+        run: |
+          npm run validate:deployment-manifest
+          npm run test:deployment-manifest
 
       # ----------------------------------------------------------
       # Final working tree check

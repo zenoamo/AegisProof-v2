@@ -8,6 +8,8 @@ import path from "node:path";
 import { fileURLToPath } from "url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const externalZkey = path.join(ROOT, "artifacts/__external_production_zkey__.zkey");
+process.env.AEGIS_PRODUCTION_ZKEY_PATH = externalZkey;
 
 const {
   PRODUCTION_ZKEY_HASH,
@@ -91,5 +93,22 @@ ok(sourceLabelForRel("crypto-artifacts/phase4/x") === "crypto-artifacts", "sourc
 ok(sourceLabelForRel("artifacts/phase2/x") === "artifacts/phase2", "sourceLabel artifacts/phase2");
 ok(PRODUCTION_ZKEY_HASH.length === 64, "PRODUCTION_ZKEY_HASH pinned");
 ok(PRODUCTION_VKEY_HASH.length === 64, "PRODUCTION_VKEY_HASH pinned");
+const externalPaths = resolveArtifacts({ production: true });
+ok(externalPaths.zkey === externalZkey, "external production zkey path is selected");
+ok(externalPaths.sources.zkey === "external", "external production zkey source is labeled external");
+
+delete process.env.AEGIS_PRODUCTION_ZKEY_PATH;
+try {
+  process.env.AEGIS_PRODUCTION_ZKEY_PATH = "relative/path/to/production.zkey";
+  resolveArtifacts({ production: true });
+  assert.fail("Case 5 should reject relative external zkey path");
+} catch (e) {
+  ok(
+    String(e).includes("must be an absolute path"),
+    "Case 5: external zkey path must be absolute"
+  );
+} finally {
+  delete process.env.AEGIS_PRODUCTION_ZKEY_PATH;
+}
 
 console.log(`\nARTIFACT RESOLUTION: ${passed} checks PASS`);

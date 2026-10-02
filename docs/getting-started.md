@@ -1,151 +1,85 @@
 # AegisProof Getting Started
 
 **Prerequisites:** Node.js 22+, npm/pnpm/yarn.  
-**Goal:** Set up a local development environment and run your first verification end to end.
+**Goal:** Set up a local development environment and run the repository's canonical verification flow.
 
----
+> **Deployment boundary:** The repository currently has an executable **local Hardhat fixture only**. Sepolia and Mainnet deployment are authorization-gated and have no committed executable deployment path. Do not copy local addresses into a live-network configuration.
 
 ## Installation
 
-1. Clone the repository and install dependencies:
-
-   ```bash
-   git clone https://github.com/zenoamo/AegisProof-v2.git
-   cd AegisProof-v2
-   npm install
-   ```
-
-2. Compile contracts:
-
-   ```bash
-   npx hardhat compile
-   ```
-
----
-
-## Local verification workflow (offline-capable)
-
-### Step 1: Prepare input data
-
-Use the canonical test vector located at [`artifacts/phase2/tests/input_v2.json`](../artifacts/phase2/tests/input_v2.json):
-
-```json
-{
-  "secretKey": "123456789",
-  "deviceId": "device-001",
-  "timestamp": 1754300000,
-  "chainId": 31337,
-  "sessionId": 777,
-  "purposeId": 42,
-  "commitment": "...",
-  "nullifier": "..."
-}
+```bash
+git clone https://github.com/zenoamo/AegisProof-v2.git
+cd AegisProof-v2
+npm install
+npx hardhat compile
 ```
 
-These values are **public test vectors**; never commit real private keys to production systems.
+## Local verification workflow
 
-### Step 2: Generate witness and prove
+### 1. Prepare and verify canonical artifacts
 
-Using the `phase2_verify.mjs` script (FAST mode for sanity checks; FULL for complete cycle including proving):
+Use the repository's existing verification scripts:
 
 ```bash
-# Witness generation + sanity checks only (no setup required)
 node scripts/phase2_verify.mjs --fast
-
-# Full flow: generates baseline proof using dev zkey (for testing only)
 node scripts/phase2_verify.mjs --full
-```
-
-To produce proofs with the **production zkey**, use the dedicated script:
-
-```bash
 node scripts/phase4_verify_production.mjs
 ```
 
-### Step 3: Verify off-chain (snarkjs)
+The production flow uses the pinned production artifacts. Never promote the development zkey/VK into a production deployment.
+
+### 2. Deploy the local fixture
+
+Start the local Hardhat network, then run:
 
 ```bash
-import snarkjs from "snarkjs";
-
-const vkey = JSON.parse(fs.readFileSync("artifacts/phase4/final/production-vkey.json"));
-const { proof, publicSignals } = JSON.parse(fs.readFileSync("artifacts/phase4/reports/production_proof_baseline.json"));
-
-const ok = await snarkjs.groth16.verify(vkey, publicSignals, proof);
-console.assert(ok, "verification failed");
+npx hardhat run scripts/deploy.ts
 ```
 
-### Step 4: On-chain verification (local Hardhat node)
+The script deploys the development `Groth16VerifierV2`, the canonical local `AegisNullifierRegistry`, and `AegisShieldV2`. It also checks the deterministic Hardhat registry address and authorizes the Shield in the shared registry.
 
-The on-chain verifier accepts the same proof:
+This is a **development fixture only**. The production verifier is not deployed by this script.
+
+### 3. Verify the on-chain path
+
+Use the repository's integration/security tests after the local deployment. The canonical 30-signal order is defined by `specs/aegis-protocol.v2.json` and the generated `AegisSignals.sol`; do not hand-write signal indices in application code.
+
+The SDK validates the 30-signal shape and BN254 field bounds before ABI conversion.
+
+## Sepolia
+
+**Status: authorization-gated; no executable Sepolia deployment path is currently committed.**
+
+Before any live testnet deployment is authorized, the chain entry must be added to `deployments/manifest.json`, the canonical registry address must be independently verified and pinned in `AegisCanonicalRegistry`, and the production verifier/Shield addresses and required bytecode hashes must be recorded.
+
+Validate the manifest with:
+
+```bash
+npm run validate:deployment-manifest
+```
+
+Do not invent or reuse local 31337 addresses.
+
+## TypeScript SDK
+
+Use the SDK's canonical signal builder and validation helpers rather than maintaining a second signal layout:
 
 ```typescript
-import { viem } from "hardhat";
+import {
+  buildPublicSignals,
+  validateSignalValues,
+} from "@aegisproof/sdk";
 
-const [client] = await viem.getWalletClients();
-const publicClient = await viem.getPublicClient();
-
-const proofCalldata = /* convert proof to calldata format */;
-const signals = /* convert public signals to uint[30][] */;
-
-const verifierContract = /* deploy Groth16VerifierV2Production.sol locally */;
-const result = await verifierContract.read.verifyProof(proofCalldata.pA, proofCalldata.pB, proofCalldata.pC, signals);
-console.assert(result === true, "contract verify failed");
+const signals = buildPublicSignals(inputMap);
+validateSignalValues(signals);
 ```
 
----
+For an RPC-backed verifier client, call the SDK's chain-binding assertion before relying on configured chain metadata.
 
-## Sepolia dry-run
+## Security reminders
 
-Set `.env` with a testnet RPC and a test wallet key (do NOT commit):
-
-```bash
-SEPOLIA_RPC_URL=https://...
-PRIVATE_KEY=<test-wallet-key>
-```
-
-Deploy verifier + shield:
-
-```bash
-node scripts/deploy_sepolia.mjs --network sepolia \
-  --verifier protocol/contracts/Groth16VerifierV2Production.sol:Groth16VerifierV2Production
-npx hardhat run test/Groth16VerifierV2Production.ts --network sepolia
-```
-
----
-
-## Using the TypeScript SDK
-
-Install SDK (scaffold in this repo):
-
-```bash
-npm install @aegisproof/sdk
-```
-
-Basic usage:
-
-```typescript
-import { grothProofToCalldata, buildPublicSignals, VerificationError } from "@aegisproof/sdk";
-
-// Load proof
-const bundle = JSON.parse(fs.readFileSync("path/to/proof.json"));
-const proof = bundle.proof;
-const signals = buildPublicSignals(bundle.inputMap); // map named signals -> array
-
-// Off-chain verification helper
-const client = createPublicClient({ chain: mainnet, transport: http() });
-const ok = await offChainVerify(client, verifierAddress, proof, signals);
-console.assert(ok, "off-chain check failed");
-
-// Estimate gas for on-chain call
-const gas = await estimateVerifyGas(client, verifierAddress, proof, signals);
-console.log("estimated gas:", gas.toString());
-```
-
----
-
-## Common pitfalls
-
-- **Do not promote dev zkey/VK to production**. The production VK hash is `d012bd29…`; ensure all contracts use IC constants matching this.
-- **Do not commit secrets**. Use `.env` for keys; add it to `.gitignore`.
-- **Timestamp policy**: the circuit does not constrain timestamp; freshness checked contract-side within window.
-- **IC binding**: tampering of public signals breaks Groth16 verification; never swap post-prove inputs.
+- Do not commit private keys, seed phrases, or real credentials.
+- Do not use the development verifier/zkey for production.
+- Treat `timestamp` as untrusted metadata; freshness is enforced by the Shield contract.
+- Preserve the canonical 30-signal order from the SSoT.
+- Before any live deployment, independently verify the deployment manifest, verifier artifacts, canonical registry, and on-chain bytecode.

@@ -175,7 +175,12 @@ jobs:
       # Do NOT use specs/artifact-manifest.json here.
       # The canonical runtime verification path is the provenance verifier.
       - name: Live artifact provenance verification
-        run: npm run verify:provenance -- --live
+        run: |
+          if [[ -n "$AEGIS_PRODUCTION_ZKEY_PATH" ]]; then
+            npm run verify:provenance -- --live
+          else
+            npm run verify:provenance -- --live --allow-missing-production-zkey
+          fi
 
       - name: Compile prover verifier
         run: npx hardhat compile --config scripts/hardhat-prover.config.ts
@@ -217,13 +222,19 @@ jobs:
 
           git diff --exit-code -- \
             generated/AegisSignals.ts \
-            contracts/generated/AegisSignals.sol
+            contracts/generated/AegisSignals.sol \
+            packages/sdk/src/generated/AegisSignals.ts
 
       # NOTE:
       # Do NOT call scripts/verify_manifest.mjs.
       # The canonical runtime verification path is the provenance verifier.
       - name: Live artifact provenance verification
-        run: npm run verify:provenance -- --live
+        run: |
+          if [[ -n "$AEGIS_PRODUCTION_ZKEY_PATH" ]]; then
+            npm run verify:provenance -- --live
+          else
+            npm run verify:provenance -- --live --allow-missing-production-zkey
+          fi
 
       - name: Standalone build gates
         run: node scripts/gates/run_all.mjs
@@ -276,7 +287,12 @@ jobs:
         run: npm audit --omit=dev
 
       - name: Live artifact provenance verification
-        run: npm run verify:provenance -- --live
+        run: |
+          if [[ -n "$AEGIS_PRODUCTION_ZKEY_PATH" ]]; then
+            npm run verify:provenance -- --live
+          else
+            npm run verify:provenance -- --live --allow-missing-production-zkey
+          fi
 
       - name: Standalone build gates
         run: node scripts/gates/run_all.mjs
@@ -334,6 +350,10 @@ jobs:
         working-directory: packages/sdk
         run: npm run build
 
+      - name: SDK unit tests
+        working-directory: packages/sdk
+        run: npm test
+
       - name: SDK pack dry-run
         working-directory: packages/sdk
         run: npm pack --dry-run
@@ -341,8 +361,10 @@ jobs:
       - name: Documentation link validation
         run: npm run validate:doc-links
 
-      # Verify existence AND canonical production hashes.
+      # Production zkey is external. Verify it only when an operator-provisioned
+      # absolute path is supplied on the runner.
       - name: Verify production prover artifacts
+        if: env.AEGIS_PRODUCTION_ZKEY_PATH != ''
         run: |
           node --input-type=module <<'NODE'
           import fs from "node:fs";
@@ -423,9 +445,12 @@ jobs:
 
   prover-compatibility:
     name: Prover compatibility
+    # Production zkey is external; enable this job only when provisioned.
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'pull_request') &&
+      vars.AEGIS_PRODUCTION_ZKEY_AVAILABLE == 'true'
 
     steps:
       - name: Checkout
@@ -908,7 +933,11 @@ jobs:
               validate "fast" "$FAST"
               validate "phase5-readiness" "$PHASE5"
               validate "tee-layer-regression" "$TEE"
-              validate "prover-compatibility" "$PROVER_COMPATIBILITY"
+              if [[ "$PROVER_COMPATIBILITY" == "skipped" ]]; then
+                echo "prover-compatibility=skipped (external production zkey not provisioned)"
+              else
+                validate "prover-compatibility" "$PROVER_COMPATIBILITY"
+              fi
               validate "formal-assurance" "$FORMAL_ASSURANCE"
               validate "hybrid-auth-research" "$HYBRID_AUTH"
 

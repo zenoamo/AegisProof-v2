@@ -20,7 +20,7 @@
 
 - [ ] Architecture doc updated with deployment topology
 - [ ] Getting started guide provides working local flow
-- [ ] Deployment guide covers local/sepolia/mainnet (docs-only)
+- [ ] Deployment guide documents the executable local fixture and authorization-gated live-network procedures
 - [ ] Security/threat models reviewed and approved
 - [ ] Operational docs complete (checklist, incident-response, key-management)
 - [ ] FAQ addresses common questions

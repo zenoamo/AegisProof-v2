@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { network } from "hardhat";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(__dirname, "../../..");
 
 // SSoT policy values (specs/aegis-protocol.v2.json contractPolicy)
 const MAX_AGE = 86400n;
@@ -76,10 +76,55 @@ async function main() {
   );
   ok((await publicClient.getBytecode({ address: verifier.address })) !== undefined, "verifier bytecode deployed");
 
+  const registry = await viem.deployContract("AegisNullifierRegistry", [
+    deployer.account.address,
+  ]);
+
+  const rogueVerifier = await viem.deployContract(
+    "contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
+  );
+  await expectRevert(
+    viem.deployContract("AegisShieldV2", [
+      rogueVerifier.address,
+      deployer.account.address,
+      registry.address,
+    ]),
+    "Non-canonical verifier",
+    "non-canonical verifier rejected at Shield constructor"
+  );
+
+  assert.equal(
+    registry.address.toLowerCase(),
+    "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "canonical localhost registry address"
+  );
+
+  const rogueRegistry = await viem.deployContract("AegisNullifierRegistry", [
+    deployer.account.address,
+  ]);
+  await expectRevert(
+    viem.deployContract("AegisShieldV2", [
+      verifier.address,
+      deployer.account.address,
+      rogueRegistry.address,
+    ]),
+    "Non-canonical nullifier registry",
+    "non-canonical registry rejected at Shield constructor"
+  );
+
+  await expectRevert(
+    registry.write.consume([BigInt(NULLIFIER)], { account: outsider.account }),
+    "Unauthorized consumer",
+    "unauthorized registry consumer rejected"
+  );
+
   const shield = await viem.deployContract("AegisShieldV2", [
     verifier.address,
     deployer.account.address,
+    registry.address,
   ]);
+
+  await registry.write.setConsumerAuthorized([shield.address, true]);
   ok((await publicClient.getBytecode({ address: shield.address })) !== undefined, "shield bytecode deployed");
 
   assert.equal(
@@ -110,9 +155,10 @@ async function main() {
 
   // ------------------------------------------------- positive: accept proof
   await shield.write.verifyAndAccept([pA, pB, pC, baseline.publicSignals as never, SESSION_ID]);
-  ok(await shield.read.usedNullifiers([BigInt(NULLIFIER)]), "baseline proof accepted; nullifier consumed");
+  ok(await shield.read.usedNullifiers([BigInt(NULLIFIER)]), "baseline proof accepted; local nullifier consumed");
+  ok(await registry.read.usedNullifiers([BigInt(NULLIFIER)]), "baseline proof accepted; global nullifier consumed");
 
-  // ------------------------------------------------- negative: replay
+  // ------------------------------------------------- negative: cross-deployment replay\n  // A second Shield using the same shared registry must reject the same proof.\n  const shieldB = await viem.deployContract("AegisShieldV2", [\n    verifier.address,\n    deployer.account.address,\n    registry.address,\n  ]);\n  await registry.write.setConsumerAuthorized([shieldB.address, true]);\n  await shieldB.write.setPurposeAllowed([PURPOSE_ID, true]);\n  await shieldB.write.registerSession([SESSION_ID, PURPOSE_ID]);\n  await expectRevert(\n    shieldB.write.verifyAndAccept([pA, pB, pC, baseline.publicSignals as never, SESSION_ID]),\n    "Nullifier already used",\n    "cross-deployment replay rejected by shared registry"\n  );\n\n  // ------------------------------------------------- negative: replay
   await expectRevert(
     shield.write.verifyAndAccept([pA, pB, pC, baseline.publicSignals as never, SESSION_ID]),
     "Nullifier already used",
@@ -167,6 +213,26 @@ async function main() {
     "Session inactive",
     "deactivated session rejected"
   );
+
+  // ------------------------------------------------- negative: deactivated session cannot be re-registered
+  await expectRevert(
+    shield.write.registerSession([SESSION_ID, PURPOSE_ID]),
+    "Session already exists",
+    "deactivated session id cannot be re-registered"
+  );
+  ok(
+    !(await shield.read.sessions([SESSION_ID])).active,
+    "deactivation preserves terminal session state"
+  );
+
+  // ------------------------------------------------- negative: disabled purpose blocks new sessions
+  await shield.write.setPurposeAllowed([PURPOSE_ID, false]);
+  await expectRevert(
+    shield.write.registerSession([SESSION_ID + 1n, PURPOSE_ID]),
+    "Purpose not allowed",
+    "disabled purpose blocks new session registration"
+  );
+  await shield.write.setPurposeAllowed([PURPOSE_ID, true]);
 
   // ------------------------------------------------- negative: timestamp too old
   // (last: jumps the clock past the validity window permanently)

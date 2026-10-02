@@ -1,0 +1,8 @@
+[package]
+name = "aegisproof-zkvm-host"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+methods = { path = "../methods" }
+risc0-zkvm = { version = "5.0.0", default-features = true }

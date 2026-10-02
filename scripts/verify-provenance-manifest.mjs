@@ -25,6 +25,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const live = args.includes("--live");
 const pqcRequired = args.includes("--pqc") || args.includes("--require-pqc");
+const allowMissingProductionZkey = args.includes("--allow-missing-production-zkey");
 const manifestArg = args.indexOf("--manifest");
 const manifestPath =
   manifestArg >= 0 ? path.resolve(args[manifestArg + 1]) : DEFAULT_MANIFEST_PATH;
@@ -33,7 +34,7 @@ async function main() {
   const t0 = Date.now();
 
   if (live) {
-    const result = verifyLiveArtifacts({ includeOptional: true, pqcRequired });
+    const result = verifyLiveArtifacts({ includeOptional: true, pqcRequired, allowMissingProductionZkey });
     console.log(`Provenance live verify — ${result.verifiedCount} artifacts (${result.elapsedMs}ms)`);
     if (pqcRequired) console.log("Mode: strict (--pqc / --require-pqc)");
     for (const w of result.warnings) console.log(`WARN ${w}`);

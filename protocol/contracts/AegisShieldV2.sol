@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
-
 // ===========================================================================
 // DEVELOPMENT CONTRACT — pairs with the development Groth16VerifierV2
 // (single-contribution dev zkey). NEVER deploy against real value.
@@ -13,6 +10,7 @@ pragma solidity ^0.8.28;
 // ===========================================================================
 
 import { AegisSignals as S } from "./generated/AegisSignals.sol";
+import { AegisCanonicalRegistry } from "./AegisCanonicalRegistry.sol";
 
 interface IAegisVerifierV2 {
     function verifyProof(
@@ -23,14 +21,18 @@ interface IAegisVerifierV2 {
     ) external view returns (bool);
 }
 
+interface IAegisNullifierRegistry {
+    function consume(uint256 nullifier) external;
+}
+
 contract AegisShieldV2 {
 
     // ==========================================
     // Cross-contract deployment domain
     // ==========================================
-    // Validated at contract layer per SSoT contractPolicy.crossContract.
-    // The contract address is intentionally NOT part of the nullifier
-    // (undetermined at proving time).
+    // v2's frozen nullifier intentionally does not include address(this).
+    // Cross-deployment replay is therefore prevented by the shared registry
+    // below rather than by changing the 30-signal circuit.
     bytes32 public constant DEPLOYMENT_DOMAIN =
         keccak256("AEGIS_SHIELD_V2");
 
@@ -42,13 +44,15 @@ contract AegisShieldV2 {
     // ==========================================
 
     IAegisVerifierV2 public immutable verifier;
-
+    IAegisNullifierRegistry public immutable nullifierRegistry;
     address public immutable operator;
 
     // ==========================================
     // Registries
     // ==========================================
 
+    // Kept as contract-local state for backwards-compatible observability.
+    // Global replay protection is enforced by nullifierRegistry.
     mapping(uint256 => bool) public usedNullifiers;
 
     mapping(uint256 => bool) public allowedPurposes;
@@ -85,12 +89,32 @@ contract AegisShieldV2 {
     // Constructor
     // ==========================================
 
-    constructor(address _verifier, address _operator) {
+    constructor(
+        address _verifier,
+        address _operator,
+        address _nullifierRegistry
+    ) {
         require(_verifier != address(0), "Invalid verifier");
         require(_operator != address(0), "Invalid operator");
+        require(_nullifierRegistry != address(0), "Invalid nullifier registry");
+
+        address canonicalVerifier =
+            AegisCanonicalRegistry.verifierForChain(block.chainid);
+        address canonicalRegistry =
+            AegisCanonicalRegistry.registryForChain(block.chainid);
+        require(canonicalVerifier != address(0), "Unsupported chain");
+        require(
+            _verifier == canonicalVerifier,
+            "Non-canonical verifier"
+        );
+        require(
+            _nullifierRegistry == canonicalRegistry,
+            "Non-canonical nullifier registry"
+        );
 
         verifier = IAegisVerifierV2(_verifier);
         operator = _operator;
+        nullifierRegistry = IAegisNullifierRegistry(_nullifierRegistry);
 
         // Baseline allowed purposes (carried over from v1 registry).
         allowedPurposes[0] = true;
@@ -173,7 +197,6 @@ contract AegisShieldV2 {
         );
 
         // 4. Timestamp validity window (untrusted metadata; window only).
-        //    Accept iff timestamp in [now - MAX_AGE - SKEW, now + SKEW].
         uint256 ts = pubSignals[S.SIGNAL_TIMESTAMP];
         require(ts <= block.timestamp + S.CLOCK_SKEW_SECONDS, "Timestamp in future");
         require(
@@ -191,18 +214,21 @@ contract AegisShieldV2 {
         require(commitment != 0, "Zero commitment");
         require(nullifier != 0, "Zero nullifier");
 
-        // 6. Session binding (Option A: sessionId bound via nullifier;
-        //    contract additionally verifies the registered session).
+        // 6. Session binding
         require(sessionId == expectedSessionId, "Session mismatch");
         require(sessionExists[sessionId], "Session does not exist");
         require(sessions[sessionId].active, "Session inactive");
         require(sessions[sessionId].purposeId == purposeId, "Purpose mismatch");
 
-        // 7. Purpose whitelist (contract layer per SSoT)
+        // 7. Purpose whitelist
         require(allowedPurposes[purposeId], "Purpose not allowed");
 
-        // 8. Replay protection: nullifier consumed exactly once
-        require(!usedNullifiers[nullifier], "Nullifier already used");
+        // 8. Global replay protection.
+        // The shared canonical registry makes nullifier uniqueness chain-wide
+        // across all AegisShieldV2 deployments on the supported chain.
+        // Only registered Shield consumers can call consume(), preventing
+        // arbitrary third parties from pre-consuming public nullifiers.
+        nullifierRegistry.consume(nullifier);
         usedNullifiers[nullifier] = true;
 
         // 9. Accept

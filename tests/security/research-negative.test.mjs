@@ -65,10 +65,9 @@ function restoreEnv(snapshot) {
   const paths = resolveArtifacts();
   const fresh = createManifest(paths, { sign: false });
   const stale = JSON.parse(JSON.stringify(fresh));
-  const zkeyIdx = stale.entries.findIndex((e) => e.artifact === "production.zkey");
-  if (zkeyIdx >= 0) {
-    stale.entries[zkeyIdx].sha256 = "0".repeat(64);
-  }
+  const vkeyIdx = stale.entries.findIndex((e) => e.artifact === "production-vkey.json");
+  assert.ok(vkeyIdx >= 0, "T-RES-001: repository-local vkey fixture");
+  stale.entries[vkeyIdx].sha256 = "0".repeat(64);
   const result = verifyManifest(stale, { allowMissingOptional: true });
   ok(!result.ok, "T-RES-001: stale zkey hash rejected");
   ok(result.errors.some((e) => e.includes("hash mismatch")), "T-RES-001: hash mismatch reported");

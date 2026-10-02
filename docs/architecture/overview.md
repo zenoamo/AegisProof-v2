@@ -43,7 +43,7 @@ The production trusted setup was completed under explicit human authorization in
 
 ### 2. Protocol v2 (SSoT)
 
-Defined in [protocol/specs](../../protocol/specs) (canonical 30-signal SSoT). Key policies:
+Defined in [specs](../../specs) (canonical 30-signal SSoT). Key policies:
 
 | Policy | Value / Rule |
 |---|---|
@@ -51,7 +51,7 @@ Defined in [protocol/specs](../../protocol/specs) (canonical 30-signal SSoT). Ke
 | Timestamp binding | Untrusted metadata; excluded from commitment/nullifier |
 | ChainId binding | Signal included in nullifier; enforced against `block.chainid` |
 | Session binding | sessionId nullifier-bound + session registry on-chain |
-| Replay protection | Used-nullifier set in Shield contract |
+| Replay protection | Shared canonical `AegisNullifierRegistry` + Shield-local observability state; supported chains pin the canonical registry address at contract level |
 | Timestamp window | Contract-side: `now ∈ [ts - MAX_AGE - SKEW, ts + SKEW]` |
 | Versions | `SUPPORTED_PROTOCOL_VERSION = 2`; future upgrades via versioning |
 
@@ -65,7 +65,8 @@ Defined in [protocol/specs](../../protocol/specs) (canonical 30-signal SSoT). Ke
 #### Shield
 
 - `protocol/contracts/AegisShieldV2.sol`: immutable; operator-controlled session lifecycle; proof acceptance policy.
-- Constructor parameters: `_verifierAddress`, `_operator`.
+- `protocol/contracts/AegisNullifierRegistry.sol`: replay registry shared by all Shield deployments on a supported chain. `AegisShieldV2` fail-closes unless the supplied registry equals the chain's canonical address from `AegisCanonicalRegistry`.
+- Constructor parameters: `_verifierAddress`, `_operator`, `_nullifierRegistry`; `_nullifierRegistry` is pinned to the supported chain's canonical registry address.
 - Constants: `DEPLOYMENT_DOMAIN`, `SUPPORTED_PROTOCOL_VERSION`, `MAX_AGE_seconds`, `CLOCK_SKEW_seconds`.
 
 ### 4. SDK & tooling
@@ -119,8 +120,8 @@ Mock / fixture PASS in CI must **not** be read as live production TEE verificati
 
 See [deployment.md](../deployment.md). Summary:
 
-- **Local Hardhat**: in-process node; deploy verifier + shield; verify locally.
-- **Sepolia**: live testnet usage; deploy producer verifier; run on-chain verifier tests.
+- **Local Hardhat**: executable development fixture via `scripts/deploy.ts`; deploys the dev verifier + canonical registry + Shield and fails closed if the registry address drifts.
+- **Sepolia**: authorization-gated procedure only; no executable Sepolia deployment script or registered deployment currently exists.
 - **Mainnet**: documentation only at this time; no deployments have been performed.
 
 Deployment model: **immutable**; no proxies or upgradeable patterns in Phase 5.

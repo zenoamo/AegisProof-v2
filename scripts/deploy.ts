@@ -53,7 +53,8 @@ function upsertEnvValue(
 
 function syncLocalhostAddresses(
   verifierAddress: string,
-  shieldAddress: string
+  shieldAddress: string,
+  registryAddress: string
 ) {
   let existing = "";
   try {
@@ -79,6 +80,12 @@ function syncLocalhostAddresses(
     updated,
     "SHIELD_ADDRESS",
     shieldAddress
+  );
+
+  updated = upsertEnvValue(
+    updated,
+    "NULLIFIER_REGISTRY_ADDRESS",
+    registryAddress
   );
 
   fs.writeFileSync(
@@ -138,13 +145,25 @@ async function main() {
 
   const verifier =
     await viem.deployContract(
-      "contracts/Groth16Verifier29.sol:Groth16Verifier"
+      "contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
     );
 
   console.log(
     "Verifier:",
     verifier.address
   );
+
+  const canonicalVerifierAddress =
+    "0x5fbdb2315678afecb367f032d93f642f64180aa3";
+
+  if (
+    verifier.address.toLowerCase() !==
+    canonicalVerifierAddress
+  ) {
+    throw new Error(
+      `Canonical verifier mismatch on localhost: expected ${canonicalVerifierAddress}, got ${verifier.address}`
+    );
+  }
 
   // ==========================================
   // 2. Verify Verifier Bytecode
@@ -170,7 +189,7 @@ async function main() {
   );
 
   // ==========================================
-  // 3. Deploy AegisShield
+  // 3. Deploy chain-wide nullifier registry
   // ==========================================
 
   console.log("");
@@ -178,14 +197,38 @@ async function main() {
     "[2] Deploying AegisShield"
   );
 
+  const registry =
+    await viem.deployContract(
+      "AegisNullifierRegistry",
+      [deployer.account.address]
+    );
+
+  const canonicalRegistryAddress =
+    "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512";
+
+  if (
+    registry.address.toLowerCase() !==
+    canonicalRegistryAddress
+  ) {
+    throw new Error(
+      `Canonical registry mismatch on localhost: expected ${canonicalRegistryAddress}, got ${registry.address}`
+    );
+  }
+
+  // ==========================================
+  // 4. Deploy AegisShieldV2
+  // ==========================================
+
   const shield =
     await viem.deployContract(
-      "AegisShield",
-      [
-        verifier.address,
-        deployer.account.address,
-      ]
+      "AegisShieldV2",
+      [verifier.address, deployer.account.address, registry.address]
     );
+
+  await registry.write.setConsumerAuthorized([shield.address, true]);
+
+  const authorized = await registry.read.authorizedConsumers([shield.address]);
+  if (!authorized) throw new Error("Registry authorization failed for AegisShieldV2");
 
   console.log(
     "Shield:",
@@ -234,6 +277,11 @@ async function main() {
       await shield.read.operator()
     );
 
+  const storedRegistry =
+    String(
+      await shield.read.nullifierRegistry()
+    );
+
   console.log(
     "Expected verifier:",
     verifier.address
@@ -272,6 +320,10 @@ async function main() {
     );
   }
 
+  if (storedRegistry.toLowerCase() !== registry.address.toLowerCase()) {
+    throw new Error(`Nullifier registry mismatch: expected ${registry.address}, got ${storedRegistry}`);
+  }
+
   console.log(
     "AegisShield constructor state: OK"
   );
@@ -304,6 +356,9 @@ async function main() {
         verifierAddress:
           verifier.address,
 
+        nullifierRegistryAddress:
+          registry.address,
+
         shieldAddress:
           shield.address,
       },
@@ -318,7 +373,8 @@ async function main() {
 
   syncLocalhostAddresses(
     verifier.address,
-    shield.address
+    shield.address,
+    registry.address
   );
 
   // ==========================================
@@ -347,12 +403,12 @@ async function main() {
   );
 
   console.log(
-    "Groth16Verifier29:",
+    "Groth16VerifierV2:",
     verifier.address
   );
 
   console.log(
-    "AegisShield:",
+    "AegisShieldV2:",
     shield.address
   );
 
