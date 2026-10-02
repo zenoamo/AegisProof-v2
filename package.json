@@ -41,6 +41,7 @@
     "test:kms-signer": "node scripts/run-kms-signer.mjs",
     "test:kms-oidc": "node scripts/run-kms-oidc.mjs",
     "test:deployment-manifest": "node tests/security/deployment-manifest.test.mjs",
+    "test:elliptic-supply-chain": "node tests/security/elliptic-supply-chain.test.mjs",
     "generate:provenance": "node scripts/generate-provenance-manifest.mjs",
     "generate:pqc-dev-keys": "node scripts/generate-pqc-dev-keys.mjs",
     "export:pqc-public-key": "node scripts/export-pqc-public-key.mjs",
