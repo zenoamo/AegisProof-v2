@@ -153,6 +153,18 @@ async function main() {
     verifier.address
   );
 
+  const canonicalVerifierAddress =
+    "0x5fbdb2315678afecb367f032d93f642f64180aa3";
+
+  if (
+    verifier.address.toLowerCase() !==
+    canonicalVerifierAddress
+  ) {
+    throw new Error(
+      `Canonical verifier mismatch on localhost: expected ${canonicalVerifierAddress}, got ${verifier.address}`
+    );
+  }
+
   // ==========================================
   // 2. Verify Verifier Bytecode
   // ==========================================

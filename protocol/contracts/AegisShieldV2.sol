@@ -98,9 +98,15 @@ contract AegisShieldV2 {
         require(_operator != address(0), "Invalid operator");
         require(_nullifierRegistry != address(0), "Invalid nullifier registry");
 
+        address canonicalVerifier =
+            AegisCanonicalRegistry.verifierForChain(block.chainid);
         address canonicalRegistry =
-            AegisCanonicalRegistry.forChain(block.chainid);
-        require(canonicalRegistry != address(0), "Unsupported chain");
+            AegisCanonicalRegistry.registryForChain(block.chainid);
+        require(canonicalVerifier != address(0), "Unsupported chain");
+        require(
+            _verifier == canonicalVerifier,
+            "Non-canonical verifier"
+        );
         require(
             _nullifierRegistry == canonicalRegistry,
             "Non-canonical nullifier registry"

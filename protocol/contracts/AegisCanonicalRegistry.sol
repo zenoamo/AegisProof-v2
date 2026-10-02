@@ -2,23 +2,38 @@
 pragma solidity ^0.8.28;
 
 /// @title AegisCanonicalRegistry
-/// @notice Chain-specific canonical AegisNullifierRegistry addresses.
+/// @notice Chain-specific canonical Aegis deployment addresses.
 /// @dev v2 currently has one supported deployment chain: Hardhat 31337.
 ///      Production chain addresses MUST be added here before deployment.
 ///      Returning address(0) for an unsupported chain makes the Shield
-///      constructor fail closed rather than accepting an arbitrary registry.
+///      constructor fail closed rather than accepting arbitrary dependencies.
 library AegisCanonicalRegistry {
     uint256 internal constant HARDHAT_CHAIN_ID = 31337;
 
     // Determined from the documented localhost deployment order:
-    // deployer nonce 0 = verifier, nonce 1 = registry.
+    // deployer nonce 0 = development verifier, nonce 1 = registry.
+    address internal constant HARDHAT_VERIFIER =
+        0x5fbdb2315678afecb367f032d93f642f64180aa3;
+
     address internal constant HARDHAT_REGISTRY =
         0xe7f1725e7734ce288f8367e1bb143e90bb3f0512;
 
-    function forChain(uint256 chainId) internal pure returns (address) {
+    function verifierForChain(uint256 chainId) internal pure returns (address) {
+        if (chainId == HARDHAT_CHAIN_ID) {
+            return HARDHAT_VERIFIER;
+        }
+        return address(0);
+    }
+
+    function registryForChain(uint256 chainId) internal pure returns (address) {
         if (chainId == HARDHAT_CHAIN_ID) {
             return HARDHAT_REGISTRY;
         }
         return address(0);
+    }
+
+    // Backwards-compatible alias for the registry lookup.
+    function forChain(uint256 chainId) internal pure returns (address) {
+        return registryForChain(chainId);
     }
 }
