@@ -4,8 +4,8 @@ pragma solidity ^0.8.28;
 /// @title AegisCanonicalRegistry
 /// @notice Chain-specific canonical Aegis deployment addresses.
 /// @dev Mainnet addresses are generated from the approved deterministic
-///      deployment plan. Do not replace them with placeholders or local
-///      development addresses.
+///      deployment plan, but remain reference-only until deployment and
+///      independent verification are complete.
 library AegisCanonicalRegistry {
     uint256 internal constant HARDHAT_CHAIN_ID = 31337;
     uint256 internal constant MAINNET_CHAIN_ID = 1;
@@ -26,9 +26,8 @@ library AegisCanonicalRegistry {
         if (chainId == HARDHAT_CHAIN_ID) {
             return HARDHAT_VERIFIER;
         }
-        if (chainId == MAINNET_CHAIN_ID) {
-            return MAINNET_VERIFIER;
-        }
+        // Mainnet addresses are counterfactual until deployment and
+        // independent verification. Keep the lookup fail-closed.
         return address(0);
     }
 
@@ -36,9 +35,8 @@ library AegisCanonicalRegistry {
         if (chainId == HARDHAT_CHAIN_ID) {
             return HARDHAT_REGISTRY;
         }
-        if (chainId == MAINNET_CHAIN_ID) {
-            return MAINNET_REGISTRY;
-        }
+        // Mainnet addresses are counterfactual until deployment and
+        // independent verification. Keep the lookup fail-closed.
         return address(0);
     }
 
