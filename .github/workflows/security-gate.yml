@@ -693,6 +693,7 @@ jobs:
       - name: Deployment manifest integrity
         run: |
           npm run validate:deployment-manifest
+          npm run test:deployment-manifest
 
       # ----------------------------------------------------------
       # Final working tree check
