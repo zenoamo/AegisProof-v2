@@ -72,7 +72,7 @@ function ok(cond, name) {
     const prevMode = process.env.KMS_BACKEND_MODE;
     process.env.KMS_BACKEND_MODE = "stub";
 
-    const run = spawnSync(process.execPath, [CLI, "--live", "--manifest", manifestPath], {
+    const run = spawnSync(process.execPath, [CLI, "--live", "--allow-missing-production-zkey", "--manifest", manifestPath], {
       cwd: ROOT,
       encoding: "utf8",
       env: { ...process.env },
@@ -168,7 +168,7 @@ function attachValidKmsStubEnvelope(entry) {
     const prevMode = process.env.KMS_BACKEND_MODE;
     process.env.KMS_BACKEND_MODE = "stub";
 
-    const run = spawnSync(process.execPath, [CLI, "--live", "--manifest", manifestPath], {
+    const run = spawnSync(process.execPath, [CLI, "--live", "--allow-missing-production-zkey", "--manifest", manifestPath], {
       cwd: ROOT,
       encoding: "utf8",
       env: { ...process.env },
@@ -248,7 +248,7 @@ function attachValidKmsStubEnvelope(entry) {
 
     const prevMode = process.env.KMS_BACKEND_MODE;
     process.env.KMS_BACKEND_MODE = "stub";
-    const run = spawnSync(process.execPath, [CLI, "--live", "--manifest", manifestPath], {
+    const run = spawnSync(process.execPath, [CLI, "--live", "--allow-missing-production-zkey", "--manifest", manifestPath], {
       cwd: ROOT,
       encoding: "utf8",
       env: { ...process.env },
