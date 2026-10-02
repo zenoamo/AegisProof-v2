@@ -28,6 +28,9 @@ export function validateManifest(manifest) {
     return errors;
   }
 
+  let deployableCount = 0;
+  let productionCount = 0;
+
   for (const [chainId, entry] of Object.entries(chains)) {
     if (!/^[0-9]+$/.test(chainId)) {
       errors.push(`invalid chain ID key: ${chainId}`);
@@ -37,6 +40,7 @@ export function validateManifest(manifest) {
       errors.push(`chain ${chainId}: entry must be an object`);
       continue;
     }
+
     if (!ADDRESS_RE.test(entry.canonicalVerifierAddress ?? "")) {
       errors.push(`chain ${chainId}: canonicalVerifierAddress must be a 20-byte address`);
     }
@@ -58,7 +62,16 @@ export function validateManifest(manifest) {
       }
     }
 
+    const productionFields = [
+      entry.productionVerifierAddress,
+      entry.productionShieldAddress,
+      entry.verifierBytecodeSha256,
+      entry.registryBytecodeSha256,
+    ];
+    const populatedProductionFields = productionFields.filter((value) => value !== null);
+
     if (entry.deployable === true) {
+      deployableCount += 1;
       if (!entry.productionVerifierAddress) {
         errors.push(`chain ${chainId}: deployable entry requires productionVerifierAddress`);
       }
@@ -71,14 +84,35 @@ export function validateManifest(manifest) {
       if (!entry.registryBytecodeSha256) {
         errors.push(`chain ${chainId}: deployable entry requires registryBytecodeSha256`);
       }
+      if (!["testnet", "production"].includes(entry.environment)) {
+        errors.push(`chain ${chainId}: deployable entry environment must be testnet or production`);
+      }
+      if (entry.environment === "production") {
+        productionCount += 1;
+      }
+    } else if (populatedProductionFields.length > 0) {
+      errors.push(
+        `chain ${chainId}: production deployment fields require deployable=true`,
+      );
+    }
+
+    if (entry.environment === "local" && entry.deployable === true) {
+      errors.push(`chain ${chainId}: local environment cannot be deployable`);
     }
   }
 
+  if (manifest.deploymentStatus === "testnet" && deployableCount === 0) {
+    errors.push("testnet deploymentStatus requires at least one deployable chain");
+  }
+
   if (manifest.deploymentStatus === "production") {
-    const productionChains = Object.values(chains).filter((entry) => entry?.deployable === true);
-    if (productionChains.length === 0) {
-      errors.push("production deploymentStatus requires at least one deployable chain");
+    if (productionCount === 0) {
+      errors.push("production deploymentStatus requires at least one deployable production chain");
     }
+  }
+
+  if (manifest.deploymentStatus === "not-deployed" && deployableCount > 0) {
+    errors.push("not-deployed status cannot contain deployable chains");
   }
 
   return errors;
