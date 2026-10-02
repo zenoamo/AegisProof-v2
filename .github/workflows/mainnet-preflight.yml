@@ -25,6 +25,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      - name: Read-only Ethereum Mainnet deployer nonce probe
+        env:
+          MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+          AEGIS_MAINNET_EXPECTED_DEPLOYER: ${{ secrets.AEGIS_MAINNET_EXPECTED_DEPLOYER }}
+        run: node scripts/mainnet-nonce-probe.mjs
+
       - name: Read-only Ethereum Mainnet preflight
         env:
           MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
