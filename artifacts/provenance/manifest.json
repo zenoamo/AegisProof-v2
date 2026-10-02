@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "phase": "8.13",
-  "generatedAt": "2026-08-07T21:05:32.889Z",
-  "commit": "9a0e2c07afa067c57c2c11ca02db5bf3d528eb80",
+  "generatedAt": "2026-10-02T11:12:40.526Z",
+  "commit": "9b004d4cb9b070a2c348c0b311b2523f654cbaaf",
   "profile": "prover",
   "resolverSource": "crypto-artifacts",
   "pinnedProductionHashes": {
@@ -10,25 +10,25 @@
     "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec"
   },
   "resolvedHashes": {
-    "zkeyHash": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
+    "zkeyHash": null,
     "vkHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
-    "vkFileHash": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
+    "vkFileHash": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
     "wasmHash": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
     "inputHash": "16578c9338396dad36fa37ea48c7c5b2215aae0937dbd195a2fa20a62eae2dbe"
   },
   "entries": [
     {
       "artifact": "production.zkey",
-      "path": "crypto-artifacts/phase4/production.zkey",
-      "sha256": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571",
-      "size": 2881473,
-      "createdAt": "2026-08-05T03:57:14.200Z",
-      "source": "crypto-artifacts",
+      "path": "artifacts/phase4/final/production.zkey",
+      "sha256": null,
+      "size": null,
+      "createdAt": null,
+      "source": "artifacts/phase4",
       "version": "v2",
-      "present": true,
+      "present": false,
       "classicalHash": {
         "algorithm": "SHA-256",
-        "digest": "ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571"
+        "digest": null
       },
       "pqcSignatureEnvelope": {
         "status": "unsigned",
@@ -43,15 +43,15 @@
     {
       "artifact": "production-vkey.json",
       "path": "crypto-artifacts/phase4/production-vkey.json",
-      "sha256": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814",
-      "size": 9078,
-      "createdAt": "2026-08-05T03:57:14.187Z",
+      "sha256": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec",
+      "size": 8840,
+      "createdAt": "2026-10-02T10:49:35.610Z",
       "source": "crypto-artifacts",
       "version": "v2",
       "present": true,
       "classicalHash": {
         "algorithm": "SHA-256",
-        "digest": "e0732a88f51791d9856245adff6dfbc1442da58cf6d4d1d7c3feb62c55355814"
+        "digest": "d012bd29ff6e4c44b4c656c7af6b289c5c8286a1554ce7b2b8fd1a7d3c67d2ec"
       },
       "pqcSignatureEnvelope": {
         "status": "unsigned",
@@ -68,7 +68,7 @@
       "path": "crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2_js/aegis_commit_core_v2.wasm",
       "sha256": "a0d3c53f3cdce624d5140874f0884b6b8075e701539978bdd55a826e41db60bd",
       "size": 4777840,
-      "createdAt": "2026-08-05T03:57:14.058Z",
+      "createdAt": "2026-10-02T10:49:35.550Z",
       "source": "crypto-artifacts",
       "version": "v2",
       "present": true,
@@ -91,7 +91,7 @@
       "path": "crypto-artifacts/phase2/phase2/r1cs/aegis_commit_core_v2.r1cs",
       "sha256": "3d47226b06d707b1765d7bf35acd01966b9800b0f6fb77cfe084a775f0fa5599",
       "size": 944872,
-      "createdAt": "2026-08-05T03:57:14.032Z",
+      "createdAt": "2026-10-02T10:49:35.534Z",
       "source": "crypto-artifacts",
       "version": "v2",
       "present": true,
@@ -114,7 +114,7 @@
       "path": "benchmarks/reports/baseline.json",
       "sha256": "4392525abff292ace6c5a1065a108a0122363a6e6530bfba68e4e09b8466282e",
       "size": 1564,
-      "createdAt": "2026-08-07T02:04:06.258Z",
+      "createdAt": "2026-10-02T10:49:35.522Z",
       "source": "benchmarks/reports",
       "version": "8.11",
       "present": true,
@@ -137,7 +137,7 @@
       "path": "benchmarks/reports/rapidsnark-evaluation.json",
       "sha256": "7388573f191cb35aa2553685142171da089bdd80f8987d0b40242ad2c038a6bd",
       "size": 824,
-      "createdAt": "2026-08-07T02:04:06.358Z",
+      "createdAt": "2026-10-02T10:49:35.526Z",
       "source": "benchmarks/reports",
       "version": "8.11",
       "present": true,
