@@ -256,8 +256,8 @@ function attachValidKmsStubEnvelope(entry) {
 
 function sampleKmsEntry() {
   const committed = loadManifest(DEFAULT_MANIFEST_PATH);
-  const entry = committed.entries.find((e) => e.artifact === "production.zkey" && e.sha256);
-  assert.ok(entry, "production.zkey fixture");
+  const entry = committed.entries.find((e) => e.present && e.sha256);
+  assert.ok(entry, "present artifact fixture");
   return structuredClone(entry);
 }
 
