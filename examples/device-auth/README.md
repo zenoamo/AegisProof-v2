@@ -18,11 +18,13 @@ Device Identity Proof Flow:
 
 ## Setup
 
-1. **Deploy contracts to testnet** (Sepolia recommended):
+1. **Use an authorized deployment**
 
+   The current repository has an executable local fixture only:
    ```bash
-   npx hardhat run scripts/deploy_sepolia.mjs --network sepolia
+   npx hardhat run scripts/deploy.ts
    ```
+   Sepolia/Mainnet deployment is authorization-gated. Do not use an old `deploy_sepolia.mjs` command or fabricate live addresses.
 
 2. **Configure environment variables**:
 
