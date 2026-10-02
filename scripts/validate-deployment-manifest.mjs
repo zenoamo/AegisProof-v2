@@ -37,6 +37,9 @@ export function validateManifest(manifest) {
       errors.push(`chain ${chainId}: entry must be an object`);
       continue;
     }
+    if (!ADDRESS_RE.test(entry.canonicalVerifierAddress ?? "")) {
+      errors.push(`chain ${chainId}: canonicalVerifierAddress must be a 20-byte address`);
+    }
     if (!ADDRESS_RE.test(entry.canonicalRegistryAddress ?? "")) {
       errors.push(`chain ${chainId}: canonicalRegistryAddress must be a 20-byte address`);
     }
@@ -83,18 +86,24 @@ export function validateManifest(manifest) {
 
 export function validateCanonicalRegistrySource(manifest, source) {
   const errors = [];
-  const match = source.match(/HARDHAT_CHAIN_ID = (\d+);[\s\S]*?HARDHAT_REGISTRY =\s*([0-9a-fx]+);/);
+  const match = source.match(/HARDHAT_CHAIN_ID = (\d+);[\s\S]*?HARDHAT_VERIFIER =\s*([0-9a-fx]+);[\s\S]*?HARDHAT_REGISTRY =\s*([0-9a-fx]+);/);
   if (!match) {
     return ["could not read Hardhat canonical registry constants"];
   }
 
   const chainId = match[1];
-  const address = match[2];
+  const verifierAddress = match[2];
+  const address = match[3];
   const entry = manifest.chains?.[chainId];
   if (!entry) {
     errors.push(`manifest is missing canonical registry entry for chain ${chainId}`);
-  } else if (entry.canonicalRegistryAddress.toLowerCase() !== address.toLowerCase()) {
-    errors.push(`chain ${chainId}: manifest registry does not match AegisCanonicalRegistry.sol`);
+  } else {
+    if (entry.canonicalVerifierAddress.toLowerCase() !== verifierAddress.toLowerCase()) {
+      errors.push(`chain ${chainId}: manifest verifier does not match AegisCanonicalRegistry.sol`);
+    }
+    if (entry.canonicalRegistryAddress.toLowerCase() !== address.toLowerCase()) {
+      errors.push(`chain ${chainId}: manifest registry does not match AegisCanonicalRegistry.sol`);
+    }
   }
   return errors;
 }
