@@ -80,6 +80,12 @@ function ok(cond, name) {
   ok(!ev.pass, "T-SEC-09: critical never allowlisted");
 }
 
+// T-SEC-11: public deployment manifest is metadata, not credentials
+{
+  const r = classifyPath("deployments/manifest.json");
+  ok(r.critical.length === 0, "T-SEC-11: deployment manifest not critical");
+}
+
 // T-SEC-10: pattern catalog non-empty
 {
   ok(CRITICAL_PATTERNS.length >= 5, "T-SEC-10: critical patterns defined");

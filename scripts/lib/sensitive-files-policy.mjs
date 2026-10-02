@@ -8,7 +8,7 @@ export const CRITICAL_PATTERNS = [
   { id: "private-key-ext", re: /\.(key|private|secret|pem)$/i, desc: "private key material extension" },
   { id: "pqc-private-dir", re: /^artifacts\/provenance\/keys\//, desc: "PQC private key directory" },
   { id: "private-keys-dir", re: /(^|\/)private-keys\//, desc: "private-keys directory" },
-  { id: "deployments-secrets", re: /^deployments\//, desc: "deployment credentials directory" },
+  { id: "deployments-secrets", re: /^deployments\/(?!manifest\.json$)/, desc: "deployment credentials directory" },
   { id: "wallet-env", re: /mnemonic|wallet\.json|keystore/i, desc: "wallet credential pattern" },
 ];
 

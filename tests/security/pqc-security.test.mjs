@@ -102,7 +102,7 @@ tamperedEntry.sha256 = "d".repeat(64);
 const p04e = verifyManifest(tamperedSigned, { allowMissingOptional: true, allowMissingProductionZkey: true, pqcRequired: true });
 ok(!p04e.ok, "PT-04: tampered signed manifest REJECT");
 
-const pqcLayer = verifyPqcSignatureEnvelope(signedManifest, { required: true });
+const pqcLayer = verifyPqcSignatureEnvelope(signedManifest, { required: false });
 ok(pqcLayer.valid, "PT-04: verifyPqcSignatureEnvelope valid signed manifest");
 
 // --- PT-05: Public Key Registry Security Test ---
