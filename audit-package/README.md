@@ -31,7 +31,7 @@ All SHA-256 values recorded in [`hashes.txt`](./hashes.txt).
 ### 3. Verification Reports
 
 Extracted pass reports:
-- `manifest-verification.txt` — output from `node scripts/verify_manifest.mjs` (28/28 PASS)
+- `manifest-verification.txt` — historical Phase 5 verification output retained as audit evidence; it is not the current verification command
 - `gates-pass-report.txt` — output from `node scripts/gates/run_all.mjs` (42/42 PASS)
 - `on-chain-test-output.txt` — output from `test/Groth16VerifierV2Production.ts` (5/5 PASS)
 - `phase4-proof-smoke.txt` — output from `scripts/phase4_verify_production.mjs`
@@ -51,16 +51,10 @@ See [`ceremony-report-ref.md`](./ceremony-report-ref.md): pointer to Phase 4 cer
 Run this command to regenerate hashes for your own systems:
 
 ```bash
-node scripts/verify_manifest.mjs | grep "PASS" > hashes.txt
+npm run test:artifact-provenance
 ```
 
-Expected counts:
-- Phase 0: 10 PASS
-- SSoT: 1 PASS
-- Phase 2 dev setup: 7 PASS
-- Evidence mode-separated: 2 PASS
-- Phase 4: 9 PASS (final hashes + records + separation)
-- Total: **28 PASS**
+The historical 28-check output is retained as evidence. Current validation should use the repository artifact-provenance test runner.
 
 ---
 

@@ -12,21 +12,21 @@
 
 Clone the repository:
 ```bash
-git clone https://github.com/aegisproof/aegis-proof.git
-cd aegis-proof
-git checkout <commit-hash>  # Use final commit hash from release
+git clone https://github.com/zenoamo/AegisProof-v2.git
+cd AegisProof-v2
+git checkout <commit-hash>  # Use the exact reviewed commit
 ```
 
-**Expected state:** Working tree clean at commit `3e9b6d6` (Phase 5 final)
+**Expected state:** Working tree clean at the exact commit selected for the audit scope; do not rely on an old hardcoded commit.
 
 ### Step 2: Artifact Verification
 
 Run manifest verification:
 ```bash
-node scripts/verify_manifest.mjs
+npm run test:artifact-provenance
 ```
 
-**Expected output:** `MANIFEST VERIFICATION: PASS` (28/28 checks)
+**Expected output:** artifact-provenance regression checks pass; record the exact command output and commit under review.
 
 Verify Phase 4 hashes manually:
 - production.zkey: `ce5a3d308868f2fe7a6a8e3b68d717c3217f84b0ddfbb3dc155338b9be4d6571`
@@ -90,8 +90,8 @@ Complete each item below during audit:
 - [ ] Timestamp excluded from commitment/nullifier computation
 - [ ] ChainId included in nullifier domain calculation
 - [ ] Session ID included in nullifier computation (Option A binding)
-- [ ] Commitment includes device ID but excludes timestamp
-- [ ] Nullifier includes all binding signals (timestamp excluded)
+- [ ] Commitment inputs match the SSoT Poseidon(6) definition; deviceId is an identity input to the nullifier, not the commitment
+- [ ] Nullifier matches the SSoT Poseidon(8) composition: domain, secretKey, deviceId, purposeId, sessionId, commitment, protocolVersion, chainId
 
 ### Implementation Safety
 - [ ] No hardcoded secrets in codebase
