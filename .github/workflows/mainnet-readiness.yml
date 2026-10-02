@@ -1,0 +1,58 @@
+name: AegisProof Ethereum Mainnet Readiness
+
+on:
+  pull_request:
+    paths:
+      - "deployments/**"
+      - "protocol/contracts/**"
+      - "scripts/validate-mainnet-readiness.mjs"
+      - "tests/security/mainnet-readiness.test.mjs"
+      - "package.json"
+      - ".github/workflows/mainnet-readiness.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    name: Mainnet readiness (no deployment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run Mainnet readiness regression
+        run: node --test tests/security/mainnet-readiness.test.mjs
+
+      - name: Verify Mainnet deployment is not accidentally enabled
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const manifest = JSON.parse(fs.readFileSync("deployments/manifest.json", "utf8"));
+          const entry = manifest.chains?.["1"];
+
+          if (!entry) {
+            console.log("PASS: Ethereum Mainnet is not configured");
+            process.exit(0);
+          }
+
+          if (entry.deployable === true || manifest.deploymentStatus === "production") {
+            console.error("FAIL: Ethereum Mainnet deployment is enabled in the committed manifest");
+            process.exit(1);
+          }
+
+          console.log("PASS: Ethereum Mainnet remains fail-closed");
+          NODE
