@@ -93,7 +93,6 @@ function ok(cond, name) {
 
 // T-EXP-004c: spy via verifyManifestKmsLayer — invoked when kmsBackend present
 {
-  const { verifyManifestKmsLayer } = await import("../../scripts/lib/kms-provenance.mjs");
   const committed = loadManifest(DEFAULT_MANIFEST_PATH);
   const withKms = structuredClone(committed);
   const entry = withKms.entries.find((e) => e.present && e.sha256);
@@ -151,17 +150,25 @@ function attachValidKmsStubEnvelope(entry) {
     kmsLive: false,
     kmsStub: true,
   };
-  return entry;
 }
 
-// T-EXP-004D: --live regeneration preserves a valid KMS envelope
+// T-EXP-004D: --live regeneration preserves a valid KMS envelope for an artifact
+// that is actually resolvable in the live environment. The production zkey may
+// intentionally be absent in CI, so it cannot be used as a preservation fixture.
 {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-exp004d-"));
   try {
     const committed = loadManifest(DEFAULT_MANIFEST_PATH);
-    const target = committed.entries.find((e) => e.artifact === "production.zkey" && e.sha256);
-    assert.ok(target, "production.zkey fixture");
-    attachValidKmsStubEnvelope(target);
+    const live = createManifest(resolveArtifacts(), { includeOptional: true });
+    const liveArtifact = live.entries.find((e) => e.artifact === "production-vkey.json" && e.sha256);
+    assert.ok(liveArtifact, "live-resolvable production-vkey fixture");
+
+    const committedEntry = committed.entries.find(
+      (e) => e.artifact === liveArtifact.artifact && e.sha256 === liveArtifact.sha256
+    );
+    assert.ok(committedEntry, "committed production-vkey matches live hash");
+
+    attachValidKmsStubEnvelope(committedEntry);
     const manifestPath = path.join(tmpDir, "manifest.json");
     fs.writeFileSync(manifestPath, JSON.stringify(committed, null, 2));
 
@@ -179,11 +186,11 @@ function attachValidKmsStubEnvelope(entry) {
 
     ok(run.status === 0, "T-EXP-004D: --live PASS with valid KMS envelope");
     const after = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-    const afterZkey = after.entries.find((e) => e.artifact === "production.zkey");
-    ok(afterZkey?.pqcSignatureEnvelope?.kmsBackend === BACKEND_VAULT_TRANSIT, "T-EXP-004D: kmsBackend preserved");
-    ok(afterZkey?.pqcSignatureEnvelope?.signature === target.pqcSignatureEnvelope.signature, "T-EXP-004D: signature preserved");
-    ok(afterZkey?.pqcSignatureEnvelope?.kmsStub === true, "T-EXP-004D: kmsStub preserved");
-    ok(afterZkey?.pqcSignatureEnvelope?.signedAt === target.pqcSignatureEnvelope.signedAt, "T-EXP-004D: signedAt preserved");
+    const afterEntry = after.entries.find((e) => e.artifact === liveArtifact.artifact);
+    ok(afterEntry?.pqcSignatureEnvelope?.kmsBackend === BACKEND_VAULT_TRANSIT, "T-EXP-004D: kmsBackend preserved");
+    ok(afterEntry?.pqcSignatureEnvelope?.signature === committedEntry.pqcSignatureEnvelope.signature, "T-EXP-004D: signature preserved");
+    ok(afterEntry?.pqcSignatureEnvelope?.kmsStub === true, "T-EXP-004D: kmsStub preserved");
+    ok(afterEntry?.pqcSignatureEnvelope?.signedAt === committedEntry.pqcSignatureEnvelope.signedAt, "T-EXP-004D: signedAt preserved");
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -198,7 +205,6 @@ function attachValidKmsStubEnvelope(entry) {
   attachValidKmsStubEnvelope(zkey);
   vkey.pqcSignatureEnvelope = structuredClone(zkey.pqcSignatureEnvelope);
 
-  const { verifyManifestKmsLayer } = await import("../../scripts/lib/kms-provenance.mjs");
   const prevMode = process.env.KMS_BACKEND_MODE;
   process.env.KMS_BACKEND_MODE = "stub";
   const cross = await verifyManifestKmsLayer(committed);
