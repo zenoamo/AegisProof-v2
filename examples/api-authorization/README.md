@@ -38,10 +38,10 @@ npm install express @aegisproof/sdk
 Create `config.js`:
 ```javascript
 const config = {
-  rpcUrl: process.env.RPC_URL || "https://rpc.sepolia.org",
+  rpcUrl: process.env.RPC_URL,
   shieldContract: process.env.SHIELD_CONTRACT,
   verifierAddress: process.env.VERIFIER_ADDRESS,
-  chainId: parseInt(process.env.CHAIN_ID) || 11155111, // Sepolia default
+  chainId: Number(process.env.CHAIN_ID),
 };
 
 module.exports = config;
@@ -95,7 +95,7 @@ authRouter.use(async (req, res, next) => {
     }
     
     // Proof valid - extract session info for authorization
-    const sessionId = signals[6]; // Signal index 6 = sessionId
+    // Resolve sessionId/deviceId from the canonical SSoT/SDK mapping; do not hardcode historical indices.\n    const sessionId = proofData.sessionId;\n    const deviceId = proofData.deviceId;
     
     // Store verified data in request object for downstream handlers
     req.aegisAuth = {
@@ -166,3 +166,4 @@ Avoid:
 - Gas costs apply for every new proof submission
 - Not suitable for ultra-low-latency APIs (<10ms response requirements)
 - Operator must maintain uptime for registration/deactivation functions
+\n\n> **Signal-layout note:** The v2 SSoT has 30 signals. This reference example intentionally does not interpret raw array indices; production code should use the SDK canonical mapping and verify the RPC chain ID before relying on configuration.\n
