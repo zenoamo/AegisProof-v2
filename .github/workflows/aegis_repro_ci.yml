@@ -4,6 +4,7 @@
 #
 # PUSH / PR
 #   - security boundary checks
+#   - production dependency boundary
 #   - codegen determinism
 #   - live artifact provenance verification
 #   - standalone build gates
@@ -33,6 +34,16 @@
 #   - PQC production simulation remains optional until its secret is configured.
 #   - Lean is an independent formal-assurance layer; it does not replace
 #     runtime, cryptographic, provenance, or integration verification.
+#
+# SUPPLY-CHAIN MODEL
+#   - Production dependencies are audited with npm audit --omit=dev.
+#   - circomlibjs is development/ZK tooling only and must not enter the
+#     production dependency tree.
+#   - elliptic is currently transitive through the development dependency
+#     graph and must not enter the production dependency tree.
+#   - The CI gate fails closed if elliptic or circomlibjs appears in the
+#     production dependency tree.
+#   - No unverified elliptic override/fork is used as a remediation.
 # ============================================================================
 
 name: AegisProof Reproducibility CI
@@ -85,8 +96,65 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # ----------------------------------------------------------------------
+      # Production dependency security
+      # ----------------------------------------------------------------------
+
       - name: Production dependency audit
         run: npm audit --omit=dev
+
+      # SECURITY INVARIANT:
+      # elliptic currently exists only in the development/ZK tooling graph.
+      # circomlibjs is likewise development-only.
+      #
+      # This gate intentionally does NOT fail merely because elliptic exists
+      # in the full development dependency tree. The security boundary is
+      # production runtime dependency exposure.
+      #
+      # Do NOT replace elliptic with an arbitrary override/fork here.
+      # There is currently no verified upstream patched elliptic release.
+      - name: Elliptic production dependency boundary
+        run: |
+          set -euo pipefail
+
+          echo "============================================"
+          echo "AegisProof production dependency boundary"
+          echo "============================================"
+
+          echo
+          echo "[1/2] Checking elliptic..."
+
+          if npm ls elliptic --omit=dev --all >/tmp/aegis-elliptic-production.txt 2>&1; then
+            echo "::error::elliptic is present in the production dependency tree"
+            echo
+            cat /tmp/aegis-elliptic-production.txt
+            exit 1
+          fi
+
+          echo "PASS: elliptic is absent from production dependencies"
+
+          echo
+          echo "[2/2] Checking circomlibjs..."
+
+          if npm ls circomlibjs --omit=dev --all >/tmp/aegis-circomlibjs-production.txt 2>&1; then
+            echo "::error::circomlibjs is present in the production dependency tree"
+            echo
+            cat /tmp/aegis-circomlibjs-production.txt
+            exit 1
+          fi
+
+          echo "PASS: circomlibjs is absent from production dependencies"
+
+          echo
+          echo "PASS: production dependency boundary is intact"
+
+      # Existing repository-specific regression coverage.
+      - name: Elliptic supply-chain regression
+        run: npm run test:elliptic-supply-chain
+
+      # ----------------------------------------------------------------------
+      # Existing security boundary
+      # ----------------------------------------------------------------------
 
       - name: Sensitive file boundary scan
         run: npm run check:sensitive-files
@@ -474,9 +542,6 @@ jobs:
   # FORMAL ASSURANCE
   # ==========================================================================
 
-  # Lean is an independent assurance layer.
-  # It formalizes semantic contracts and invariants; it does not replace
-  # Groth16, BN254, WASM, Solidity, SHA-256, ML-DSA, TEE, or runtime tests.
   formal-assurance:
     name: Lean formal assurance
     runs-on: ubuntu-latest
@@ -763,6 +828,7 @@ jobs:
           name: hybrid-auth-benchmark
           path: benchmarks/reports/hybrid-auth-benchmark.json
           if-no-files-found: warn
+
 
   # ==========================================================================
   # REQUIRED CI GATE
