@@ -40,7 +40,10 @@ test("keeps Mainnet lookup fail-closed before deployment verification", () => {
     registry: "0x000000000000000000000000000000000000beef",
   });
 
-  assert.match(source, /if \(chainId == MAINNET_CHAIN_ID\)/);
+  assert.doesNotMatch(
+    source,
+    /if \(chainId == MAINNET_CHAIN_ID\) \{[\\s\\S]*?return MAINNET_(?:VERIFIER|REGISTRY);/,
+  );
   assert.match(source, /return address\(0\);/);
 });
 
