@@ -694,6 +694,7 @@ jobs:
         run: |
           npm run validate:deployment-manifest
           npm run test:deployment-manifest
+          npm run test:mainnet-canonical-registry
 
       # ----------------------------------------------------------
       # Final working tree check
