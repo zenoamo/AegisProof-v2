@@ -46,6 +46,7 @@
     "generate:provenance": "node scripts/generate-provenance-manifest.mjs",
     "generate:pqc-dev-keys": "node scripts/generate-pqc-dev-keys.mjs",
     "export:pqc-public-key": "node scripts/export-pqc-public-key.mjs",
+    "verify:production-zkey-path": "node scripts/verify-production-zkey-path.mjs",
     "verify:provenance": "node scripts/verify-provenance-manifest.mjs",
     "bench:provenance": "node scripts/bench-provenance-verify.mjs",
     "bench:hybrid-auth": "node scripts/bench-hybrid-auth.mjs",

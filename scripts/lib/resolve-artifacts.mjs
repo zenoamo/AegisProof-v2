@@ -20,7 +20,7 @@ export const WASM_HASH_PREFIX = "a0d3c53f3cdce624";
 
 const R = (p) => path.join(ROOT, p);
 
-/** @typedef {'artifacts/phase2'|'crypto-artifacts'|'external'|'override'|'missing'} ArtifactSourceLabel */
+/** @typedef {'artifacts/phase2'|'artifacts/phase4'|'crypto-artifacts'|'external'|'override'|'missing'} ArtifactSourceLabel */
 
 /** Ordered candidate paths; first existing file wins. */
 const CANDIDATES = {
@@ -78,9 +78,8 @@ const CANDIDATES = {
 /** @param {string} relPath */
 export function sourceLabelForRel(relPath) {
   if (relPath.startsWith("crypto-artifacts/")) return "crypto-artifacts";
-  if (relPath.startsWith("artifacts/phase2") || relPath.startsWith("artifacts/phase4")) {
-    return "artifacts/phase2";
-  }
+  if (relPath.startsWith("artifacts/phase2")) return "artifacts/phase2";
+  if (relPath.startsWith("artifacts/phase4")) return "artifacts/phase4";
   return "unknown";
 }
 

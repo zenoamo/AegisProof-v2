@@ -38,4 +38,11 @@ New production.zkey commits are blocked by `.gitignore` and scanner; existing tr
 
 ## Migration update — 2026-10-01
 
-The tracked production.zkey copy has now been removed from the repository in the migration branch. The remaining work is to provision the external secure-storage location and update CI/prover resolution to retrieve it without reintroducing the binary into GitHub.
+The tracked production.zkey copy has now been removed from the repository in the migration branch. `resolveArtifacts()` accepts an operator-provisioned absolute path through `AEGIS_PRODUCTION_ZKEY_PATH`; strict CI verifies that file against `PRODUCTION_ZKEY_HASH` before provenance verification.
+
+The secure-storage download backend, object identifier, and credential/OIDC
+contract are not defined in this repository. Until operators configure that
+provisioning step, strict scheduled/manual provenance verification is
+fail-closed (`BLOCKED`), not silently downgraded. PR and repository regression
+tiers explicitly allow the absent external zkey, but continue to verify the
+committed hash pin and all available artifacts.
