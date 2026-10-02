@@ -10,10 +10,10 @@
 All artifacts are stored under `artifacts/phase4/`. Run:
 
 ```bash
-node scripts/verify_manifest.mjs
+npm run test:artifact-provenance
 ```
 
-This should output **28/28 PASS** and include:
+This should complete the current artifact-provenance regression checks and include:
 
 - `phase4:ptauHash` == `4afdd19bbf8cceeb...`
 - `phase4:zkeyHash` == `ce5a3d308868f2fe...`
