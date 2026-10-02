@@ -9,7 +9,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TARGET = path.join(ROOT, "protocol", "contracts", "AegisCanonicalRegistry.sol");
 
 function fail(message) {
-  console.error(\`FAIL \${message}\`);
+  console.error(`FAIL ${message}`);
   process.exitCode = 1;
 }
 
@@ -20,7 +20,7 @@ export function renderCanonicalRegistry({ verifier, registry }) {
   const normalizedVerifier = getAddress(verifier);
   const normalizedRegistry = getAddress(registry);
 
-  return \`// SPDX-License-Identifier: MIT
+  return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
 /// @title AegisCanonicalRegistry
@@ -39,10 +39,10 @@ library AegisCanonicalRegistry {
         0xe7f1725e7734ce288f8367e1bb143e90bb3f0512;
 
     address internal constant MAINNET_VERIFIER =
-        \${normalizedVerifier};
+        ${normalizedVerifier};
 
     address internal constant MAINNET_REGISTRY =
-        \${normalizedRegistry};
+        ${normalizedRegistry};
 
     function verifierForChain(uint256 chainId) internal pure returns (address) {
         if (chainId == HARDHAT_CHAIN_ID) {
@@ -68,7 +68,7 @@ library AegisCanonicalRegistry {
         return registryForChain(chainId);
     }
 }
-\`;
+`;
 }
 
 export function generateMainnetCanonicalRegistry({ deployer, startingNonce }) {
@@ -101,11 +101,11 @@ if (import.meta.url === new URL(process.argv[1], "file:").href) {
 
     fs.writeFileSync(TARGET, source);
     console.log("Generated Mainnet canonical registry");
-    console.log(\`Deployer: \${plan.deployer}\`);
-    console.log(\`Starting nonce: \${plan.startingNonce}\`);
-    console.log(\`MAINNET_VERIFIER: \${plan.verifier}\`);
-    console.log(\`MAINNET_REGISTRY: \${plan.registry}\`);
-    console.log(\`Output: \${TARGET}\`);
+    console.log(`Deployer: ${plan.deployer}`);
+    console.log(`Starting nonce: ${plan.startingNonce}`);
+    console.log(`MAINNET_VERIFIER: ${plan.verifier}`);
+    console.log(`MAINNET_REGISTRY: ${plan.registry}`);
+    console.log(`Output: ${TARGET}`);
     console.log("No transaction was created or broadcast.");
   }
 }
