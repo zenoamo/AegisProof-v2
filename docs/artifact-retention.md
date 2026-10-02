@@ -79,7 +79,7 @@ Production verifier on-chain test: `test/Groth16VerifierV2Production.ts`
 
 ## 2. Retention rules
 1. FROZEN artifacts are never modified, moved, or regenerated. Verification:
-   `node scripts/verify_manifest.mjs` (every check PASS; includes the pinned
+   `npm run test:artifact-provenance` (artifact-provenance checks PASS; includes the pinned
    Phase 4 production final hashes when the ceremony has been performed).
 2. CANONICAL artifacts are hash-pinned; the cache manifest and every suite
    run re-verify them. A mismatch aborts the run (never treated as success).
