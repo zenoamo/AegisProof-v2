@@ -56,7 +56,8 @@
     "aegis:verify": "tsx scripts/aegis-auto-verify.ts",
     "validate:deployment-manifest": "node scripts/validate-deployment-manifest.mjs",
     "preflight:mainnet": "node scripts/mainnet-preflight.mjs",
-    "check:mainnet-deploy-config": "node scripts/mainnet-deploy-config-check.mjs"
+    "check:mainnet-deploy-config": "node scripts/mainnet-deploy-config-check.mjs",
+    "test:mainnet-deployment-plan": "node --test tests/security/mainnet-deployment-plan.test.mjs"
   },
   "type": "module",
   "optionalDependencies": {
