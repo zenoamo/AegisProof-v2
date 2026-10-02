@@ -3,6 +3,8 @@ import hardhatToolboxViem from "@nomicfoundation/hardhat-toolbox-viem";
 
 const rpcUrl = process.env.SEPOLIA_RPC_URL;
 const privateKey = process.env.SEPOLIA_PRIVATE_KEY;
+const mainnetRpcUrl = process.env.MAINNET_RPC_URL;
+const mainnetPrivateKey = process.env.MAINNET_PRIVATE_KEY;
 
 export default {
   plugins: [hardhatToolboxViem],
@@ -34,6 +36,11 @@ export default {
       type: "http",
       url: rpcUrl ?? "http://127.0.0.1:8545",
       accounts: privateKey ? [privateKey] : [],
+    },
+    mainnet: {
+      type: "http",
+      url: mainnetRpcUrl ?? "http://127.0.0.1:8545",
+      accounts: mainnetPrivateKey ? [mainnetPrivateKey] : [],
     },
   },
 };
