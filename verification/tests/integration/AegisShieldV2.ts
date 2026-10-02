@@ -80,6 +80,19 @@ async function main() {
     deployer.account.address,
   ]);
 
+  const rogueVerifier = await viem.deployContract(
+    "contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
+  );
+  await expectRevert(
+    viem.deployContract("AegisShieldV2", [
+      rogueVerifier.address,
+      deployer.account.address,
+      registry.address,
+    ]),
+    "Non-canonical verifier",
+    "non-canonical verifier rejected at Shield constructor"
+  );
+
   assert.equal(
     registry.address.toLowerCase(),
     "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
