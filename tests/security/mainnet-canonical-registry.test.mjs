@@ -26,10 +26,22 @@ test("generates Mainnet canonical addresses from the deterministic deployment pl
 
   assert.equal(plan.verifier, expectedVerifier);
   assert.equal(plan.registry, expectedRegistry);
+  assert.equal(plan.verifierNonce, startingNonce);
+  assert.equal(plan.registryNonce, startingNonce + 1);
   assert.match(source, new RegExp(`MAINNET_VERIFIER =\\s+${expectedVerifier}`));
   assert.match(source, new RegExp(`MAINNET_REGISTRY =\\s+${expectedRegistry}`));
   assert.match(source, /chainId == MAINNET_CHAIN_ID/);
   assert.match(source, /chainId == HARDHAT_CHAIN_ID/);
+});
+
+test("keeps Mainnet lookup fail-closed before deployment verification", () => {
+  const source = renderCanonicalRegistry({
+    verifier: "0x000000000000000000000000000000000000dead",
+    registry: "0x000000000000000000000000000000000000beef",
+  });
+
+  assert.match(source, /if \(chainId == MAINNET_CHAIN_ID\)/);
+  assert.match(source, /return address\(0\);/);
 });
 
 test("renders normalized checksum addresses without changing the local fixtures", () => {
