@@ -55,7 +55,8 @@
     "sync:signals": "tsx scripts/sync-signals.ts",
     "aegis:verify": "tsx scripts/aegis-auto-verify.ts",
     "validate:deployment-manifest": "node scripts/validate-deployment-manifest.mjs",
-    "preflight:mainnet": "node scripts/mainnet-preflight.mjs"
+    "preflight:mainnet": "node scripts/mainnet-preflight.mjs",
+    "check:mainnet-deploy-config": "node scripts/mainnet-deploy-config-check.mjs"
   },
   "type": "module",
   "optionalDependencies": {

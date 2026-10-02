@@ -27,7 +27,7 @@ const ZKEY = path.join(P4, "final", "production.zkey");
 const VKEY_JSON = path.join(P4, "final", "production-vkey.json");
 const HASHES = path.join(P4, "hashes", "hashes.json");
 const TEMPLATE = path.join(ROOT, "node_modules/snarkjs/templates/verifier_groth16.sol.ejs");
-const OUT = path.join(ROOT, "contracts/Groth16VerifierV2Production.sol");
+const OUT = path.join(ROOT, "protocol", "contracts", "Groth16VerifierV2Production.sol");
 
 const DEV = { zkey: "c80f004e9f6b26fa", vkey: "6193351af0892493" };
 
