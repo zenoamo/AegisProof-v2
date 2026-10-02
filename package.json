@@ -59,7 +59,8 @@
     "check:mainnet-deploy-config": "node scripts/mainnet-deploy-config-check.mjs",
     "test:mainnet-deployment-plan": "node --test tests/security/mainnet-deployment-plan.test.mjs",
     "generate:mainnet-canonical-registry": "node scripts/gen-mainnet-canonical-registry.mjs",
-    "test:mainnet-canonical-registry": "node --test tests/security/mainnet-canonical-registry.test.mjs"
+    "test:mainnet-canonical-registry": "node --test tests/security/mainnet-canonical-registry.test.mjs",
+    "probe:mainnet-nonce": "node scripts/mainnet-nonce-probe.mjs"
   },
   "type": "module",
   "optionalDependencies": {
