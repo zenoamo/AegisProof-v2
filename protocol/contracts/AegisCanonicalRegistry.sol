@@ -3,24 +3,31 @@ pragma solidity ^0.8.28;
 
 /// @title AegisCanonicalRegistry
 /// @notice Chain-specific canonical Aegis deployment addresses.
-/// @dev v2 currently has one supported deployment chain: Hardhat 31337.
-///      Production chain addresses MUST be added here before deployment.
-///      Returning address(0) for an unsupported chain makes the Shield
-///      constructor fail closed rather than accepting arbitrary dependencies.
+/// @dev Mainnet addresses are generated from the approved deterministic
+///      deployment plan. Do not replace them with placeholders or local
+///      development addresses.
 library AegisCanonicalRegistry {
     uint256 internal constant HARDHAT_CHAIN_ID = 31337;
+    uint256 internal constant MAINNET_CHAIN_ID = 1;
 
-    // Determined from the documented localhost deployment order:
-    // deployer nonce 0 = development verifier, nonce 1 = registry.
     address internal constant HARDHAT_VERIFIER =
         0x5fbdb2315678afecb367f032d93f642f64180aa3;
 
     address internal constant HARDHAT_REGISTRY =
-        0xe7f1725e7734ce288f8367e1bb143e90bb3f0512;
+        0xe7f1725e7734ce2884f8367e1bb143e90bb3f0512;
+
+    address internal constant MAINNET_VERIFIER =
+        0x014468895DB46636dCEED11A0981c3dB3d8BE146;
+
+    address internal constant MAINNET_REGISTRY =
+        0x5fECFdDE220Ecc5349f16547fa3c49fBc36A62f6;
 
     function verifierForChain(uint256 chainId) internal pure returns (address) {
         if (chainId == HARDHAT_CHAIN_ID) {
             return HARDHAT_VERIFIER;
+        }
+        if (chainId == MAINNET_CHAIN_ID) {
+            return MAINNET_VERIFIER;
         }
         return address(0);
     }
@@ -29,10 +36,12 @@ library AegisCanonicalRegistry {
         if (chainId == HARDHAT_CHAIN_ID) {
             return HARDHAT_REGISTRY;
         }
+        if (chainId == MAINNET_CHAIN_ID) {
+            return MAINNET_REGISTRY;
+        }
         return address(0);
     }
 
-    // Backwards-compatible alias for the registry lookup.
     function forChain(uint256 chainId) internal pure returns (address) {
         return registryForChain(chainId);
     }
