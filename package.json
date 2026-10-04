@@ -13,7 +13,7 @@
     "@nomicfoundation/hardhat-viem": "^3.0.9",
     "@types/node": "^26.6.3",
     "circomlibjs": "^0.1.7",
-    "hardhat": "^3.18.0",
+    "hardhat": "^3.18.1",
     "snarkjs": "^0.7.6",
     "tsx": "^4.23.15",
     "typescript": "~7.0.2"
