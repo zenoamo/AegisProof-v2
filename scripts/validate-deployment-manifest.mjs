@@ -120,7 +120,7 @@ export function validateManifest(manifest) {
 
 export function validateCanonicalRegistrySource(manifest, source) {
   const errors = [];
-  const match = source.match(/HARDHAT_CHAIN_ID = (\d+);[\s\S]*?HARDHAT_VERIFIER =\s*([0-9a-fx]+);[\s\S]*?HARDHAT_REGISTRY =\s*([0-9a-fx]+);/);
+  const match = source.match(/HARDHAT_CHAIN_ID = (\d+);[\s\S]*?HARDHAT_VERIFIER =\s*([0-9a-fA-Fx]+);[\s\S]*?HARDHAT_REGISTRY =\s*([0-9a-fA-Fx]+);/);
   if (!match) {
     return ["could not read Hardhat canonical registry constants"];
   }
