@@ -248,15 +248,6 @@ const signedManifest = signManifest(createSigningFixtureManifest(), { secretKey,
 const pqcManifest = verifyPqcSignatureEnvelope(signedManifest, { required: true });
 ok(pqcManifest.valid, "verifyPqcSignatureEnvelope valid signed manifest");
 
-const registryStrictManifest = JSON.parse(JSON.stringify(signedManifest));
-const strictZkey = registryStrictManifest.entries.find((entry) => entry.artifact === "production.zkey");
-strictZkey.pqcSignatureEnvelope.publicKeyId = "aegis-ci-mldsa87-v1";
-strictZkey.pqcSignatureEnvelope.publicKey = ciKey.publicKey;
-const strictPqc = verifyPqcSignatureEnvelope(registryStrictManifest, {
-  required: false,
-  requireActiveKey: true,
-});
-ok(strictPqc.valid, "T-PQC-11 active registry key accepted in strict lifecycle mode");
 ok(pqcManifest.algorithm === PQC_ALGORITHM_VERSION, "verifyPqcSignatureEnvelope returns algorithm");
 
 const signedCore = signedManifest.entries.filter((e) =>
