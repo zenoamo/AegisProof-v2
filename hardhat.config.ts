@@ -16,6 +16,7 @@ export default {
   // output in artifacts/hardhat keeps the frozen evidence tree untouched.
   paths: {
     artifacts: "artifacts/hardhat",
+    sources: "protocol/contracts",
   },
 
   solidity: {
