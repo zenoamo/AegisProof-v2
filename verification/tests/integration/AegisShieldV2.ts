@@ -72,7 +72,7 @@ async function main() {
 
   // ---------------------------------------------------------------- deploy
   const verifier = await viem.deployContract(
-    "contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
+    "protocol/contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
   );
   ok((await publicClient.getBytecode({ address: verifier.address })) !== undefined, "verifier bytecode deployed");
 
@@ -81,7 +81,7 @@ async function main() {
   ]);
 
   const rogueVerifier = await viem.deployContract(
-    "contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
+    "protocol/contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
   );
   await expectRevert(
     viem.deployContract("AegisShieldV2", [

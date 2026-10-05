@@ -3,9 +3,9 @@
 // ----------------------------------------------------------------------------
 // Reads specs/aegis-protocol.v2.json (the ONLY source of truth) and emits:
 //   generated/AegisSignals.ts              — TypeScript constants
-//   contracts/generated/AegisSignals.sol   — Solidity library constants
+//   protocol/contracts/generated/AegisSignals.sol — Solidity library constants
 //   packages/sdk/src/generated/AegisSignals.ts — SDK-local TypeScript constants
-//     (under contracts/ so hardhat compiles it together with AegisShieldV2)
+//     (under protocol/contracts so hardhat compiles it with AegisShieldV2)
 // Output is deterministic (no timestamps) so CI can verify regeneration
 // produces zero diff. NEVER edit the generated files by hand.
 // ============================================================================
@@ -16,7 +16,7 @@ import { fileURLToPath } from "url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ssot = JSON.parse(fs.readFileSync(path.join(ROOT, "specs/aegis-protocol.v2.json"), "utf8"));
 const outDir = path.join(ROOT, "generated");
-const solOutDir = path.join(ROOT, "contracts/generated");
+const solOutDir = path.join(ROOT, "protocol/contracts/generated");
 const sdkTsOutDir = path.join(ROOT, "packages/sdk/src/generated");
 fs.mkdirSync(outDir, { recursive: true });
 fs.mkdirSync(solOutDir, { recursive: true });
@@ -78,6 +78,6 @@ const solLines = [
 fs.writeFileSync(path.join(solOutDir, "AegisSignals.sol"), solLines.join("\n"), "utf8");
 
 console.log("codegen: generated/AegisSignals.ts written");
-console.log("codegen: contracts/generated/AegisSignals.sol written");
+console.log("codegen: protocol/contracts/generated/AegisSignals.sol written");
 console.log("codegen: packages/sdk/src/generated/AegisSignals.ts written");
 console.log(`codegen: ${ssot.publicSignals.length} signals, protocol v${ssot.version}, MAX_AGE=${MAX_AGE}, SKEW=${SKEW}`);

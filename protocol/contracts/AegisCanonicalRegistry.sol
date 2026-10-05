@@ -11,10 +11,10 @@ library AegisCanonicalRegistry {
     uint256 internal constant MAINNET_CHAIN_ID = 1;
 
     address internal constant HARDHAT_VERIFIER =
-        0x5fbdb2315678afecb367f032d93f642f64180aa3;
+        0x5FbDB2315678afecb367f032d93F642f64180aa3;
 
     address internal constant HARDHAT_REGISTRY =
-        0xe7f1725e7734ce288f8367e1bb143e90bb3f0512;
+        0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512;
 
     address internal constant MAINNET_VERIFIER =
         0x014468895DB46636dCEED11A0981c3dB3d8BE146;

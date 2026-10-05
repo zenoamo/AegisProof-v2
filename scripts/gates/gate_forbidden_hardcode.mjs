@@ -14,8 +14,8 @@ const scanTargets = [
   PATHS.sym,
   PATHS.ssot,
   path.join(P2, "tests/input_v2.json"),
-  path.join(ROOT, "contracts/AegisShieldV2.sol"),
-  path.join(ROOT, "contracts/Groth16VerifierV2.sol"),
+  path.join(ROOT, "protocol/contracts/AegisShieldV2.sol"),
+  path.join(ROOT, "protocol/contracts/Groth16VerifierV2.sol"),
   path.join(ROOT, "generated/AegisSignals.ts"),
 ];
 for (const t of scanTargets) {
@@ -25,7 +25,7 @@ for (const t of scanTargets) {
 }
 
 // SSoT-derived constants must be consistent everywhere they appear
-const genSol = path.join(ROOT, "contracts/generated/AegisSignals.sol");
+const genSol = path.join(ROOT, "protocol/contracts/generated/AegisSignals.sol");
 if (fs.existsSync(genSol)) {
   const txt = fs.readFileSync(genSol, "utf8");
   check(txt.includes("86400"), "hardcode:max-age-consistent", "MAX_AGE=86400 in generated Solidity");

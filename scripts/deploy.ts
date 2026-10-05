@@ -145,7 +145,7 @@ async function main() {
 
   const verifier =
     await viem.deployContract(
-      "contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
+      "protocol/contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
     );
 
   console.log(
