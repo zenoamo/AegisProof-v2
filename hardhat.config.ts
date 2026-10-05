@@ -27,22 +27,19 @@ export default {
     // In-process simulated network: pin the genesis clock to the frozen Phase 2
     // baseline proof's timestamp window (signal 24 = 1754300000). EVM time
     // cannot rewind, so the chain must start inside the proof's validity window.
-    default: {
+    hardhat: {
       initialDate: new Date(1754300000 * 1000),
     },
     localhost: {
       url: "http://127.0.0.1:8545",
     },
     sepolia: {
-      type: "http",
       url: rpcUrl ?? "http://127.0.0.1:8545",
       accounts: privateKey ? [privateKey] : [],
     },
     mainnet: {
-      type: "http",
       url: mainnetRpcUrl ?? "http://127.0.0.1:8545",
       accounts: mainnetPrivateKey ? [mainnetPrivateKey] : [],
     },
   },
 };
-
