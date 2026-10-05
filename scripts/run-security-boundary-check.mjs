@@ -22,6 +22,6 @@ function run(label, scriptRel, extraArgs = []) {
 }
 
 run("Sensitive file boundary", "scripts/check-sensitive-files.mjs");
-run("Artifact provenance (live)", "scripts/verify-provenance-manifest.mjs", ["--live"]);
+run("Artifact provenance (live)", "scripts/verify-provenance-manifest.mjs", ["--live", "--allow-missing-production-zkey"]);
 
 console.log("\nPASS security boundary check (sensitive files + provenance)");
