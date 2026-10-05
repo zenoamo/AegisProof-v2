@@ -108,12 +108,16 @@ jobs:
             "utf8",
           );
 
-          if (/MAINNET_RPC_URL|MAINNET_PRIVATE_KEY/.test(workflow)) {
-            throw new Error("workflow must not use Mainnet RPC or private-key credentials");
+          if (!workflow.includes("npx hardhat node")) {
+            throw new Error("workflow must start the local Hardhat node");
           }
 
-          if (!workflow.includes("--network localhost")) {
+          if (!workflow.includes("npx hardhat run scripts/deploy.ts --network localhost")) {
             throw new Error("workflow must deploy only to the local Hardhat network");
+          }
+
+          if (/secrets\\.|MAINNET_(RPC_URL|PRIVATE_KEY)/.test(workflow)) {
+            throw new Error("local deployment workflow must not reference GitHub secrets or Mainnet RPC/private-key credentials");
           }
 
           console.log("Local-only deployment boundary: PASS");
