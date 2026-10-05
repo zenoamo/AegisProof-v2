@@ -32,6 +32,7 @@ ADR-0003: PQC applies to artifact metadata authenticity only.
 | KMS signing path | IMPLEMENTED / MOCKED | `kms-provenance.mjs` |
 | Live KMS signing | NOT VERIFIED | operator checklist |
 | PR-tier strict | PARTIAL (WARN-only) | Phase 8.15 pending |
+| Key lifecycle policy | IMPLEMENTED | status + validity window + purpose policy |
 
 ---
 
@@ -56,7 +57,23 @@ CI tiers: [phase8.13-pqc-ci-policy.md](./phase8.13-pqc-ci-policy.md)
 
 ---
 
-## 5. Production Readiness Gaps
+## 5. PQC Key Lifecycle Policy
+
+Registry records now support an explicit lifecycle state and validity window without changing the cryptographic algorithm or frozen proof path:
+
+- `active` — accepted by strict verification.
+- `deprecated` — retained for historical verification, rejected when `requireActiveKey` is enabled.
+- `revoked` — rejected by strict verification.
+- `notBefore` / `notAfter` — optional ISO-8601 validity window.
+- `revokedAt` — explicit revocation timestamp.
+- `purposes` — optional allowed-use labels for policy separation.
+
+Strict consumers can enable `requireActiveKey` and an optional `keyPurpose`. This prevents a valid ML-DSA signature from being accepted merely because its cryptographic bytes verify; the referenced registry key must also be authorized for the current lifecycle policy.
+
+The default compatibility path remains unchanged so existing signed artifacts can be verified during migration.
+
+---
+## 6. Production Readiness Gaps
 
 1. `aegis-provenance-prod-v1` registry key not committed
 2. Live Vault Transit signing NOT VERIFIED
@@ -65,7 +82,7 @@ CI tiers: [phase8.13-pqc-ci-policy.md](./phase8.13-pqc-ci-policy.md)
 
 ---
 
-## 6. Non-Goals
+## 7. Non-Goals
 
 - Replacing Groth16 with lattice-based SNARKs in v2
 - PQC-protecting ZK proof soundness
