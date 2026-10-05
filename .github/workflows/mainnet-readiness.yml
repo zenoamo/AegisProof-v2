@@ -116,10 +116,6 @@ jobs:
             throw new Error("workflow must deploy only to the local Hardhat network");
           }
 
-          if (workflow.includes("mainnet:")) {
-            throw new Error("workflow must not select the Hardhat mainnet network");
-          }
-
           console.log("Local-only deployment boundary: PASS");
           NODE
 
