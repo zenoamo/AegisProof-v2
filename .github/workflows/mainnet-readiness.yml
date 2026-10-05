@@ -37,6 +37,12 @@ jobs:
       - name: Compile contracts
         run: npx hardhat compile
 
+      # Reuse the repository's canonical Phase 2 verification suite.
+      # This is the existing local verification path; do not replace it
+      # with a second, deployment-specific crypto test implementation.
+      - name: Phase 2 verification suite - FAST
+        run: node scripts/phase2_verify.mjs --fast --artifact-json
+
       - name: Start local Hardhat node
         run: |
           nohup npx hardhat node > /tmp/aegisproof-hardhat-node.log 2>&1 &
