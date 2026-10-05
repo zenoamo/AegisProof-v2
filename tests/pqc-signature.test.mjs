@@ -25,6 +25,8 @@ const {
   loadRegistryPublicKey,
   validateRegistryKeyLifecycle,
   validateRegistryRecord,
+  validateKeyRotationEvidence,
+  validateKeyRotationChain,
 } = await import("../scripts/lib/public-key-registry.mjs");
 
 const {
@@ -234,6 +236,109 @@ const malformedLifecycle = validateRegistryRecord(
   "fixture-key"
 );
 ok(!malformedLifecycle.ok && malformedLifecycle.errors.some((e) => e.includes("invalid registry key status")), "T-PQC-11 invalid registry status rejected");
+
+// T-PQC-12: auditable key rotation evidence
+const rotationEffectiveAt = new Date(Date.now() + 5_000).toISOString();
+const predecessor = {
+  ...lifecycleBase,
+  keyId: "fixture-predecessor",
+  status: "deprecated",
+  notBefore: new Date(Date.now() - 120_000).toISOString(),
+};
+const successor = {
+  ...lifecycleBase,
+  keyId: "fixture-successor",
+  status: "active",
+  notBefore: new Date(Date.now() - 1_000).toISOString(),
+};
+const rotationRegistry = new Map([
+  [predecessor.keyId, predecessor],
+  [successor.keyId, successor],
+]);
+const validRotation = validateKeyRotationEvidence(
+  {
+    rotationId: "rotate-001",
+    version: "v1",
+    predecessorKeyId: predecessor.keyId,
+    successorKeyId: successor.keyId,
+    effectiveAt: rotationEffectiveAt,
+    reason: "scheduled lifecycle rotation",
+    recordedAt: new Date().toISOString(),
+  },
+  rotationRegistry
+);
+ok(validRotation.ok, "T-PQC-12 valid rotation evidence accepted");
+
+const selfRotation = validateKeyRotationEvidence(
+  {
+    rotationId: "rotate-self",
+    predecessorKeyId: predecessor.keyId,
+    successorKeyId: predecessor.keyId,
+    effectiveAt: rotationEffectiveAt,
+    reason: "invalid self rotation",
+  },
+  rotationRegistry
+);
+ok(!selfRotation.ok && selfRotation.errors.some((e) => e.includes("must differ")), "T-PQC-12 self rotation rejected");
+
+const revokedTooEarly = validateKeyRotationEvidence(
+  {
+    rotationId: "rotate-early-revoke",
+    predecessorKeyId: predecessor.keyId,
+    successorKeyId: successor.keyId,
+    effectiveAt: rotationEffectiveAt,
+    reason: "scheduled lifecycle rotation",
+  },
+  new Map([
+    [predecessor.keyId, { ...predecessor, revokedAt: new Date(Date.now() - 1_000).toISOString() }],
+    [successor.keyId, successor],
+  ])
+);
+ok(!revokedTooEarly.ok && revokedTooEarly.errors.some((e) => e.includes("revoked before")), "T-PQC-12 predecessor early revocation rejected");
+
+const successorNotReady = validateKeyRotationEvidence(
+  {
+    rotationId: "rotate-not-ready",
+    predecessorKeyId: predecessor.keyId,
+    successorKeyId: successor.keyId,
+    effectiveAt: new Date(Date.now() - 120_000).toISOString(),
+    reason: "scheduled lifecycle rotation",
+  },
+  new Map([[predecessor.keyId, predecessor], [successor.keyId, { ...successor, notBefore: new Date(Date.now() + 60_000).toISOString() }]])
+);
+ok(!successorNotReady.ok && successorNotReady.errors.some((e) => e.includes("not active")), "T-PQC-12 successor not active at rotation rejected");
+
+const missingReason = validateKeyRotationEvidence(
+  {
+    rotationId: "rotate-no-reason",
+    predecessorKeyId: predecessor.keyId,
+    successorKeyId: successor.keyId,
+    effectiveAt: rotationEffectiveAt,
+  },
+  rotationRegistry
+);
+ok(!missingReason.ok && missingReason.errors.some((e) => e.includes("reason is required")), "T-PQC-12 missing rotation reason rejected");
+
+const duplicateChain = validateKeyRotationChain(
+  [
+    { rotationId: "rotate-dup", predecessorKeyId: predecessor.keyId, successorKeyId: successor.keyId, effectiveAt: rotationEffectiveAt, reason: "scheduled" },
+    { rotationId: "rotate-dup", predecessorKeyId: predecessor.keyId, successorKeyId: successor.keyId, effectiveAt: rotationEffectiveAt, reason: "scheduled" },
+  ],
+  rotationRegistry
+);
+ok(!duplicateChain.ok && duplicateChain.errors.some((e) => e.includes("duplicate rotation")), "T-PQC-12 duplicate rotation evidence rejected");
+
+const chainOutOfOrder = validateKeyRotationChain(
+  [
+    { rotationId: "rotate-chain-1", predecessorKeyId: predecessor.keyId, successorKeyId: successor.keyId, effectiveAt: new Date(Date.now() + 60_000).toISOString(), reason: "scheduled" },
+    { rotationId: "rotate-chain-2", predecessorKeyId: successor.keyId, successorKeyId: "fixture-third", effectiveAt: new Date(Date.now() + 10_000).toISOString(), reason: "scheduled" },
+  ],
+  new Map([
+    ...rotationRegistry,
+    ["fixture-third", { ...successor, keyId: "fixture-third" }],
+  ])
+);
+ok(!chainOutOfOrder.ok && chainOutOfOrder.errors.some((e) => e.includes("monotonic")), "T-PQC-12 non-monotonic rotation chain rejected");
 
 // Registry + manifest integrity
 const ciKey = loadRegistryPublicKey("aegis-ci-mldsa87-v1");
