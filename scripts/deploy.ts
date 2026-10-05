@@ -89,17 +89,23 @@ async function deployLocalhost() {
     network: "localhost",
     chainId,
     deployer: deployer.account.address,
-    verifierAddress: verifier.address,
-    nullifierRegistryAddress: registry.address,
-    shieldAddress: shield.address,
+    verifierAddress,
+    verifierDeploymentTx: verifierTxHash,
+    nullifierRegistryAddress: registryAddress,
+    registryDeploymentTx,
+    shieldAddress,
+    shieldDeploymentTx,
   }, null, 2) + "\n");
 
   syncLocalhostAddresses(verifier.address, shield.address, registry.address);
 
   console.log("Deployment completed successfully");
-  console.log("Groth16VerifierV2:", verifier.address);
-  console.log("AegisNullifierRegistry:", registry.address);
-  console.log("AegisShieldV2:", shield.address);
+  console.log("Groth16VerifierV2:", verifierAddress);
+  console.log("AegisNullifierRegistry:", registryAddress);
+  console.log("AegisShieldV2:", shieldAddress);
+  console.log("Verifier deployment tx:", verifierTxHash ?? "reused existing deployment");
+  console.log("Registry deployment tx:", registryDeploymentTx);
+  console.log("Shield deployment tx:", shieldDeploymentTx);
 }
 
 async function deploySepolia() {
@@ -135,9 +141,28 @@ async function deploySepolia() {
     throw new Error(`Pending nonce ${pendingNonce} differs from latest nonce ${latestNonce}; do not deploy until the nonce range is clear.`);
   }
 
-  const expectedVerifier = getContractAddress({ from: deployerAddress, nonce: BigInt(latestNonce) });
-  const expectedRegistry = getContractAddress({ from: deployerAddress, nonce: BigInt(latestNonce + 1) });
-  const expectedShield = getContractAddress({ from: deployerAddress, nonce: BigInt(latestNonce + 2) });
+  const existingVerifierAddress = process.env.SEPOLIA_VERIFIER_ADDRESS;
+
+  const verifierNonce = existingVerifierAddress ? null : latestNonce;
+  const registryNonce = existingVerifierAddress ? latestNonce : latestNonce + 1;
+  const shieldNonce = registryNonce + 1;
+
+  const expectedVerifier = existingVerifierAddress
+    ? getAddress(existingVerifierAddress)
+    : getContractAddress({
+        from: deployerAddress,
+        nonce: BigInt(verifierNonce),
+      });
+
+  const expectedRegistry = getContractAddress({
+    from: deployerAddress,
+    nonce: BigInt(registryNonce),
+  });
+
+  const expectedShield = getContractAddress({
+    from: deployerAddress,
+    nonce: BigInt(shieldNonce),
+  });
 
   console.log("AegisProof Sepolia Deployment");
   console.log("Deployer:", deployerAddress);
@@ -147,24 +172,125 @@ async function deploySepolia() {
   console.log("Expected registry:", expectedRegistry);
   console.log("Expected shield:", expectedShield);
 
-  const verifier = await viem.deployContract("protocol/contracts/Groth16VerifierV2.sol:Groth16VerifierV2");
-  if (getAddress(verifier.address) !== getAddress(expectedVerifier)) {
-    throw new Error(`Verifier address mismatch: expected ${expectedVerifier}, got ${verifier.address}`);
+  let verifierAddress: string;
+  let verifierTxHash: string | null = null;
+
+  if (existingVerifierAddress) {
+    verifierAddress = getAddress(existingVerifierAddress);
+
+    const verifierCode = await publicClient.getBytecode({
+      address: verifierAddress,
+    });
+
+    if (!verifierCode || verifierCode === "0x") {
+      throw new Error(
+        `SEPOLIA_VERIFIER_ADDRESS has no bytecode: ${verifierAddress}`,
+      );
+    }
+
+    console.log("Reusing existing Groth16VerifierV2:");
+    console.log("Verifier:", verifierAddress);
+  } else {
+    console.log("[1] Deploying Groth16VerifierV2...");
+
+    const verifierDeploymentTx = await viem.sendDeploymentTransaction(
+      "protocol/contracts/Groth16VerifierV2.sol:Groth16VerifierV2",
+    );
+
+    verifierTxHash = verifierDeploymentTx;
+
+    console.log("Verifier deployment tx:", verifierTxHash);
+
+    const verifierReceipt = await publicClient.waitForTransactionReceipt({
+      hash: verifierDeploymentTx,
+      confirmations: 2,
+      timeout: 180_000,
+    });
+
+    if (!verifierReceipt.contractAddress) {
+      throw new Error(
+        `Verifier deployment ${verifierDeploymentTx} did not produce a contract address`,
+      );
+    }
+
+    verifierAddress = getAddress(verifierReceipt.contractAddress);
+
+    if (verifierAddress !== getAddress(expectedVerifier)) {
+      throw new Error(
+        `Verifier address mismatch: expected ${expectedVerifier}, got ${verifierAddress}`,
+      );
+    }
+
+    console.log("Verifier Contract Address:", verifierAddress);
   }
 
-  const registry = await viem.deployContract("AegisNullifierRegistry", [deployerAddress]);
-  if (getAddress(registry.address) !== getAddress(expectedRegistry)) {
-    throw new Error(`Registry address mismatch: expected ${expectedRegistry}, got ${registry.address}`);
+  const registryDeploymentTx = await viem.sendDeploymentTransaction(
+    "AegisNullifierRegistry",
+    [deployerAddress],
+  );
+
+  console.log("Registry deployment tx:", registryDeploymentTx);
+
+  const registryReceipt = await publicClient.waitForTransactionReceipt({
+    hash: registryDeploymentTx,
+    confirmations: 2,
+    timeout: 180_000,
+  });
+
+  if (!registryReceipt.contractAddress) {
+    throw new Error(
+      `Registry deployment ${registryDeploymentTx} did not produce a contract address`,
+    );
   }
 
-  const shield = await viem.deployContract("AegisShieldV2", [
-    verifier.address,
-    deployerAddress,
-    registry.address,
-  ]);
-  if (getAddress(shield.address) !== getAddress(expectedShield)) {
-    throw new Error(`Shield address mismatch: expected ${expectedShield}, got ${shield.address}`);
+  const registryAddress = getAddress(registryReceipt.contractAddress);
+
+  if (registryAddress !== getAddress(expectedRegistry)) {
+    throw new Error(
+      `Registry address mismatch: expected ${expectedRegistry}, got ${registryAddress}`,
+    );
   }
+
+  const registry = await viem.getContractAt(
+    "AegisNullifierRegistry",
+    registryAddress,
+  );
+
+  console.log("Registry Contract Address:", registryAddress);
+
+  const shieldDeploymentTx = await viem.sendDeploymentTransaction(
+    "AegisShieldV2",
+    [verifierAddress, deployerAddress, registryAddress],
+  );
+
+  console.log("Shield deployment tx:", shieldDeploymentTx);
+
+  const shieldReceipt = await publicClient.waitForTransactionReceipt({
+    hash: shieldDeploymentTx,
+    confirmations: 2,
+    timeout: 180_000,
+  });
+
+  if (!shieldReceipt.contractAddress) {
+    throw new Error(
+      `Shield deployment ${shieldDeploymentTx} did not produce a contract address`,
+    );
+  }
+
+  const shieldAddress = getAddress(shieldReceipt.contractAddress);
+
+  if (shieldAddress !== getAddress(expectedShield)) {
+    throw new Error(
+      `Shield address mismatch: expected ${expectedShield}, got ${shieldAddress}`,
+    );
+  }
+
+  const shield = await viem.getContractAt(
+    "AegisShieldV2",
+    shieldAddress,
+  );
+
+  console.log("Shield Contract Address:", shieldAddress);
 
   await registry.write.setConsumerAuthorized([shield.address, true]);
   if (!(await registry.read.authorizedConsumers([shield.address]))) {
