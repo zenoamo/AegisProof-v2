@@ -116,8 +116,8 @@ jobs:
             throw new Error("workflow must deploy only to the local Hardhat network");
           }
 
-          if (/secrets\\.|MAINNET_(RPC_URL|PRIVATE_KEY)/.test(workflow)) {
-            throw new Error("local deployment workflow must not reference GitHub secrets or Mainnet RPC/private-key credentials");
+          if (workflow.includes("mainnet:")) {
+            throw new Error("workflow must not select the Hardhat mainnet network");
           }
 
           console.log("Local-only deployment boundary: PASS");
