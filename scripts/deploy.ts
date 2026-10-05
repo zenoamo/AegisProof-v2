@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { getAddress, getContractAddress, isAddress } from "viem";
 import { fileURLToPath } from "node:url";
 
 import { network } from "hardhat";
