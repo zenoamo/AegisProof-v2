@@ -20,6 +20,26 @@ import {
 import { resolveArtifacts } from "./lib/resolve-artifacts.mjs";
 import { verifyManifestKmsLayer } from "./lib/kms-provenance.mjs";
 import { isExplicitLiveMode } from "./lib/kms-backends/env.mjs";
+import {
+  classifyManifestSignatures,
+  classifyRotationEvidence,
+  decideProvenanceExit,
+  formatProvenanceStatus,
+  isPqcAbsenceError,
+} from "./lib/provenance-verification-status.mjs";
+
+function reportProvenance(manifest, errors, pqcRequired) {
+  const signature = classifyManifestSignatures(manifest);
+  const rotation = classifyRotationEvidence(manifest?.rotationEvidence);
+  const hardErrors = (errors ?? []).filter((error) => !isPqcAbsenceError(error));
+  const decision = decideProvenanceExit({ signature, rotation, pqcRequired, hardErrors });
+  const lines = formatProvenanceStatus(rotation, signature, decision);
+  const sink = decision.exitCode === 0 ? console.log : console.error;
+  for (const line of lines) sink(line);
+  for (const error of hardErrors) console.error(`FAIL ${error}`);
+  if (decision.exitCode !== 0) process.exit(decision.exitCode);
+  return decision;
+}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -38,11 +58,7 @@ async function main() {
     console.log(`Provenance live verify — ${result.verifiedCount} artifacts (${result.elapsedMs}ms)`);
     if (pqcRequired) console.log("Mode: strict (--pqc / --require-pqc)");
     for (const w of result.warnings) console.log(`WARN ${w}`);
-    if (!result.ok) {
-      for (const e of result.errors) console.error(`FAIL ${e}`);
-      console.error("\nFAIL artifact provenance check");
-      process.exit(1);
-    }
+    reportProvenance(result.manifest, result.errors, pqcRequired);
 
     let committedManifest = null;
     try {
@@ -69,7 +85,7 @@ async function main() {
 
     writeManifest(manifestToWrite, manifestPath);
     console.log(`Updated manifest: ${path.relative(ROOT, manifestPath)}`);
-    console.log(`PASS artifact provenance check (${Date.now() - t0}ms overhead)`);
+    console.log(`PASS classical artifact hash check (${Date.now() - t0}ms overhead)`);
     process.exit(0);
   }
 
@@ -107,17 +123,13 @@ async function main() {
 
   for (const w of result.warnings) console.log(`WARN ${w}`);
 
-  if (!result.ok) {
-    for (const e of result.errors) console.error(`FAIL ${e}`);
-    console.error("\nFAIL artifact provenance check");
-    process.exit(1);
-  }
+  reportProvenance(manifest, result.errors, pqcRequired);
 
   if (liveManifest.resolvedHashes.zkeyHash !== manifest.resolvedHashes?.zkeyHash) {
     console.log("WARN manifest stale — zkey hash differs from live resolution (re-run generate:provenance)");
   }
 
-  console.log(`PASS artifact provenance check (${Date.now() - t0}ms overhead)`);
+  console.log(`PASS classical artifact hash check (${Date.now() - t0}ms overhead)`);
 }
 
 main().catch((err) => {
