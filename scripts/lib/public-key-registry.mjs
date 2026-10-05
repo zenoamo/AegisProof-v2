@@ -18,6 +18,8 @@ export const REGISTRY_KEY_STATUSES = Object.freeze({
   REVOKED: "revoked",
 });
 
+export const REGISTRY_ROTATION_VERSION = "v1";
+
 /** Normalize registry record to canonical shape. */
 export function normalizeRegistryRecord(raw, fallbackId) {
   const keyId = raw.keyId ?? raw.publicKeyId ?? fallbackId;
@@ -80,6 +82,110 @@ export function validateRegistryKeyLifecycle(record, opts = {}) {
     }
   }
 
+  return { ok: errors.length === 0, errors };
+}
+
+
+/** Normalize auditable key-rotation evidence to a canonical shape. */
+export function normalizeRotationEvidence(raw) {
+  return {
+    rotationId: raw?.rotationId ?? null,
+    version: raw?.version ?? REGISTRY_ROTATION_VERSION,
+    predecessorKeyId: raw?.predecessorKeyId ?? null,
+    successorKeyId: raw?.successorKeyId ?? null,
+    effectiveAt: raw?.effectiveAt ?? null,
+    reason: raw?.reason ?? null,
+    recordedAt: raw?.recordedAt ?? null,
+  };
+}
+
+function registryRecordFor(keyId, registry) {
+  if (!keyId || !registry) return null;
+  if (registry instanceof Map) return registry.get(keyId) ?? null;
+  return registry[keyId] ?? null;
+}
+
+/** Validate one rotation evidence record against predecessor/successor registry state. */
+export function validateKeyRotationEvidence(raw, registry, opts = {}) {
+  const evidence = normalizeRotationEvidence(raw);
+  const errors = [];
+  if (!evidence.rotationId) errors.push("rotationId missing");
+  if (evidence.version !== REGISTRY_ROTATION_VERSION) {
+    errors.push(`unsupported rotation evidence version: ${evidence.version}`);
+  }
+  if (!evidence.predecessorKeyId) errors.push("predecessorKeyId missing");
+  if (!evidence.successorKeyId) errors.push("successorKeyId missing");
+  if (evidence.predecessorKeyId && evidence.predecessorKeyId === evidence.successorKeyId) {
+    errors.push("predecessorKeyId and successorKeyId must differ");
+  }
+  if (!evidence.effectiveAt || Number.isNaN(Date.parse(evidence.effectiveAt))) {
+    errors.push("effectiveAt must be valid ISO-8601");
+  }
+  if (typeof evidence.reason !== "string" || !evidence.reason.trim()) {
+    errors.push("rotation reason is required");
+  }
+  if (evidence.recordedAt != null && Number.isNaN(Date.parse(evidence.recordedAt))) {
+    errors.push("recordedAt must be valid ISO-8601");
+  }
+
+  const predecessor = registryRecordFor(evidence.predecessorKeyId, registry);
+  const successor = registryRecordFor(evidence.successorKeyId, registry);
+  if (!predecessor) errors.push(`unknown predecessor key: ${evidence.predecessorKeyId ?? "unknown"}`);
+  if (!successor) errors.push(`unknown successor key: ${evidence.successorKeyId ?? "unknown"}`);
+
+  if (predecessor && successor && predecessor.algorithm !== successor.algorithm) {
+    errors.push("rotation algorithm mismatch");
+  }
+  if (predecessor && successor && predecessor.version !== successor.version) {
+    errors.push("rotation registry version mismatch");
+  }
+
+  if (predecessor && evidence.effectiveAt && !Number.isNaN(Date.parse(evidence.effectiveAt))) {
+    const effectiveAtMs = Date.parse(evidence.effectiveAt);
+    if (predecessor.revokedAt != null && !Number.isNaN(Date.parse(predecessor.revokedAt)) && Date.parse(predecessor.revokedAt) < effectiveAtMs) {
+      errors.push("predecessor revoked before rotation effectiveAt");
+    }
+    if (predecessor.notBefore != null && !Number.isNaN(Date.parse(predecessor.notBefore)) && Date.parse(predecessor.notBefore) > effectiveAtMs) {
+      errors.push("predecessor became active after rotation effectiveAt");
+    }
+  }
+
+  if (successor && evidence.effectiveAt && !Number.isNaN(Date.parse(evidence.effectiveAt))) {
+    const lifecycle = validateRegistryKeyLifecycle(successor, {
+      atTimeMs: Date.parse(evidence.effectiveAt),
+      requireActive: true,
+    });
+    if (!lifecycle.ok) errors.push(...lifecycle.errors.map((error) => `successor lifecycle: ${error}`));
+  }
+
+  return { ok: errors.length === 0, errors, evidence, predecessor, successor };
+}
+
+/** Validate a rotation chain for duplicate links and monotonic effective times. */
+export function validateKeyRotationChain(records, registry, opts = {}) {
+  const errors = [];
+  const seenIds = new Set();
+  const seenLinks = new Set();
+  let previous = null;
+  for (const raw of records ?? []) {
+    const result = validateKeyRotationEvidence(raw, registry, opts);
+    errors.push(...result.errors);
+    if (result.evidence.rotationId && seenIds.has(result.evidence.rotationId)) {
+      errors.push(`duplicate rotationId: ${result.evidence.rotationId}`);
+    }
+    if (result.evidence.rotationId) seenIds.add(result.evidence.rotationId);
+    const link = `${result.evidence.predecessorKeyId}=>${result.evidence.successorKeyId}`;
+    if (seenLinks.has(link)) errors.push(`duplicate rotation link: ${link}`);
+    seenLinks.add(link);
+    if (previous && previous.successorKeyId === result.evidence.predecessorKeyId) {
+      const previousAt = Date.parse(previous.effectiveAt);
+      const currentAt = Date.parse(result.evidence.effectiveAt);
+      if (!Number.isNaN(previousAt) && !Number.isNaN(currentAt) && currentAt < previousAt) {
+        errors.push("rotation effectiveAt must be monotonic");
+      }
+    }
+    previous = result.evidence;
+  }
   return { ok: errors.length === 0, errors };
 }
 
