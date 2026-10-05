@@ -73,20 +73,18 @@ async function waitForDeployment(publicClient: any, hash: Hash) {
 function canonicalAddress(name: "SEPOLIA_VERIFIER" | "SEPOLIA_REGISTRY") {
   if (!fs.existsSync(CANONICAL_REGISTRY)) {
     throw new Error(
-      "AegisCanonicalRegistry.sol is missing; run prepare-sepolia-deployment.mjs first",
+      "AegisCanonicalRegistry.sol is missing; run npm run prepare:sepolia",
     );
   }
 
   const source = fs.readFileSync(CANONICAL_REGISTRY, "utf8");
   const match = source.match(
-    new RegExp(
-      `${name}\\\\s*=\\\\s*\\\\n\\\\s*(0x[0-9a-fA-F]{40})\\\\s*;`,
-    ),
+    new RegExp(`\\${name}\\\\s*=\\\\s*(0x[0-9a-fA-F]{40})\\\\s*;`),
   );
 
   if (!match) {
     throw new Error(
-      `No ${name} entry found in AegisCanonicalRegistry.sol; run prepare-sepolia-deployment.mjs first`,
+      `No ${name} entry found in AegisCanonicalRegistry.sol; run npm run prepare:sepolia`,
     );
   }
 
@@ -181,12 +179,12 @@ async function main() {
 
   if (!sameAddress(canonicalAddress("SEPOLIA_VERIFIER"), verifierTarget)) {
     throw new Error(
-      "Canonical Sepolia verifier does not match deployment target. Run prepare-sepolia-deployment.mjs.",
+      "Canonical Sepolia verifier does not match deployment target. Run npm run prepare:sepolia.",
     );
   }
   if (!sameAddress(canonicalAddress("SEPOLIA_REGISTRY"), registryTarget)) {
     throw new Error(
-      "Canonical Sepolia registry does not match deployment target. Run prepare-sepolia-deployment.mjs.",
+      "Canonical Sepolia registry does not match deployment target. Run npm run prepare:sepolia.",
     );
   }
 
