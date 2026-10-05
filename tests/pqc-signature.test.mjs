@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 const {
   PROVENANCE_DOMAIN,
   PQC_ALGORITHM_VERSION,
+  PQC_ENVELOPE_UNSIGNED,
   PQC_VERSION,
   createPqcSignatureEnvelope,
   verifyEnvelope,
@@ -75,9 +76,25 @@ const v02 = verifyEnvelope(tamperedPayload, envelope);
 ok(!v02.ok, "T-PQC-02 modified payload reject");
 
 const paths = resolveArtifacts();
-const manifest = createManifest(paths, { sign: false });
+function createSigningFixtureManifest() {
+  const fixtureManifest = createManifest(paths, { sign: false });
+  const zkeyIndex = fixtureManifest.entries.findIndex(
+    (entry) => entry.artifact === "production.zkey"
+  );
+  assert.notEqual(zkeyIndex, -1, "production.zkey fixture entry exists");
+  fixtureManifest.entries[zkeyIndex] = {
+    ...sampleEntry,
+    classicalHash: { algorithm: "SHA-256", digest: sampleEntry.sha256 },
+    pqcSignatureEnvelope: { ...PQC_ENVELOPE_UNSIGNED },
+  };
+  fixtureManifest.resolvedHashes.zkeyHash = sampleEntry.sha256;
+  return fixtureManifest;
+}
+
+const manifest = createSigningFixtureManifest();
 const signedEntry = signEntry(sampleEntry, { secretKey, publicKeyHex });
-manifest.entries[0] = signedEntry;
+const manifestZkeyIndex = manifest.entries.findIndex((entry) => entry.artifact === "production.zkey");
+manifest.entries[manifestZkeyIndex] = signedEntry;
 
 const vEntry = verifyEntryPqc(signedEntry);
 ok(vEntry.ok, "verifyEntryPqc accepts signed entry");
@@ -126,8 +143,9 @@ const v06 = verifyEnvelope(payload, unknownKeyEnvelope);
 ok(!v06.ok, "T-PQC-06 verifyEnvelope rejects unknown publicKeyId");
 
 // T-PQC-07: wrong algorithmVersion reject (manifest-level)
-const badAlgoManifest = signManifest(createManifest(paths, { sign: false }), { secretKey, publicKeyHex });
-badAlgoManifest.entries[0].pqcSignatureEnvelope.algorithmVersion = "ML-DSA-44";
+const badAlgoManifest = signManifest(createSigningFixtureManifest(), { secretKey, publicKeyHex });
+const badAlgoZkey = badAlgoManifest.entries.find((entry) => entry.artifact === "production.zkey");
+badAlgoZkey.pqcSignatureEnvelope.algorithmVersion = "ML-DSA-44";
 const v07 = verifyManifest(badAlgoManifest, { allowMissingOptional: true });
 ok(!v07.ok && v07.errors.some((e) => e.includes("algorithm mismatch")), "T-PQC-07 wrong algorithmVersion reject");
 
@@ -174,7 +192,7 @@ const integrity = verifyManifestIntegrity(unsignedManifest);
 ok(integrity.ok, "manifest integrity check PASS");
 
 // verifyPqcSignatureEnvelope manifest-level API
-const signedManifest = signManifest(unsignedManifest, { secretKey, publicKeyHex });
+const signedManifest = signManifest(createSigningFixtureManifest(), { secretKey, publicKeyHex });
 const pqcManifest = verifyPqcSignatureEnvelope(signedManifest, { required: true });
 ok(pqcManifest.valid, "verifyPqcSignatureEnvelope valid signed manifest");
 ok(pqcManifest.algorithm === PQC_ALGORITHM_VERSION, "verifyPqcSignatureEnvelope returns algorithm");

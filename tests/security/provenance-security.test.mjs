@@ -46,17 +46,18 @@ const s02a = verifyManifestIntegrity(schemaTamper);
 ok(!s02a.ok && s02a.errors.some((e) => e.includes("schemaVersion")), "PT-02: schema modification reject");
 
 const metaTamper = JSON.parse(JSON.stringify(committed));
-const zkeyIdx = metaTamper.entries.findIndex((e) => e.artifact === "production.zkey");
-if (zkeyIdx >= 0) {
-  metaTamper.entries[zkeyIdx].sha256 = "0".repeat(64);
-  metaTamper.entries[zkeyIdx].classicalHash.digest = "0".repeat(64);
+const presentIdx = metaTamper.entries.findIndex((e) => e.present && e.sha256);
+if (presentIdx >= 0) {
+  metaTamper.entries[presentIdx].sha256 = "0".repeat(64);
+  metaTamper.entries[presentIdx].classicalHash.digest = "0".repeat(64);
 }
 const s02b = verifyManifest(metaTamper, { allowMissingOptional: true });
-ok(!s02b.ok && s02b.errors.some((e) => e.includes("hash mismatch") || e.includes("zkeyHash")), "PT-02: artifact metadata/hash tampering reject");
+ok(!s02b.ok && s02b.errors.some((e) => e.includes("hash mismatch")), "PT-02: artifact metadata/hash tampering reject");
 
 const hashTamper = JSON.parse(JSON.stringify(committed));
-if (hashTamper.entries[0]?.classicalHash) {
-  hashTamper.entries[0].classicalHash.digest = "0".repeat(64);
+const hashTamperEntry = hashTamper.entries.find((e) => e.sha256 && e.classicalHash);
+if (hashTamperEntry) {
+  hashTamperEntry.classicalHash.digest = "0".repeat(64);
 }
 const s02c = verifyManifestIntegrity(hashTamper);
 ok(!s02c.ok && s02c.errors.some((e) => e.includes("classicalHash")), "PT-02: classicalHash modification reject");
@@ -78,16 +79,19 @@ ok(validIntegrity.ok, "PT-02: committed manifest integrity PASS");
 const zkeyEntry = committed.entries.find((e) => e.artifact === "production.zkey");
 const vkEntry = committed.entries.find((e) => e.artifact === "production-vkey.json");
 
-ok(zkeyEntry?.sha256 === PRODUCTION_ZKEY_HASH, "PT-03: manifest zkey hash matches pin");
+ok(
+  zkeyEntry?.present === false && zkeyEntry?.sha256 === null,
+  "PT-03: migrated manifest records external zkey as absent"
+);
 ok(committed.pinnedProductionHashes.zkeyHash === PRODUCTION_ZKEY_HASH, "PT-03: pinned zkey constant");
 
 const hashMismatch = JSON.parse(JSON.stringify(committed));
-const zidx = hashMismatch.entries.findIndex((e) => e.artifact === "production.zkey");
-if (zidx >= 0) {
-  hashMismatch.entries[zidx].sha256 = "a".repeat(64);
+const mismatchIdx = hashMismatch.entries.findIndex((e) => e.present && e.sha256);
+if (mismatchIdx >= 0) {
+  hashMismatch.entries[mismatchIdx].sha256 = "a".repeat(64);
 }
 const s03a = verifyManifest(hashMismatch, { allowMissingOptional: true });
-ok(!s03a.ok && s03a.errors.some((e) => e.includes("hash mismatch")), "PT-03: zkey hash mismatch reject");
+ok(!s03a.ok && s03a.errors.some((e) => e.includes("hash mismatch")), "PT-03: artifact hash mismatch reject");
 
 const vkMismatch = JSON.parse(JSON.stringify(committed));
 const vkidx = vkMismatch.entries.findIndex((e) => e.artifact === "production-vkey.json");
@@ -119,7 +123,10 @@ ok(!s03c.ok && s03c.errors.some((e) => e.includes("resolvedHashes")), "PT-03: re
 
 const fresh = createManifest(paths, { sign: false });
 ok(fresh.schemaVersion === PROVENANCE_SCHEMA_VERSION, "PT-03: fresh manifest schema valid");
-const liveVerify = verifyManifest(fresh, { allowMissingOptional: true });
-ok(liveVerify.ok || liveVerify.errors.every((e) => !e.includes("hash mismatch")), "PT-03: live manifest verify PASS or non-hash errors only");
+const liveVerify = verifyManifest(fresh, {
+  allowMissingOptional: true,
+  allowMissingProductionZkey: true,
+});
+ok(liveVerify.ok, "PT-03: repository-tier live manifest verify PASS");
 
 console.log(`\nPROVENANCE SECURITY: ${passed} checks PASS`);

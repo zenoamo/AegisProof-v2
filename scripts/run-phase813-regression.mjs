@@ -18,7 +18,11 @@ const STEPS = [
   { label: "PQC signature (T-PQC)", script: "scripts/run-pqc-signature.mjs" },
   { label: "Hybrid auth (T-AUTH)", script: "scripts/run-hybrid-auth.mjs" },
   { label: "Security penetration (PT-01–PT-10)", script: "scripts/run-penetration.mjs" },
-  { label: "Provenance live verify", script: "scripts/verify-provenance-manifest.mjs", args: ["--live"] },
+  {
+    label: "Provenance live verify (repository tier)",
+    script: "scripts/verify-provenance-manifest.mjs",
+    args: ["--live", "--allow-missing-production-zkey"],
+  },
 ];
 
 function runStep(step) {

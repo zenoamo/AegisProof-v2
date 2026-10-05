@@ -16,10 +16,17 @@ Supply-chain integrity requires verifying that committed artifacts match expecte
 
 1. **SSoT manifest:** `artifacts/provenance/manifest.json` (schemaVersion 1, phase 8.13).
 2. **Verification order:** manifest integrity → live SHA-256 → optional PQC signature.
-3. **CLI:** `npm run verify:provenance -- --live` required on PR CI.
+3. **CLI:** PR CI uses `npm run verify:provenance -- --live --allow-missing-production-zkey`; strict scheduled/manual CI uses `--live --pqc` without that exception.
 4. **Module:** `scripts/lib/artifact-provenance.mjs` is the canonical implementation.
 
 Provenance verifies **artifact files**, not Groth16 proof validity.
+
+The committed SSoT is a reference snapshot, while `--live` reconstructs entries
+from the resolver and current filesystem before verification. After the
+production.zkey storage migration, a checkout without the externally
+provisioned file records that entry as `present: false`, `sha256: null`, and
+unsigned while retaining `pinnedProductionHashes.zkeyHash`. Strict verification
+still requires the file, pinned hash, and PQC signature.
 
 ## Consequences
 

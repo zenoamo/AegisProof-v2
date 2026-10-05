@@ -23,7 +23,7 @@
 
 | Asset | Current state | Target |
 |-------|---------------|--------|
-| `production.zkey` | Migration debt in `crypto-artifacts/` | HSM / encrypted object store |
+| `production.zkey` | Removed from Git; external provisioning pending | HSM / encrypted object store |
 | `*.ptau` ceremony files | Migration debt (5 paths) | External archive |
 | Dev zkey / wtns | Migration debt | External or regenerable |
 | ML-DSA private keys | Gitignored (`artifacts/provenance/keys/`) | Vault / HSM |
@@ -70,6 +70,7 @@ All prover/bench/verify scripts use `resolveArtifacts()` (`scripts/lib/resolve-a
 
 - Canonical paths under `artifacts/phase2/` and `artifacts/phase4/`
 - Fallback to `crypto-artifacts/` mirror
+- Operator-provisioned absolute production zkey path via `AEGIS_PRODUCTION_ZKEY_PATH`
 - Pinned constants: `PRODUCTION_ZKEY_HASH`, `PRODUCTION_VKEY_HASH`
 
 ---
@@ -78,8 +79,8 @@ All prover/bench/verify scripts use `resolveArtifacts()` (`scripts/lib/resolve-a
 
 | Tier | Command | PQC |
 |------|---------|-----|
-| PR / push | `verify:provenance -- --live` | WARN if unsigned |
-| Schedule / manual | `verify:provenance -- --live --pqc` | Required |
+| PR / push | `verify:provenance -- --live --allow-missing-production-zkey` | WARN if unsigned |
+| Schedule / manual | preflight external zkey, then `verify:provenance -- --live --pqc` | Required; fail closed if not provisioned |
 
 ---
 

@@ -179,11 +179,10 @@ function attachValidKmsStubEnvelope(entry) {
 // T-EXP-004E: KMS envelope bound to a different artifact is rejected at verify time
 {
   const committed = loadManifest(DEFAULT_MANIFEST_PATH);
-  const zkey = committed.entries.find((e) => e.artifact === "production.zkey" && e.sha256);
-  const vkey = committed.entries.find((e) => e.artifact === "production-vkey.json" && e.sha256);
-  assert.ok(zkey && vkey, "zkey and vkey fixtures");
-  attachValidKmsStubEnvelope(zkey);
-  vkey.pqcSignatureEnvelope = structuredClone(zkey.pqcSignatureEnvelope);
+  const [signedFor, replayedOn] = committed.entries.filter((e) => e.present && e.sha256);
+  assert.ok(signedFor && replayedOn, "two present artifact fixtures");
+  attachValidKmsStubEnvelope(signedFor);
+  replayedOn.pqcSignatureEnvelope = structuredClone(signedFor.pqcSignatureEnvelope);
 
   const prevMode = process.env.KMS_BACKEND_MODE;
   process.env.KMS_BACKEND_MODE = "stub";
@@ -192,7 +191,7 @@ function attachValidKmsStubEnvelope(entry) {
   else process.env.KMS_BACKEND_MODE = prevMode;
 
   ok(!cross.ok, "T-EXP-004E: cross-artifact KMS envelope rejected");
-  ok(cross.errors.some((e) => e.includes("production-vkey.json")), "T-EXP-004E: error names wrong artifact");
+  ok(cross.errors.some((e) => e.includes(replayedOn.artifact)), "T-EXP-004E: error names wrong artifact");
 }
 
 // T-EXP-004F: regenerated manifest cannot inherit envelope when artifact hash changed
@@ -200,17 +199,20 @@ function attachValidKmsStubEnvelope(entry) {
   const paths = resolveArtifacts();
   const regenerated = createManifest(paths, { sign: false });
   const committed = structuredClone(regenerated);
-  const zkeyCommitted = committed.entries.find((e) => e.artifact === "production.zkey");
-  attachValidKmsStubEnvelope(zkeyCommitted);
+  const committedEntry = committed.entries.find((e) => e.present && e.sha256);
+  assert.ok(committedEntry, "present artifact fixture");
+  attachValidKmsStubEnvelope(committedEntry);
 
-  const zkeyRegenerated = regenerated.entries.find((e) => e.artifact === "production.zkey");
-  zkeyRegenerated.sha256 = "f".repeat(64);
-  zkeyRegenerated.classicalHash.digest = zkeyRegenerated.sha256;
+  const regeneratedEntry = regenerated.entries.find(
+    (e) => e.artifact === committedEntry.artifact
+  );
+  regeneratedEntry.sha256 = "f".repeat(64);
+  regeneratedEntry.classicalHash.digest = regeneratedEntry.sha256;
 
   const merged = preserveVerifiedKmsEnvelopes(regenerated, committed);
-  const mergedZkey = merged.entries.find((e) => e.artifact === "production.zkey");
-  ok(mergedZkey?.pqcSignatureEnvelope?.status === "unsigned", "T-EXP-004F: hash change drops KMS envelope");
-  ok(!mergedZkey?.pqcSignatureEnvelope?.kmsBackend, "T-EXP-004F: kmsBackend not inherited after hash change");
+  const mergedEntry = merged.entries.find((e) => e.artifact === committedEntry.artifact);
+  ok(mergedEntry?.pqcSignatureEnvelope?.status === "unsigned", "T-EXP-004F: hash change drops KMS envelope");
+  ok(!mergedEntry?.pqcSignatureEnvelope?.kmsBackend, "T-EXP-004F: kmsBackend not inherited after hash change");
 }
 
 // T-EXP-004G: invalid/malformed KMS envelope remains rejected on --live path
@@ -254,8 +256,8 @@ function attachValidKmsStubEnvelope(entry) {
 
 function sampleKmsEntry() {
   const committed = loadManifest(DEFAULT_MANIFEST_PATH);
-  const entry = committed.entries.find((e) => e.artifact === "production.zkey" && e.sha256);
-  assert.ok(entry, "production.zkey fixture");
+  const entry = committed.entries.find((e) => e.present && e.sha256);
+  assert.ok(entry, "present artifact fixture");
   return structuredClone(entry);
 }
 

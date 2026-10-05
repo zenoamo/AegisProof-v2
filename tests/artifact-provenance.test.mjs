@@ -26,10 +26,9 @@ const {
 
 const {
   PQC_ALGORITHM_VERSION,
+  PQC_ENVELOPE_UNSIGNED,
   generateKeypair,
-  createPqcSignatureEnvelope,
   verifyPqcSignatureEnvelope,
-  entrySignPayload,
 } = await import("../scripts/lib/pqc-signature.mjs");
 
 const {
@@ -86,8 +85,29 @@ ok(!traversalResult.ok, "manifest path traversal is rejected");
 
 
 // --- PQC signature generation + verification ---
+// Signing is a cryptographic unit test, not an assertion about whether the
+// externally stored production.zkey is mounted in this checkout.
 const { secretKey, publicKeyHex } = generateKeypair();
-const signedManifest = signManifest(createManifest(paths, { sign: false }), { secretKey, publicKeyHex });
+const signingFixture = createManifest(paths, { sign: false });
+const signingFixtureIndex = signingFixture.entries.findIndex(
+  (e) => e.artifact === "production.zkey"
+);
+assert.notEqual(signingFixtureIndex, -1, "production.zkey fixture entry exists");
+signingFixture.entries[signingFixtureIndex] = {
+  artifact: "production.zkey",
+  path: "fixtures/external/production.zkey",
+  sha256: PRODUCTION_ZKEY_HASH,
+  size: 32,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  source: "test-fixture",
+  version: "v2",
+  present: true,
+  classicalHash: { algorithm: "SHA-256", digest: PRODUCTION_ZKEY_HASH },
+  pqcSignatureEnvelope: { ...PQC_ENVELOPE_UNSIGNED },
+};
+signingFixture.resolvedHashes.zkeyHash = PRODUCTION_ZKEY_HASH;
+
+const signedManifest = signManifest(signingFixture, { secretKey, publicKeyHex });
 const signedZkey = signedManifest.entries.find((e) => e.artifact === "production.zkey");
 ok(signedZkey?.pqcSignatureEnvelope?.status === "signed", "manifest signature generation");
 ok(signedZkey?.pqcSignatureEnvelope?.publicKey === publicKeyHex, "publicKey embedded in envelope");
@@ -97,16 +117,31 @@ ok(pqcVerify.valid, "manifest signature verification");
 
 // invalid PQC signature reject
 const badSigManifest = JSON.parse(JSON.stringify(signedManifest));
-badSigManifest.entries[0].pqcSignatureEnvelope.signature = "00".repeat(100);
+const badSigZkey = badSigManifest.entries.find((e) => e.artifact === "production.zkey");
+badSigZkey.pqcSignatureEnvelope.signature = "00".repeat(100);
 const badSig = verifyManifest(badSigManifest, { allowMissingOptional: true });
 ok(!badSig.ok, "invalid PQC signature reject");
 
-// missing signature behavior (--pqc strict)
-const missingPqc = verifyManifest(createManifest(paths, { sign: false }), {
+// Missing external artifact policy is separate from signing infrastructure.
+const missingManifest = createManifest(paths, { sign: false });
+const missingZkey = missingManifest.entries.find((e) => e.artifact === "production.zkey");
+ok(missingZkey?.present === false, "missing production.zkey is present=false");
+ok(missingZkey?.sha256 === null, "missing production.zkey has null sha256");
+ok(missingZkey?.pqcSignatureEnvelope?.status === "unsigned", "missing production.zkey remains unsigned");
+
+const missingPqc = verifyManifest(missingManifest, {
   allowMissingOptional: true,
   pqcRequired: true,
 });
 ok(!missingPqc.ok, "missing signature fails in --pqc mode");
+ok(
+  missingPqc.errors.some((e) => e.includes("missing required artifact: production.zkey")),
+  "strict mode reports missing production.zkey"
+);
+ok(
+  missingPqc.errors.some((e) => e.includes("PQC signature required but absent: production.zkey")),
+  "strict mode reports absent production.zkey signature"
+);
 
 // --- live verify ---
 const live = verifyLiveArtifacts({ includeOptional: true });
