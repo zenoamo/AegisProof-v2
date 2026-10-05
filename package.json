@@ -30,6 +30,8 @@
     "check:security-boundary": "node scripts/run-security-boundary-check.mjs",
     "test": "tsx test/testVerifyAndAccept.ts",
     "test:prover-compat": "node scripts/run-prover-compat.mjs",
+    "test:groth16-regression-gate": "node tests/groth16-regression-gate.test.mjs",
+    "verify:frozen-core-integrity": "node scripts/verify-frozen-core-integrity.mjs",
     "test:artifact-resolution": "node scripts/run-artifact-resolution.mjs",
     "test:artifact-provenance": "node scripts/run-artifact-provenance.mjs",
     "test:pqc-signature": "node scripts/run-pqc-signature.mjs",

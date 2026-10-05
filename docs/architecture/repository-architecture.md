@@ -24,7 +24,7 @@ R1CS ヘッダの実測値は `nPubOut=0`、`nPubIn=30`、`nPrvIn=2`、`nConstra
 
 外側の層は、SHA-256 マニフェスト、任意の ML-DSA-87 メタデータ署名、CI の回帰、SDK の calldata 変換、アプリケーション向けの読み取り API である。`tee/` の `ClaimsGate` はオフライン fixture 上の研究実装であり、`protocol/` や回路への import は確認できない。STARK と PQ-ZK は文書上の別ラインであり、証明経路の実装は確認できない。
 
-このチェックアウトだけでは `production.zkey` が無いため、`tests/prover-compatibility.test.ts` は `artifactsReady()` が偽のとき exit 0 で T1–T9 をスキップする。PR 必須ジョブ `prover-compatibility` も、リポジトリ変数 `AEGIS_PRODUCTION_ZKEY_AVAILABLE == 'true'` のときだけ走る。
+このチェックアウトだけでは `production.zkey` が無い。そのとき `tests/prover-compatibility.test.ts` は `Groth16 regression: NOT RUN` を出して exit 2 で終わる。exit 0 は、T1–T9 を実行したあとの `Groth16 regression: PASS` だけである。WASM / R1CS / 本番 vkey の SHA-256 は `npm run verify:frozen-core-integrity` が zkey 無しでも確認し、`Frozen Core artifact integrity: PASS` と表示する。これは回帰 PASS ではない。
 
 ## 2. Repository Structure
 
@@ -230,7 +230,7 @@ nullifier の 8 入力は `DOMAIN_NULLIFIER_V2`、`secretKey`、`deviceId`、`pu
 | `scripts/gates/gate_layout.mjs` | SSoT 30 件、`.sym` ワイヤ名、R1CS ヘッダ | `run_all.mjs` が非ゼロ。FAST / FULL CI で実行 |
 | `scripts/gates/gate_icvk.mjs` | **開発** vkey（`vkey_v2.json`）の `nPublic=30` と `IC.length=31`、曲線点 | 同上。本番 vkey ではない |
 | `scripts/codegen_signals.mjs` の CI | 生成された 3 つの信号ファイルが再生成後も diff ゼロ | FAST ジョブ失敗 |
-| T6 / T7 | 解決された zkey と本番 vkey のピン | zkey が無いとスイート全体が exit 0 でスキップ |
+| T6 / T7 | 解決された zkey と本番 vkey のピン | zkey が無いと T1–T9 は NOT RUN（exit 2）。静的ハッシュは別コマンド |
 | `verifyManifest` | マニフェスト SHA-256 と、存在する本番 zkey / vkey のピン | 不一致で exit 1。`--allow-missing-production-zkey` では zkey 欠落を必須から外す |
 
 `ceremony-metadata.json` の `ssotSha256` は `90f7a6a0ee640f7c11c37a7040d8f5ba4733eb0fbb9d1e491704aa4a29df5cf4` である。現在の `protocol/specs` は `5a4b83a3…`、`specs/aegis-protocol.v2.json` は `4f43d6c1…` であり、どちらとも一致しない。信号配列の差分は無く、`crossContract` の文章 2 箇所だけが二つの SSoT 間で異なる。セレモニー記録の SSoT ハッシュが現ファイルと一致しない理由は、このツリーからは確認できない。
@@ -359,7 +359,7 @@ input JSON (32 keys: 30 public + secretKey + deviceId)
 | v2 WASM | push / PR の `security-gate.yml`（パス条件付き）と、毎日 19:00 UTC | GitHub Actions `frozen-core` | インライン Node | ファイル SHA-256 が `a0d3c53f…db60bd` |
 | v2 R1CS | 同上 | 同上 | 同上 | `3d47226b…fa5599` |
 | 本番 vkey ファイル | 同上 | 同上 | 同上 | 生ファイル SHA-256 が `d012bd29…d2ec`。このファイルでは `sha256VkeyCeremony`（`JSON.stringify(v, null, 2)`）とも一致した |
-| 本番 zkey | zkey が解決できるときだけ | ローカルまたは `AEGIS_PRODUCTION_ZKEY_PATH` がある CI | `sha256File` と `PRODUCTION_ZKEY_HASH` | T6 と `verifyManifest`。ファイルが無い PR では T1–T9 がスキップされ、provenance は `--allow-missing-production-zkey` |
+| 本番 zkey | zkey が解決できるときだけ | ローカルまたは `AEGIS_PRODUCTION_ZKEY_PATH` がある CI | `sha256File` と `PRODUCTION_ZKEY_HASH` | ファイルが無いと回帰は NOT RUN（exit 2）であり PASS ではない。静的完全性は `verify:frozen-core-integrity`。provenance は `--allow-missing-production-zkey` |
 | 開発 vkey | FAST の `node scripts/gates/run_all.mjs` | CI とローカル | `gate_icvk.mjs` | `nPublic`、IC 長、bn128 上の点 |
 | 信号レイアウト | 同上 | 同上 | `gate_layout.mjs`、`gate_binding.mjs`、`gate_domain.mjs`、`gate_forbidden_hardcode.mjs` | SSoT、sym、R1CS、Poseidon 束縛 |
 | publicSignals 個数（JSON） | `security-gate.yml` の `public-signals` | CI | インライン Node | `specs/aegis-protocol.v2.json` の配列長が 30。中身の名前は見ない |
@@ -378,17 +378,23 @@ allowlist の 7 パスは、開発 zkey 1、ptau 5、`witness_v2_baseline.wtns` 
 
 実装は `tests/prover-compatibility.test.ts`。起動は `npm run test:prover-compat`（`scripts/run-prover-compat.mjs` が Hardhat 設定を `scripts/hardhat-prover.config.ts` にして tsx で実行する）。
 
-`artifactsReady()` が偽なら、最初の行で `SKIP prover-compatibility: production artifacts absent` を出して **exit 0** する。本番 zkey が無いと T1–T9 は実行されないまま成功する。
+`production.zkey` が解決できないとき、スイートは T1–T9 を実行せず `Groth16 regression: NOT RUN` と `Reason: production.zkey unavailable` を出して **exit 2** する。`Groth16 regression: PASS` は出さない。exit 0 は、必要成果物があり T1–T9 が実行されて既存の合格条件を満たしたときだけである。
+
+`AEGIS_PRODUCTION_ZKEY_AVAILABLE=true` なのに zkey ファイルが解決できない場合は exit 1（FAIL）である。フラグが false または未設定でも、絶対パスで zkey が解決できれば回帰は RUN する。フラグはファイルの存在を上書きして成功にはしない。
+
+静的確認は `scripts/verify-frozen-core-integrity.mjs` である。zkey が無くても WASM、R1CS、本番 vkey の SHA-256 を見て、一致すれば `Frozen Core artifact integrity: PASS` と出す。この行は回帰の実行も PASS も意味しない。
+
+T2 と T4 は、回帰が RUN になったあとに限って、rapidsnark バイナリが無いときだけ個別に SKIP する。スイート全体の NOT RUN とは別である。
 
 | Test | Purpose | Target | Pass Condition | Failure Effect | Implementation |
 |---|---|---|---|---|---|
-| T1 | snarkjs 証明を snarkjs で検証 | 解決された wasm と zkey と本番 vkey | `groth16.verify === true` | プロセス exit 1。ただし成果物欠落時はスイートごとスキップ | `proveCanonical(..., backend:"snarkjs", verify:false)` の後に verify |
+| T1 | snarkjs 証明を snarkjs で検証 | 解決された wasm と zkey と本番 vkey | `groth16.verify === true` | プロセス exit 1。zkey 欠落時は T1 に到達せずスイートは exit 2 | `proveCanonical(..., backend:"snarkjs", verify:false)` の後に verify |
 | T2 | rapidsnark 証明を snarkjs で検証 | rapidsnark バイナリ | verify が真 | バイナリが無いと `SKIP T2`（失敗にしない）。ある場合の失敗は exit 1 | `isRapidsnarkAvailable()` |
-| T3 | snarkjs 証明をチェーン上で検証 | ローカルデプロイした `Groth16VerifierV2Production` | `verifyProof === true` | exit 1（スキップ条件は同じ） | Hardhat viem |
+| T3 | snarkjs 証明をチェーン上で検証 | ローカルデプロイした `Groth16VerifierV2Production` | `verifyProof === true` | exit 1。zkey 欠落時は未実行（exit 2） | Hardhat viem |
 | T4 | rapidsnark 証明をチェーン上で検証 | 同上 | `verifyProof === true` | バイナリ無しは SKIP | 同上 |
 | T5 | 公開信号の一致 | 長さと `production_proof_baseline.json` | 長さ 30 かつ全要素一致 | exit 1 | 配列比較。ベースラインファイルは `artifacts/phase4/reports/` にあり、長さ 30 を確認した |
 | T6 | zkey 改ざん | 解決された zkey ファイル | SHA-256 が `PRODUCTION_ZKEY_HASH` | exit 1。ファイルが無い実行では到達しない | `sha256File` |
-| T7 | vkey 改ざん | 解決された vkey | ceremony 形式 SHA-256 が `PRODUCTION_VKEY_HASH` | exit 1。zkey 欠落でスイートが先にスキップされると到達しない | `sha256VkeyCeremony` |
+| T7 | vkey 改ざん | 解決された vkey | ceremony 形式 SHA-256 が `PRODUCTION_VKEY_HASH` | exit 1。zkey 欠落時は T7 に到達しない。vkey の静的ハッシュは integrity コマンドが別途確認する | `sha256VkeyCeremony` |
 | T8 | 改ざん拒否 | publicSignals[28] を +1、および `pi_a[0]` を +1 | snarkjs とオンチェーンが偽 | 偽にならないと exit 1 | インデックス 28 は `commitment` |
 | T9 | ベンチ出力の形 | `scripts/bench_prover.mjs --samples 2 --modes M2` | exit 0 かつレポートに `generatedAt`、`samples`、`hashes`、`modes` | exit 1 | 新しい `benchmarks/reports/prover-bench-*.json` を読む |
 
@@ -396,12 +402,12 @@ allowlist の 7 パスは、開発 zkey 1、ptau 5、`witness_v2_baseline.wtns` 
 
 | ワークフロー | トリガ | T1–T9 | 失敗時にジョブが赤くなるか | merge を止めるか |
 |---|---|---|---|---|
-| `aegis_repro_ci.yml` `security-boundary-check` | push と PR | `npm run test:prover-compat` を常に実行 | テストが exit 1 のとき。欠落時の exit 0 では赤くならない | このジョブは `required-gate` の対象。GitHub の ruleset がこのチェックを必須にしているかはリポジトリ内からは確認できない。`dependency-security-update.yml` は「master ruleset が最終ゲート」とコメントしている |
-| `aegis_repro_ci.yml` `prover-compatibility` | push / PR **かつ** `vars.AEGIS_PRODUCTION_ZKEY_AVAILABLE == 'true'` | 実行する | 失敗すると `required-gate` が exit 1 | 変数が偽のときジョブは skipped。`required-gate` は skipped を成功として扱う |
-| `security-gate.yml` `regression` | master/main への push、毎日、および列挙パスへの PR | 実行する | exit 1 でジョブ失敗。欠落時は exit 0 | branch protection の必須チェックかどうかは確認できない |
+| `aegis_repro_ci.yml` `security-boundary-check` | push と PR | 回帰スイートは動かさない。`verify:frozen-core-integrity` を実行する | ハッシュ不一致でジョブ失敗 | このジョブは `required-gate` の対象。GitHub の ruleset がこのチェックを必須にしているかはリポジトリ内からは確認できない |
+| `aegis_repro_ci.yml` `prover-compatibility` | push と PR | zkey があれば T1–T9。無ければ exit 2 を `regression_status=NOT_RUN` として記録し、PASS とは表示しない | 実行後の失敗（exit 1）はジョブ失敗。`required-gate` は status が PASS でも NOT RUN でもないとき exit 1 | NOT RUN は回帰成功として扱わない。他の必須ジョブが成功なら required-gate は回帰を NOT RUN と記録して終了する。ruleset の merge 強制は未確認 |
+| `security-gate.yml` `regression` | master/main への push、毎日、および列挙パスへの PR | 静的完全性のあと、同じ exit 2 / exit 0 の分岐 | 回帰 FAIL はジョブ失敗。NOT RUN は PASS と表示しない | branch protection の必須チェックかどうかは確認できない |
 | `release.yml` | タグ `v*.*.*` | T1–T9 は呼ばない | sensitive scan と phase813 と provenance `--pqc` | リリースジョブの失敗はタグの Release 作成を止める。merge とは別 |
 
-`required-gate` が push / PR で成功を要求するのは、`security-boundary-check`、`fast`、`phase5-readiness`、`tee-layer-regression`、条件付きの `prover-compatibility`、`formal-assurance`、`hybrid-auth-research` である。週次または手動では `full`、`prover-benchmark`、`provenance-pqc-hardening`、`security-penetration-full`、`phase813-regression`、`hybrid-auth-research` を要求する。
+`required-gate` が push / PR で成功を要求するのは、`security-boundary-check`、`fast`、`phase5-readiness`、`tee-layer-regression`、`formal-assurance`、`hybrid-auth-research` である。`prover-compatibility` は毎回評価する。`regression_status` が `PASS` のときだけ、そのジョブ成功を回帰 PASS の条件にする。`NOT_RUN` は回帰 PASS ではなく、ゲートは他の必須ジョブが成功していれば回帰を NOT RUN と記録して終了する。それ以外の status はゲートを失敗させる。週次または手動では `full`、`prover-benchmark`、`provenance-pqc-hardening`、`security-penetration-full`、`phase813-regression`、`hybrid-auth-research` を要求する。
 
 ### 改ざん検知と偽陰性・偽陽性
 
@@ -534,7 +540,7 @@ Groth16 の健全性、Poseidon の衝突耐性、BN254 の離散対数、セレ
 
 ### IMPLEMENTED / PARTIAL
 
-- 本番証明: コードはある。`production.zkey` はツリーに無く、PR の T1–T9 はスキップ成功しうる
+- 本番証明: コードはある。`production.zkey` はツリーに無く、そのとき T1–T9 は NOT RUN（exit 2）であり PASS ではない。静的ハッシュ確認は別結果である
 - PQC の CI 強制: 検証器はある。PR は未署名を警告にしうる。タグの release ワークフローは `--pqc` と live Vault を要求するが、接続成功は未確認
 - KMS / HSM / OIDC: バックエンドとモックテストはある。ライブ適用は未確認
 - mainnet: アドレス定数と fail-closed の lookup がある。chainId 1 では Shield を構築できない。ライブデプロイは確認できない
@@ -645,7 +651,7 @@ flowchart TB
   subgraph CI["CI"]
     SG["security-gate.yml<br/>WASM R1CS vkey の SHA-256"]
     REPRO["aegis_repro_ci.yml<br/>gates と required-gate"]
-    T19["T1-T9<br/>zkey 無しなら exit 0 で skip"]
+    T19["T1-T9<br/>zkey 無しなら NOT RUN exit 2"]
   end
 
   subgraph FUT["文書上の別ライン"]
@@ -709,7 +715,7 @@ flowchart TB
 
 - この公開ツリーだけでは本番証明を再生成できない。
 - v2 Circom ソースが無く、29 信号ソースが残っている。
-- PR の T1–T9 は zkey 欠落で成功終了しうる。専用ジョブはリポジトリ変数が真のときだけ走り、skipped は必須ゲートを通過する。
+- `production.zkey` がリポジトリに無いため、既定の PR では T1–T9 は実行されない。その状態は NOT RUN であり、回帰 PASS ではない。静的ハッシュの PASS は別である。
 - mainnet の canonical lookup は `address(0)` である。
 - ブラウザ検証と複数の example は文書またはプレースホルダである。
 
@@ -761,7 +767,7 @@ mainnet でこのコントラクト群がデプロイされ検証済みである
 - R1CS ヘッダの数値、`.sym` のワイヤ 1..32 の名前、本番 vkey の `nPublic` と `IC.length`、Solidity の `uint[30]` と precompile 6/7/8。
 - WASM、R1CS、本番 vkey、`.sym` の SHA-256 をこの作業ツリーで再計算し、CI とマニフェストの値と一致したこと。
 - `production.zkey` が `artifacts/phase4/final/` にも `crypto-artifacts/phase4/` にも存在しないこと。
-- `proveCanonical`、T1–T9 のスキップ条件、`required-gate` の skipped 扱い、provenance の `--allow-missing-production-zkey` と未署名方針。
+- `proveCanonical`、回帰の exit 0 / 1 / 2、静的完全性コマンド、provenance の `--allow-missing-production-zkey` と未署名方針。
 - 二つの SSoT の差分が `crossContract` の文章 2 箇所だけであること。
 - `ClaimsGate` が `tee/` に閉じ、`ZkClaimsMapper` がプロトコル信号を出力しないこと。
 - `AegisCanonicalRegistry` が chainId 1 で `address(0)` を返すこと。
@@ -785,4 +791,4 @@ mainnet でこのコントラクト群がデプロイされ検証済みである
 - ハードウェア TEE で attestation が検証されたこと。
 - v2 WASM / R1CS を、失われた Circom から再コンパイルしてバイト一致すること。
 - ベースライン proof を snarkjs で実際に検証すること。本調査は JSON の長さと鍵のハッシュまでであり、証明検証コマンドは実行していない。
-- `npm test` や T1–T9 の実行結果。zkey が無いため、テストはスキップ設計に従い証明を作らない。
+- 実在の `production.zkey` を使った T1–T9 の実行結果。ファイルが無いとき証明は作られず、終了状態は NOT RUN である。

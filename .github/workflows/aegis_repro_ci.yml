@@ -185,8 +185,9 @@ jobs:
       - name: Compile prover verifier
         run: npx hardhat compile --config scripts/hardhat-prover.config.ts
 
-      - name: Prover compatibility regression
-        run: npm run test:prover-compat
+      # Static hashes only. This PASS is not Groth16 regression PASS.
+      - name: Frozen Core artifact integrity
+        run: npm run verify:frozen-core-integrity
 
 
   # ==========================================================================
@@ -451,12 +452,15 @@ jobs:
 
   prover-compatibility:
     name: Prover compatibility
-    # Production zkey is external; enable this job only when provisioned.
+    # Always evaluates regression status on push/PR.
+    # production.zkey stays outside the repository. NOT RUN is not PASS.
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    if: >-
-      (github.event_name == 'push' || github.event_name == 'pull_request') &&
-      vars.AEGIS_PRODUCTION_ZKEY_AVAILABLE == 'true'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+      regression_status: ${{ steps.groth16.outputs.status }}
+    env:
+      AEGIS_PRODUCTION_ZKEY_AVAILABLE: ${{ vars.AEGIS_PRODUCTION_ZKEY_AVAILABLE }}
 
     steps:
       - name: Checkout
@@ -481,46 +485,41 @@ jobs:
           import fs from "node:fs";
           import {
             resolveArtifacts,
-            artifactsReady,
             assertProductionHashes,
           } from "./scripts/lib/resolve-artifacts.mjs";
+          import { classifyGroth16Regression } from "./scripts/lib/groth16-regression-gate.mjs";
 
           const paths = resolveArtifacts({
             production: true,
             profile: "production",
           });
 
-          const required = {
-            wasm: paths.wasm,
-            witCalc: paths.witCalc,
-            input: paths.input,
-            zkey: paths.zkey,
-            vkey: paths.vkey,
-          };
-
-          let missing = false;
-
-          for (const [name, file] of Object.entries(required)) {
-            const exists = fs.existsSync(file);
-            console.log(`${name}: ${file} exists=${exists}`);
-
-            if (!exists) {
-              missing = true;
-            }
+          for (const name of ["wasm", "witCalc", "input", "zkey", "vkey"]) {
+            const file = paths[name];
+            console.log(`${name}: ${file} exists=${fs.existsSync(file)}`);
           }
 
-          if (missing || !artifactsReady(paths)) {
-            console.error("FAIL: production prover artifacts are not ready.");
+          const decision = classifyGroth16Regression({ paths });
+          if (decision.status === "NOT_RUN") {
+            console.log("Groth16 regression: NOT RUN");
+            console.log(`Reason: ${decision.reason}`);
+            process.exit(0);
+          }
+          if (decision.status !== "RUN") {
+            console.error("Groth16 regression: FAIL");
+            console.error(`Reason: ${decision.reason}`);
             process.exit(1);
           }
 
           const hashes = assertProductionHashes(paths);
-
-          console.log("PASS: production prover artifacts verified");
+          console.log("production.zkey SHA-256 matches the pin");
           console.log("zkey SHA-256:", hashes.zkeyHash);
           console.log("vkey SHA-256:", hashes.vkHash);
           console.log("artifact source:", paths.sources);
           NODE
+
+      - name: Frozen Core artifact integrity
+        run: npm run verify:frozen-core-integrity
 
       - name: Compile prover verifier
         run: npx hardhat compile --config scripts/hardhat-prover.config.ts
@@ -545,11 +544,52 @@ jobs:
             "RAPIDSNARK_BIN=${{ github.workspace }}/rapidsnark/package/bin/prover" \
             >> "$GITHUB_ENV"
 
-      - name: Prover compatibility tests
-        run: npm run test:prover-compat
+      - name: Groth16 regression
+        id: groth16
+        continue-on-error: true
+        # npm script test:prover-compat is node scripts/run-prover-compat.mjs.
+        # Call node directly so exit 2 (NOT RUN) is not remapped.
+        run: |
+          set +e
+          node scripts/run-prover-compat.mjs
+          code=$?
+          set -e
+          if [[ "$code" -eq 0 ]]; then
+            echo "status=PASS" >> "$GITHUB_OUTPUT"
+            echo "Groth16 regression: PASS"
+          elif [[ "$code" -eq 2 ]]; then
+            echo "status=NOT_RUN" >> "$GITHUB_OUTPUT"
+            echo "Groth16 regression: NOT RUN"
+            echo "Reason: production.zkey unavailable"
+            echo "Groth16 regression is not PASS."
+            exit 2
+          else
+            echo "status=FAIL" >> "$GITHUB_OUTPUT"
+            echo "Groth16 regression: FAIL"
+            exit 1
+          fi
+
+      - name: Fail when Groth16 regression executed and failed
+        if: steps.groth16.outputs.status == 'FAIL'
+        run: |
+          echo "Groth16 regression: FAIL"
+          exit 1
+
+      - name: Record Groth16 regression NOT RUN
+        if: steps.groth16.outputs.status == 'NOT_RUN'
+        run: |
+          echo "Groth16 regression: NOT RUN"
+          echo "Reason: production.zkey unavailable"
+          echo "Frozen Core artifact integrity is a separate result."
+          echo "Groth16 regression is not PASS."
 
       - name: Artifact provenance verification
+        if: steps.groth16.outputs.status == 'PASS'
         run: npm run verify:provenance -- --live
+
+      - name: Artifact provenance verification without production zkey
+        if: steps.groth16.outputs.status == 'NOT_RUN'
+        run: npm run verify:provenance -- --live --allow-missing-production-zkey
 
       - name: Artifact provenance tests
         run: npm run test:artifact-provenance
@@ -908,6 +948,7 @@ jobs:
           PHASE5: ${{ needs.phase5-readiness.result }}
           TEE: ${{ needs.tee-layer-regression.result }}
           PROVER_COMPATIBILITY: ${{ needs.prover-compatibility.result }}
+          REGRESSION_STATUS: ${{ needs.prover-compatibility.outputs.regression_status }}
           FORMAL_ASSURANCE: ${{ needs.formal-assurance.result }}
           HYBRID_AUTH: ${{ needs.hybrid-auth-research.result }}
 
@@ -946,15 +987,31 @@ jobs:
               validate "fast" "$FAST"
               validate "phase5-readiness" "$PHASE5"
               validate "tee-layer-regression" "$TEE"
-              if [[ "$PROVER_COMPATIBILITY" == "skipped" ]]; then
-                echo "prover-compatibility=skipped (external production zkey not provisioned)"
-              else
-                validate "prover-compatibility" "$PROVER_COMPATIBILITY"
-              fi
               validate "formal-assurance" "$FORMAL_ASSURANCE"
               validate "hybrid-auth-research" "$HYBRID_AUTH"
 
-              echo "✓ All PUSH / PR required jobs passed"
+              echo "prover-compatibility job=${PROVER_COMPATIBILITY}"
+              echo "regression_status=${REGRESSION_STATUS}"
+
+              if [[ "$REGRESSION_STATUS" == "PASS" ]]; then
+                if [[ "$PROVER_COMPATIBILITY" != "success" ]]; then
+                  echo "Groth16 regression: FAIL"
+                  echo "ERROR: regression status PASS requires a successful prover-compatibility job"
+                  exit 1
+                fi
+                echo "Groth16 regression: PASS"
+                echo "✓ Required jobs passed and Groth16 regression ran"
+              elif [[ "$REGRESSION_STATUS" == "NOT_RUN" ]]; then
+                echo "Groth16 regression: NOT RUN"
+                echo "Reason: production.zkey unavailable"
+                echo "Groth16 regression is not PASS."
+                echo "Frozen Core artifact integrity is reported separately by verify:frozen-core-integrity."
+                echo "✓ Required non-regression jobs passed"
+              else
+                echo "Groth16 regression: FAIL"
+                echo "ERROR: Groth16 regression did not report PASS or NOT RUN (job=${PROVER_COMPATIBILITY})"
+                exit 1
+              fi
               ;;
 
             schedule|workflow_dispatch)
