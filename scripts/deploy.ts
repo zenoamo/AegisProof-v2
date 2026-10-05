@@ -1,449 +1,441 @@
+import "dotenv/config";
+import hre from "hardhat";
+import hardhatToolboxViem from "@nomicfoundation/hardhat-toolbox-viem";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { network } from "hardhat";
+const VERIFIER_FQN =
+  "protocol/contracts/Groth16VerifierV2.sol:Groth16VerifierV2";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const REGISTRY_FQN =
+  "protocol/contracts/AegisNullifierRegistry.sol:AegisNullifierRegistry";
 
-const PROJECT_ROOT = path.resolve(
-  __dirname,
-  ".."
-);
+const SHIELD_FQN =
+  "protocol/contracts/AegisShieldV2.sol:AegisShieldV2";
 
-const LOCAL_DEPLOYMENT_INFO_PATH = path.join(
-  PROJECT_ROOT,
-  "deployments",
-  "localhost.json"
-);
+const REQUIRED_CONFIRMATIONS = 2;
+const RECEIPT_TIMEOUT = 180_000;
 
-const ENV_PATH = path.join(
-  PROJECT_ROOT,
-  ".env"
-);
+type Address = `0x${string}`;
+
+type DeploymentResult = {
+  address: Address;
+  txHash: `0x${string}`;
+  receipt: any;
+  contract: any;
+};
+
+function validateAddress(
+  value: string | undefined,
+  name: string,
+): Address {
+  if (!value || !/^0x[0-9a-fA-F]{40}$/.test(value)) {
+    throw new Error(`${name} is missing or invalid: ${value ?? "<empty>"}`);
+  }
+
+  return value as Address;
+}
+
+async function deployAndConfirm(
+  viem: any,
+  publicClient: any,
+  contractName: string,
+  constructorArgs: readonly unknown[] = [],
+): Promise<DeploymentResult> {
+  console.log(`\nDeploying ${contractName}...`);
+
+  const deploymentTransaction =
+    await viem.sendDeploymentTransaction(
+      contractName,
+      [...constructorArgs],
+    );
+
+  const txHash = deploymentTransaction.hash as `0x${string}`;
+
+  console.log(`Deployment Tx: ${txHash}`);
+  console.log(
+    `Waiting for deployment confirmation (${REQUIRED_CONFIRMATIONS} blocks)...`,
+  );
+
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: txHash,
+    confirmations: REQUIRED_CONFIRMATIONS,
+    timeout: RECEIPT_TIMEOUT,
+  });
+
+  if (!receipt.contractAddress) {
+    throw new Error(
+      `Deployment transaction ${txHash} was mined but did not return a contract address`,
+    );
+  }
+
+  const address = receipt.contractAddress as Address;
+
+  const contract = await viem.getContractAt(
+    contractName,
+    address,
+  );
+
+  return {
+    address,
+    txHash,
+    receipt,
+    contract,
+  };
+}
+
+async function getExistingContract(
+  viem: any,
+  publicClient: any,
+  address: string | undefined,
+  contractName: string,
+): Promise<DeploymentResult | null> {
+  if (!address) {
+    return null;
+  }
+
+  const validatedAddress = validateAddress(
+    address,
+    `${contractName} address`,
+  );
+
+  const bytecode = await publicClient.getBytecode({
+    address: validatedAddress,
+  });
+
+  if (!bytecode || bytecode === "0x") {
+    return null;
+  }
+
+  console.log(`\nReusing existing ${contractName}`);
+  console.log(`Address: ${validatedAddress}`);
+
+  const contract = await viem.getContractAt(
+    contractName,
+    validatedAddress,
+  );
+
+  return {
+    address: validatedAddress,
+    txHash: "0x" as `0x${string}`,
+    receipt: null,
+    contract,
+  };
+}
 
 function upsertEnvValue(
-  content: string,
+  envPath: string,
   key: string,
-  value: string
-) {
+  value: string,
+): void {
+  let content = "";
+
+  if (fs.existsSync(envPath)) {
+    content = fs.readFileSync(envPath, "utf8");
+  }
+
   const line = `${key}=${value}`;
 
-  const pattern = new RegExp(
-    `^${key}=.*$`,
-    "m"
-  );
+  const pattern = new RegExp(`^${key}=.*$`, "m");
 
   if (pattern.test(content)) {
-    return content.replace(
-      pattern,
-      line
-    );
+    content = content.replace(pattern, line);
+  } else {
+    content = content.trimEnd() + `\n${line}\n`;
   }
 
-  const normalized =
-    content.length === 0 ||
-    content.endsWith("\n")
-      ? content
-      : `${content}\n`;
-
-  return `${normalized}${line}\n`;
+  fs.writeFileSync(envPath, content);
 }
 
-function syncLocalhostAddresses(
-  verifierAddress: string,
-  shieldAddress: string,
-  registryAddress: string
-) {
-  let existing = "";
-  try {
-    existing = fs.readFileSync(
-      ENV_PATH,
-      "utf8"
-    );
-  } catch (error) {
-    if (error?.code !== "ENOENT") {
-      throw error;
-    }
+function syncEnvAddresses(
+  networkName: string,
+  verifierAddress: Address,
+  registryAddress: Address,
+  shieldAddress: Address,
+): void {
+  const envPath = path.resolve(".env");
+
+  upsertEnvValue(
+    envPath,
+    `${networkName.toUpperCase()}_VERIFIER_ADDRESS`,
+    verifierAddress,
+  );
+
+  upsertEnvValue(
+    envPath,
+    `${networkName.toUpperCase()}_REGISTRY_ADDRESS`,
+    registryAddress,
+  );
+
+  upsertEnvValue(
+    envPath,
+    `${networkName.toUpperCase()}_SHIELD_ADDRESS`,
+    shieldAddress,
+  );
+}
+
+async function main(): Promise<void> {
+  const networkConnection = await hre.network.create();
+  const viem = networkConnection.viem;
+  const publicClient = await viem.getPublicClient();
+
+  const [deployer] = await viem.getWalletClients();
+
+  if (!deployer?.account) {
+    throw new Error("No deployment wallet is configured");
   }
 
-  let updated = existing;
+  const deployerAddress = deployer.account.address as Address;
+  const chainId = await publicClient.getChainId();
 
-  updated = upsertEnvValue(
-    updated,
-    "VERIFIER_ADDRESS",
-    verifierAddress
+  const networkName =
+    networkConnection.networkName ??
+    process.env.HARDHAT_NETWORK ??
+    "unknown";
+
+  console.log("==========================================");
+  console.log(`AegisProof ${networkName} Deployment`);
+  console.log("==========================================");
+  console.log(`Deployer: ${deployerAddress}`);
+  console.log(`Chain ID: ${chainId}`);
+
+  if (networkName !== "sepolia") {
+    throw new Error(
+      `This deployment script is restricted to Sepolia. Current network: ${networkName}`,
+    );
+  }
+
+  if (chainId !== 11155111) {
+    throw new Error(
+      `Unexpected chain ID. Expected 11155111, received ${chainId}`,
+    );
+  }
+
+  /*
+   * The previous deployment already produced bytecode at:
+   *
+   *   0x444fcb9b1fb3cec13a11b6be2b40d5d43700df86
+   *
+   * If SEPOLIA_VERIFIER_ADDRESS is present in .env, reuse it.
+   *
+   * This prevents the failed post-deployment bookkeeping from causing
+   * another Verifier deployment on the next run.
+   */
+  const existingVerifierAddress =
+    process.env.SEPOLIA_VERIFIER_ADDRESS;
+
+  let verifierDeployment =
+    await getExistingContract(
+      viem,
+      publicClient,
+      existingVerifierAddress,
+      VERIFIER_FQN,
+    );
+
+  if (!verifierDeployment) {
+    console.log("\n[1] Deploying Groth16VerifierV2...");
+
+    verifierDeployment = await deployAndConfirm(
+      viem,
+      publicClient,
+      VERIFIER_FQN,
+    );
+
+    console.log(
+      `Verifier Contract Address: ${verifierDeployment.address}`,
+    );
+    console.log(
+      `Verifier Deployment Tx: ${verifierDeployment.txHash}`,
+    );
+  }
+
+  const verifierAddress = verifierDeployment.address;
+
+  /*
+   * Registry
+   */
+  let registryDeployment =
+    await getExistingContract(
+      viem,
+      publicClient,
+      process.env.SEPOLIA_REGISTRY_ADDRESS,
+      REGISTRY_FQN,
+    );
+
+  if (!registryDeployment) {
+    console.log("\n[2] Deploying AegisNullifierRegistry...");
+
+    registryDeployment = await deployAndConfirm(
+      viem,
+      publicClient,
+      REGISTRY_FQN,
+      [deployerAddress],
+    );
+
+    console.log(
+      `Registry Contract Address: ${registryDeployment.address}`,
+    );
+    console.log(
+      `Registry Deployment Tx: ${registryDeployment.txHash}`,
+    );
+  }
+
+  const registryAddress = registryDeployment.address;
+
+  /*
+   * Shield
+   */
+  let shieldDeployment =
+    await getExistingContract(
+      viem,
+      publicClient,
+      process.env.SEPOLIA_SHIELD_ADDRESS,
+      SHIELD_FQN,
+    );
+
+  if (!shieldDeployment) {
+    console.log("\n[3] Deploying AegisShieldV2...");
+
+    shieldDeployment = await deployAndConfirm(
+      viem,
+      publicClient,
+      SHIELD_FQN,
+      [verifierAddress, registryAddress],
+    );
+
+    console.log(
+      `Shield Contract Address: ${shieldDeployment.address}`,
+    );
+    console.log(
+      `Shield Deployment Tx: ${shieldDeployment.txHash}`,
+    );
+  }
+
+  const shieldAddress = shieldDeployment.address;
+
+  /*
+   * Authorize Shield in Registry.
+   */
+  console.log("\n[4] Authorizing Shield in Registry...");
+
+  const authorized =
+    await registryDeployment.contract.read.authorizedShields([
+      shieldAddress,
+    ]);
+
+  if (!authorized) {
+    const authorizationTx =
+      await registryDeployment.contract.write.authorizeShield([
+        shieldAddress,
+      ]);
+
+    console.log(`Authorization Tx: ${authorizationTx}`);
+
+    await publicClient.waitForTransactionReceipt({
+      hash: authorizationTx,
+      confirmations: REQUIRED_CONFIRMATIONS,
+      timeout: RECEIPT_TIMEOUT,
+    });
+
+    console.log("Shield authorization confirmed.");
+  } else {
+    console.log("Shield is already authorized.");
+  }
+
+  /*
+   * Basic bytecode validation.
+   */
+  console.log("\n[5] Verifying deployed bytecode...");
+
+  for (const [name, address] of [
+    ["Verifier", verifierAddress],
+    ["Registry", registryAddress],
+    ["Shield", shieldAddress],
+  ] as const) {
+    const bytecode = await publicClient.getBytecode({
+      address,
+    });
+
+    if (!bytecode || bytecode === "0x") {
+      throw new Error(
+        `${name} has no bytecode at ${address}`,
+      );
+    }
+
+    console.log(
+      `${name}: bytecode present at ${address}`,
+    );
+  }
+
+  /*
+   * Persist deployment metadata.
+   *
+   * deployments/ is ignored by git, so this remains local deployment
+   * state and must not be committed as production deployment evidence.
+   */
+  const deploymentDir = path.resolve("deployments");
+
+  fs.mkdirSync(deploymentDir, {
+    recursive: true,
+  });
+
+  const deploymentPath = path.join(
+    deploymentDir,
+    `${networkName}.json`,
   );
 
-  updated = upsertEnvValue(
-    updated,
-    "SHIELD_ADDRESS",
-    shieldAddress
-  );
-
-  updated = upsertEnvValue(
-    updated,
-    "NULLIFIER_REGISTRY_ADDRESS",
-    registryAddress
-  );
+  const deployment = {
+    network: networkName,
+    chainId,
+    deployer: deployerAddress,
+    verifier: {
+      address: verifierAddress,
+      transactionHash:
+        verifierDeployment.txHash === "0x"
+          ? null
+          : verifierDeployment.txHash,
+    },
+    registry: {
+      address: registryAddress,
+      transactionHash:
+        registryDeployment.txHash === "0x"
+          ? null
+          : registryDeployment.txHash,
+    },
+    shield: {
+      address: shieldAddress,
+      transactionHash:
+        shieldDeployment.txHash === "0x"
+          ? null
+          : shieldDeployment.txHash,
+    },
+    shieldAuthorized: true,
+    updatedAt: new Date().toISOString(),
+  };
 
   fs.writeFileSync(
-    ENV_PATH,
-    updated
+    deploymentPath,
+    JSON.stringify(deployment, null, 2) + "\n",
   );
+
+  syncEnvAddresses(
+    networkName,
+    verifierAddress,
+    registryAddress,
+    shieldAddress,
+  );
+
+  console.log("\n==========================================");
+  console.log("Deployment completed successfully");
+  console.log("==========================================");
+  console.log(`Verifier: ${verifierAddress}`);
+  console.log(`Registry: ${registryAddress}`);
+  console.log(`Shield:   ${shieldAddress}`);
+  console.log(`Metadata: ${deploymentPath}`);
 }
 
-async function main() {
-  // ==========================================
-  // Connect localhost
-  // ==========================================
-
-  const { viem } =
-    await network.connect({
-      network: "localhost",
-    });
-
-  const [deployer] =
-    await viem.getWalletClients();
-
-  const publicClient =
-    await viem.getPublicClient();
-
-  const chainId =
-    await publicClient.getChainId();
-
-  console.log("");
-  console.log(
-    "=========================================="
-  );
-  console.log(
-    "AegisProof Localhost Deployment"
-  );
-  console.log(
-    "=========================================="
-  );
-
-  console.log(
-    "Deployer:",
-    deployer.account.address
-  );
-
-  console.log(
-    "Chain ID:",
-    chainId
-  );
-
-  // ==========================================
-  // 1. Deploy Groth16Verifier29
-  // ==========================================
-
-  console.log("");
-  console.log(
-    "[1] Deploying Groth16Verifier29"
-  );
-
-  const verifier =
-    await viem.deployContract(
-      "protocol/contracts/Groth16VerifierV2.sol:Groth16VerifierV2"
-    );
-
-  console.log(
-    "Verifier:",
-    verifier.address
-  );
-
-  const canonicalVerifierAddress =
-    "0x5fbdb2315678afecb367f032d93f642f64180aa3";
-
-  if (
-    verifier.address.toLowerCase() !==
-    canonicalVerifierAddress
-  ) {
-    throw new Error(
-      `Canonical verifier mismatch on localhost: expected ${canonicalVerifierAddress}, got ${verifier.address}`
-    );
-  }
-
-  // ==========================================
-  // 2. Verify Verifier Bytecode
-  // ==========================================
-
-  const verifierCode =
-    await publicClient.getBytecode({
-      address:
-        verifier.address,
-    });
-
-  if (
-    !verifierCode ||
-    verifierCode === "0x"
-  ) {
-    throw new Error(
-      "Verifier deployment failed: no bytecode found"
-    );
-  }
-
-  console.log(
-    "Verifier bytecode: OK"
-  );
-
-  // ==========================================
-  // 3. Deploy chain-wide nullifier registry
-  // ==========================================
-
-  console.log("");
-  console.log(
-    "[2] Deploying AegisShield"
-  );
-
-  const registry =
-    await viem.deployContract(
-      "AegisNullifierRegistry",
-      [deployer.account.address]
-    );
-
-  const canonicalRegistryAddress =
-    "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512";
-
-  if (
-    registry.address.toLowerCase() !==
-    canonicalRegistryAddress
-  ) {
-    throw new Error(
-      `Canonical registry mismatch on localhost: expected ${canonicalRegistryAddress}, got ${registry.address}`
-    );
-  }
-
-  // ==========================================
-  // 4. Deploy AegisShieldV2
-  // ==========================================
-
-  const shield =
-    await viem.deployContract(
-      "AegisShieldV2",
-      [verifier.address, deployer.account.address, registry.address]
-    );
-
-  await registry.write.setConsumerAuthorized([shield.address, true]);
-
-  const authorized = await registry.read.authorizedConsumers([shield.address]);
-  if (!authorized) throw new Error("Registry authorization failed for AegisShieldV2");
-
-  console.log(
-    "Shield:",
-    shield.address
-  );
-
-  // ==========================================
-  // 4. Verify Shield Bytecode
-  // ==========================================
-
-  const shieldCode =
-    await publicClient.getBytecode({
-      address:
-        shield.address,
-    });
-
-  if (
-    !shieldCode ||
-    shieldCode === "0x"
-  ) {
-    throw new Error(
-      "AegisShield deployment failed: no bytecode found"
-    );
-  }
-
-  console.log(
-    "Shield bytecode: OK"
-  );
-
-  // ==========================================
-  // 5. Verify Constructor State
-  // ==========================================
-
-  console.log("");
-  console.log(
-    "[3] Verifying AegisShield state"
-  );
-
-  const storedVerifier =
-    String(
-      await shield.read.verifier()
-    );
-
-  const storedOperator =
-    String(
-      await shield.read.operator()
-    );
-
-  const storedRegistry =
-    String(
-      await shield.read.nullifierRegistry()
-    );
-
-  console.log(
-    "Expected verifier:",
-    verifier.address
-  );
-
-  console.log(
-    "Stored verifier:",
-    storedVerifier
-  );
-
-  console.log(
-    "Expected operator:",
-    deployer.account.address
-  );
-
-  console.log(
-    "Stored operator:",
-    storedOperator
-  );
-
-  if (
-    storedVerifier.toLowerCase() !==
-    verifier.address.toLowerCase()
-  ) {
-    throw new Error(
-      `Verifier mismatch: expected ${verifier.address}, got ${storedVerifier}`
-    );
-  }
-
-  if (
-    storedOperator.toLowerCase() !==
-    deployer.account.address.toLowerCase()
-  ) {
-    throw new Error(
-      `Operator mismatch: expected ${deployer.account.address}, got ${storedOperator}`
-    );
-  }
-
-  if (storedRegistry.toLowerCase() !== registry.address.toLowerCase()) {
-    throw new Error(`Nullifier registry mismatch: expected ${registry.address}, got ${storedRegistry}`);
-  }
-
-  console.log(
-    "AegisShield constructor state: OK"
-  );
-
-  // ==========================================
-  // 6. Save Deployment Information
-  // ==========================================
-
-  fs.mkdirSync(
-    path.dirname(
-      LOCAL_DEPLOYMENT_INFO_PATH
-    ),
-    {
-      recursive: true,
-    }
-  );
-
-  fs.writeFileSync(
-    LOCAL_DEPLOYMENT_INFO_PATH,
-    JSON.stringify(
-      {
-        network:
-          "localhost",
-
-        chainId,
-
-        deployer:
-          deployer.account.address,
-
-        verifierAddress:
-          verifier.address,
-
-        nullifierRegistryAddress:
-          registry.address,
-
-        shieldAddress:
-          shield.address,
-      },
-      null,
-      2
-    ) + "\n"
-  );
-
-  // ==========================================
-  // 7. Sync .env
-  // ==========================================
-
-  syncLocalhostAddresses(
-    verifier.address,
-    shield.address,
-    registry.address
-  );
-
-  // ==========================================
-  // 8. Final Output
-  // ==========================================
-
-  console.log("");
-  console.log(
-    "=========================================="
-  );
-  console.log(
-    "Deployment completed successfully"
-  );
-  console.log(
-    "=========================================="
-  );
-
-  console.log(
-    "Deployer:",
-    deployer.account.address
-  );
-
-  console.log(
-    "Chain ID:",
-    chainId
-  );
-
-  console.log(
-    "Groth16VerifierV2:",
-    verifier.address
-  );
-
-  console.log(
-    "AegisShieldV2:",
-    shield.address
-  );
-
-  console.log(
-    "Stored verifier:",
-    storedVerifier
-  );
-
-  console.log(
-    "Stored operator:",
-    storedOperator
-  );
-
-  console.log(
-    "Deployment file:",
-    LOCAL_DEPLOYMENT_INFO_PATH
-  );
-
-  console.log(
-    "Updated .env:",
-    ENV_PATH
-  );
-
-  console.log(
-    "=========================================="
-  );
-}
-
-main().catch(
-  (error) => {
-    console.error("");
-    console.error(
-      "DEPLOYMENT FAILED"
-    );
-    console.error(error);
-    process.exitCode = 1;
-  }
-);
+main().catch((error) => {
+  console.error("\nDEPLOYMENT FAILED");
+  console.error(error);
+  process.exitCode = 1;
+});
