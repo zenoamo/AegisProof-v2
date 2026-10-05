@@ -192,23 +192,23 @@ async function deploySepolia() {
   } else {
     console.log("[1] Deploying Groth16VerifierV2...");
 
-    const verifierDeploymentTx = await viem.sendDeploymentTransaction(
+    const verifierDeployment = await viem.sendDeploymentTransaction(
       "protocol/contracts/Groth16VerifierV2.sol:Groth16VerifierV2",
     );
 
-    verifierTxHash = verifierDeploymentTx;
+    verifierTxHash = verifierDeployment.deploymentTransaction.hash;
 
     console.log("Verifier deployment tx:", verifierTxHash);
 
     const verifierReceipt = await publicClient.waitForTransactionReceipt({
-      hash: verifierDeploymentTx,
+      hash: verifierTxHash,
       confirmations: 2,
       timeout: 180_000,
     });
 
     if (!verifierReceipt.contractAddress) {
       throw new Error(
-        `Verifier deployment ${verifierDeploymentTx} did not produce a contract address`,
+        `Verifier deployment ${verifierTxHash} did not produce a contract address`,
       );
     }
 
@@ -223,10 +223,12 @@ async function deploySepolia() {
     console.log("Verifier Contract Address:", verifierAddress);
   }
 
-  const registryDeploymentTx = await viem.sendDeploymentTransaction(
+  const registryDeployment = await viem.sendDeploymentTransaction(
     "AegisNullifierRegistry",
     [deployerAddress],
   );
+
+  const registryDeploymentTx = registryDeployment.deploymentTransaction.hash;
 
   console.log("Registry deployment tx:", registryDeploymentTx);
 
@@ -257,10 +259,12 @@ async function deploySepolia() {
 
   console.log("Registry Contract Address:", registryAddress);
 
-  const shieldDeploymentTx = await viem.sendDeploymentTransaction(
+  const shieldDeployment = await viem.sendDeploymentTransaction(
     "AegisShieldV2",
     [verifierAddress, deployerAddress, registryAddress],
   );
+
+  const shieldDeploymentTx = shieldDeployment.deploymentTransaction.hash;
 
   console.log("Shield deployment tx:", shieldDeploymentTx);
 
@@ -297,9 +301,9 @@ async function deploySepolia() {
   }
 
   for (const [name, address] of [
-    ["verifier", verifier.address],
-    ["registry", registry.address],
-    ["shield", shield.address],
+    ["verifier", verifierAddress],
+    ["registry", registryAddress],
+    ["shield", shieldAddress],
   ]) {
     const code = await publicClient.getBytecode({ address });
     if (!code || code === "0x") throw new Error(`${name} deployment failed: no bytecode found`);
@@ -309,9 +313,9 @@ async function deploySepolia() {
   const storedOperator = String(await shield.read.operator());
   const storedRegistry = String(await shield.read.nullifierRegistry());
 
-  if (getAddress(storedVerifier) !== getAddress(verifier.address)) throw new Error("Shield verifier state mismatch");
+  if (getAddress(storedVerifier) !== getAddress(verifierAddress)) throw new Error("Shield verifier state mismatch");
   if (getAddress(storedOperator) !== deployerAddress) throw new Error("Shield operator state mismatch");
-  if (getAddress(storedRegistry) !== getAddress(registry.address)) throw new Error("Shield registry state mismatch");
+  if (getAddress(storedRegistry) !== getAddress(registryAddress)) throw new Error("Shield registry state mismatch");
 
   fs.mkdirSync(path.dirname(SEPOLIA_DEPLOYMENT_INFO_PATH), { recursive: true });
   fs.writeFileSync(SEPOLIA_DEPLOYMENT_INFO_PATH, JSON.stringify({
