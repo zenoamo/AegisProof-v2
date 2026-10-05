@@ -143,7 +143,6 @@ async function deploySepolia() {
 
   const existingVerifierAddress = process.env.SEPOLIA_VERIFIER_ADDRESS;
 
-  const verifierNonce = existingVerifierAddress ? null : latestNonce;
   const registryNonce = existingVerifierAddress ? latestNonce : latestNonce + 1;
   const shieldNonce = registryNonce + 1;
 
@@ -151,7 +150,7 @@ async function deploySepolia() {
     ? getAddress(existingVerifierAddress)
     : getContractAddress({
         from: deployerAddress,
-        nonce: BigInt(verifierNonce),
+        nonce: BigInt(latestNonce),
       });
 
   const expectedRegistry = getContractAddress({
