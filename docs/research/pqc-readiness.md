@@ -33,6 +33,7 @@ ADR-0003: PQC applies to artifact metadata authenticity only.
 | Live KMS signing | NOT VERIFIED | operator checklist |
 | PR-tier strict | PARTIAL (WARN-only) | Phase 8.15 pending |
 | Key lifecycle policy | IMPLEMENTED | status + validity window + purpose policy |
+| Key rotation evidence | IMPLEMENTED | predecessor/successor evidence + chain validation |
 
 ---
 
@@ -71,6 +72,8 @@ Registry records now support an explicit lifecycle state and validity window wit
 Strict consumers can enable `requireActiveKey` and an optional `keyPurpose`. This prevents a valid ML-DSA signature from being accepted merely because its cryptographic bytes verify; the referenced registry key must also be authorized for the current lifecycle policy.
 
 The default compatibility path remains unchanged so existing signed artifacts can be verified during migration.
+
+Rotation evidence is validated as policy metadata: strict validation requires an explicit predecessor/successor relationship, effective timestamp, reason, successor validity at the transition time, and no premature predecessor revocation. Rotation chains additionally enforce unique IDs/links and monotonic transition times.
 
 ---
 ## 6. Production Readiness Gaps
