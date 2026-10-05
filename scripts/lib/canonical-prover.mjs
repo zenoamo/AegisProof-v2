@@ -47,6 +47,13 @@ export {
   EXPECTED_PUBLIC_SIGNALS,
 } from "./provers.mjs";
 
+export {
+  CANONICAL_V2_PUBLIC_SIGNALS,
+  assertCanonicalV2ProvingArtifacts,
+  readR1csPublicSignalCount,
+  CanonicalV2ArtifactError,
+} from "./canonical-v2-guard.mjs";
+
 /** @deprecated use SnarkjsProver.prove */
 export async function proveSnarkjs(zkeyPath, wtnsPath) {
   return SnarkjsProver.prove(zkeyPath, wtnsPath);
