@@ -23,6 +23,8 @@ const {
   validateEnvelopeKeyReference,
   validateEnvelopeMetadata,
   loadRegistryPublicKey,
+  validateRegistryKeyLifecycle,
+  validateRegistryRecord,
 } = await import("../scripts/lib/public-key-registry.mjs");
 
 const {
@@ -183,6 +185,56 @@ const invalidDate = { ...envelope, signedAt: "not-a-date" };
 const meta10b = validateEnvelopeMetadata(invalidDate);
 ok(!meta10b.ok && meta10b.error.includes("invalid"), "T-PQC-10 invalid signedAt reject");
 
+// T-PQC-11: registry lifecycle policy
+const lifecycleBase = {
+  keyId: "fixture-key",
+  algorithm: PQC_ALGORITHM_VERSION,
+  version: PQC_VERSION,
+  publicKey: publicKeyHex,
+  status: "active",
+  notBefore: new Date(Date.now() - 60_000).toISOString(),
+  notAfter: new Date(Date.now() + 60_000).toISOString(),
+  immutable: true,
+};
+const activeLifecycle = validateRegistryKeyLifecycle(lifecycleBase, { requireActive: true });
+ok(activeLifecycle.ok, "T-PQC-11 active key lifecycle accepted");
+
+const revokedLifecycle = validateRegistryKeyLifecycle(
+  { ...lifecycleBase, status: "revoked", revokedAt: new Date(Date.now() - 1_000).toISOString() },
+  { requireActive: true }
+);
+ok(!revokedLifecycle.ok && revokedLifecycle.errors.some((e) => e.includes("revoked")), "T-PQC-11 revoked key rejected");
+
+const expiredLifecycle = validateRegistryKeyLifecycle(
+  { ...lifecycleBase, notAfter: new Date(Date.now() - 1_000).toISOString() },
+  { requireActive: true }
+);
+ok(!expiredLifecycle.ok && expiredLifecycle.errors.some((e) => e.includes("expired")), "T-PQC-11 expired key rejected");
+
+const futureLifecycle = validateRegistryKeyLifecycle(
+  { ...lifecycleBase, notBefore: new Date(Date.now() + 60_000).toISOString() },
+  { requireActive: true }
+);
+ok(!futureLifecycle.ok && futureLifecycle.errors.some((e) => e.includes("not active")), "T-PQC-11 not-yet-active key rejected");
+
+const deprecatedLifecycle = validateRegistryKeyLifecycle(
+  { ...lifecycleBase, status: "deprecated" },
+  { requireActive: true }
+);
+ok(!deprecatedLifecycle.ok && deprecatedLifecycle.errors.some((e) => e.includes("deprecated")), "T-PQC-11 deprecated key rejected in strict mode");
+
+const purposeMismatch = validateRegistryKeyLifecycle(
+  { ...lifecycleBase, purposes: ["artifact-provenance"] },
+  { purpose: "operator-auth" }
+);
+ok(!purposeMismatch.ok && purposeMismatch.errors.some((e) => e.includes("purpose mismatch")), "T-PQC-11 key purpose mismatch rejected");
+
+const malformedLifecycle = validateRegistryRecord(
+  { ...lifecycleBase, status: "not-a-status" },
+  "fixture-key"
+);
+ok(!malformedLifecycle.ok && malformedLifecycle.errors.some((e) => e.includes("invalid registry key status")), "T-PQC-11 invalid registry status rejected");
+
 // Registry + manifest integrity
 const ciKey = loadRegistryPublicKey("aegis-ci-mldsa87-v1");
 ok(ciKey?.keyId === "aegis-ci-mldsa87-v1", "CI registry key loadable");
@@ -195,6 +247,16 @@ ok(integrity.ok, "manifest integrity check PASS");
 const signedManifest = signManifest(createSigningFixtureManifest(), { secretKey, publicKeyHex });
 const pqcManifest = verifyPqcSignatureEnvelope(signedManifest, { required: true });
 ok(pqcManifest.valid, "verifyPqcSignatureEnvelope valid signed manifest");
+
+const registryStrictManifest = JSON.parse(JSON.stringify(signedManifest));
+const strictZkey = registryStrictManifest.entries.find((entry) => entry.artifact === "production.zkey");
+strictZkey.pqcSignatureEnvelope.publicKeyId = "aegis-ci-mldsa87-v1";
+strictZkey.pqcSignatureEnvelope.publicKey = ciKey.publicKey;
+const strictPqc = verifyPqcSignatureEnvelope(registryStrictManifest, {
+  required: false,
+  requireActiveKey: true,
+});
+ok(strictPqc.valid, "T-PQC-11 active registry key accepted in strict lifecycle mode");
 ok(pqcManifest.algorithm === PQC_ALGORITHM_VERSION, "verifyPqcSignatureEnvelope returns algorithm");
 
 const signedCore = signedManifest.entries.filter((e) =>
