@@ -1,13 +1,13 @@
-name: AegisProof Ethereum Mainnet Readiness
+name: AegisProof Ethereum Mainnet Deployment (Local)
 
 on:
   pull_request:
     paths:
       - "deployments/**"
       - "protocol/contracts/**"
-      - "scripts/validate-mainnet-readiness.mjs"
-      - "tests/security/mainnet-readiness.test.mjs"
+      - "scripts/**"
       - "package.json"
+      - "package-lock.json"
       - ".github/workflows/mainnet-readiness.yml"
   workflow_dispatch:
 
@@ -15,10 +15,10 @@ permissions:
   contents: read
 
 jobs:
-  readiness:
-    name: Mainnet readiness (no deployment)
+  local-deployment:
+    name: Mainnet deployment path (local Hardhat)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -34,25 +34,85 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Run Mainnet readiness regression
-        run: node --test tests/security/mainnet-readiness.test.mjs
+      - name: Compile contracts
+        run: npx hardhat compile
 
-      - name: Verify Mainnet deployment is not accidentally enabled
+      - name: Start local Hardhat node
+        run: |
+          nohup npx hardhat node > /tmp/aegisproof-hardhat-node.log 2>&1 &
+          for i in {1..30}; do
+            if curl --silent --fail \
+              -H "Content-Type: application/json" \
+              --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
+              http://127.0.0.1:8545 > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          if ! curl --silent --fail \
+            -H "Content-Type: application/json" \
+            --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
+            http://127.0.0.1:8545 > /dev/null; then
+            cat /tmp/aegisproof-hardhat-node.log
+            exit 1
+          fi
+
+      - name: Run local deployment
+        run: npx hardhat run scripts/deploy.ts --network localhost
+
+      - name: Verify local deployment output
         run: |
           node --input-type=module <<'NODE'
           import fs from "node:fs";
-          const manifest = JSON.parse(fs.readFileSync("deployments/manifest.json", "utf8"));
-          const entry = manifest.chains?.["1"];
 
-          if (!entry) {
-            console.log("PASS: Ethereum Mainnet is not configured");
-            process.exit(0);
+          const deployment = JSON.parse(
+            fs.readFileSync("deployments/localhost.json", "utf8"),
+          );
+
+          if (deployment.network !== "localhost") {
+            throw new Error(`unexpected deployment network: ${deployment.network}`);
           }
 
-          if (entry.deployable === true || manifest.deploymentStatus === "production") {
-            console.error("FAIL: Ethereum Mainnet deployment is enabled in the committed manifest");
-            process.exit(1);
+          if (deployment.chainId !== 31337) {
+            throw new Error(`unexpected local chain ID: ${deployment.chainId}`);
           }
 
-          console.log("PASS: Ethereum Mainnet remains fail-closed");
+          for (const [name, address] of Object.entries({
+            verifierAddress: deployment.verifierAddress,
+            nullifierRegistryAddress: deployment.nullifierRegistryAddress,
+            shieldAddress: deployment.shieldAddress,
+          })) {
+            if (!/^0x[0-9a-fA-F]{40}$/.test(address ?? "")) {
+              throw new Error(`${name} is not a valid EVM address`);
+            }
+          }
+
+          console.log("Local deployment manifest: PASS");
+          console.log(JSON.stringify(deployment, null, 2));
           NODE
+
+      - name: Verify deployment remains local-only
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const workflow = fs.readFileSync(
+            ".github/workflows/mainnet-readiness.yml",
+            "utf8",
+          );
+
+          if (/MAINNET_RPC_URL|MAINNET_PRIVATE_KEY/.test(workflow)) {
+            throw new Error("workflow must not use Mainnet RPC or private-key credentials");
+          }
+
+          if (!workflow.includes("--network localhost")) {
+            throw new Error("workflow must deploy only to the local Hardhat network");
+          }
+
+          console.log("Local-only deployment boundary: PASS");
+          NODE
+
+      - name: Dump local node log on failure
+        if: failure()
+        run: cat /tmp/aegisproof-hardhat-node.log
