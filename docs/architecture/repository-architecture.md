@@ -289,7 +289,9 @@ Production Provenance Final E2E Verification は `scripts/verify-production-prov
 7. 登録済みかつ active なセッションと purpose の一致
 8. `AegisNullifierRegistry.consume`。呼び出し元 Shield が `authorizedConsumers` である必要があり、使用済み nullifier は `"Nullifier already used"`
 
-`AegisCanonicalRegistry.verifierForChain` は chainId `31337` だけアドレスを返す。mainnet 定数 `MAINNET_VERIFIER` と `MAINNET_REGISTRY` はファイル内にあるが、関数は chainId `1` に対して `address(0)` を返す。コメントは「独立検証が終わるまで fail-closed」と書いている。したがって現在の `AegisShieldV2` コンストラクタは chainId 1 で `"Unsupported chain"` になる。
+`AegisCanonicalRegistry.verifierForChain` は chainId `31337` だけアドレスを返す。mainnet 定数 `MAINNET_VERIFIER` と `MAINNET_REGISTRY` はファイル内にあるが、関数は chainId `1` に対して `address(0)` を返す。コメントは「独立検証が終わるまで fail-closed」と書いている。したがって現在の `AegisShieldV2` コンストラクタは chainId 1 で `"Unsupported chain"` になる。定数だけを Mainnet binding としては扱わない。
+
+`scripts/mainnet-preflight.mjs` は Mainnet RPC、chainId `1`、その binding、canonical verifier address、`eth_getCode` の順で読む。`address(0)` は `Canonical verifier: NOT CONFIGURED` であり、deployment ではない。address が設定されていて bytecode が `0x` または空なら `Canonical verifier bytecode: NOT DEPLOYED` と `FAIL canonical verifier address has no deployed bytecode` で終了コード 1 である。これを NOT RUN や PASS にはしない。Sepolia、chainId `31337`、テスト鍵は fallback ではない。`MAINNET_RPC_URL` が実行コンテキストに無いときだけ Mainnet RPC は NOT RUN（終了コード 3）である。bytecode が存在し、`verifierForChain` が chainId `1` の非ゼロ address を返すときだけ後続の verifier validation に進める。この PASS は `production provenance: VERIFIED` でも Groth16 regression PASS でもない。
 
 ### 5.4 ローカル検証とランタイム検証
 

@@ -32,9 +32,42 @@ jobs:
         run: node scripts/mainnet-nonce-probe.mjs
 
       - name: Read-only Ethereum Mainnet preflight
+        id: mainnet_preflight
+        continue-on-error: true
         env:
           MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
           AEGIS_MAINNET_CANONICAL_VERIFIER: ${{ secrets.AEGIS_MAINNET_CANONICAL_VERIFIER }}
           AEGIS_MAINNET_CANONICAL_REGISTRY: ${{ secrets.AEGIS_MAINNET_CANONICAL_REGISTRY }}
           AEGIS_MAINNET_EXPECTED_DEPLOYER: ${{ secrets.AEGIS_MAINNET_EXPECTED_DEPLOYER }}
-        run: node scripts/mainnet-preflight.mjs
+        run: |
+          set +e
+          node scripts/mainnet-preflight.mjs
+          code=$?
+          set -e
+          if [[ "$code" -eq 0 ]]; then
+            echo "status=PASS" >> "$GITHUB_OUTPUT"
+          elif [[ "$code" -eq 3 ]]; then
+            echo "status=NOT_RUN" >> "$GITHUB_OUTPUT"
+            echo "Mainnet RPC: NOT RUN"
+            echo "Mainnet chainId: NOT RUN"
+            exit 3
+          else
+            echo "status=FAIL" >> "$GITHUB_OUTPUT"
+            echo "Mainnet preflight: FAIL"
+            exit 1
+          fi
+
+      - name: Fail when Mainnet preflight failed
+        if: steps.mainnet_preflight.outputs.status == 'FAIL'
+        run: |
+          echo "Mainnet preflight: FAIL"
+          echo "Undeployed canonical verifier bytecode remains FAIL."
+          exit 1
+
+      - name: Record Mainnet preflight NOT RUN
+        if: steps.mainnet_preflight.outputs.status == 'NOT_RUN'
+        run: |
+          echo "Mainnet RPC: NOT RUN"
+          echo "Mainnet chainId: NOT RUN"
+          echo "Mainnet RPC credential was not provided to this job."
+          echo "This is not a deployed verifier and it is not PASS."

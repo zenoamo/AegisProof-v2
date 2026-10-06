@@ -26,6 +26,8 @@ npm run preflight:mainnet
 
 The preflight performs RPC reads only. It must not broadcast a transaction.
 
+`npm run preflight:mainnet` checks Mainnet RPC, chain ID 1, the active `AegisCanonicalRegistry` binding, and canonical verifier bytecode. `address(0)` is `Canonical verifier: NOT CONFIGURED`. A configured address with no bytecode exits 1 with `FAIL canonical verifier address has no deployed bytecode`. That result stays FAIL until a real Mainnet deployment is bound. Sepolia and localhost addresses are not substitutes. The RPC URL and any credential it contains are not printed.
+
 ## Deployment order
 
 The canonical verifier and registry addresses must be finalized before enabling a production Shield deployment because `AegisShieldV2` fails closed unless its constructor arguments match `AegisCanonicalRegistry` for the target chain.

@@ -67,6 +67,7 @@
     "aegis:verify": "tsx scripts/aegis-auto-verify.ts",
     "validate:deployment-manifest": "node scripts/validate-deployment-manifest.mjs",
     "preflight:mainnet": "node scripts/mainnet-preflight.mjs",
+    "test:mainnet-preflight": "node --test tests/security/mainnet-preflight.test.mjs",
     "check:mainnet-deploy-config": "node scripts/mainnet-deploy-config-check.mjs",
     "test:mainnet-deployment-plan": "node --test tests/security/mainnet-deployment-plan.test.mjs",
     "generate:mainnet-canonical-registry": "node scripts/gen-mainnet-canonical-registry.mjs",
