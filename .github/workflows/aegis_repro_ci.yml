@@ -264,6 +264,42 @@ jobs:
       - name: Production provenance provisioning boundary
         run: npm run test:production-provenance-provisioning
 
+      - name: Production provenance final E2E
+        id: production_e2e
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/verify-production-provenance-e2e.mjs
+          code=$?
+          set -e
+          if [[ "$code" -eq 0 ]]; then
+            echo "status=VERIFIED" >> "$GITHUB_OUTPUT"
+            echo "production provenance: VERIFIED"
+          elif [[ "$code" -eq 2 || "$code" -eq 3 ]]; then
+            echo "status=NOT_RUN" >> "$GITHUB_OUTPUT"
+            echo "Production provenance E2E: NOT RUN"
+            echo "production provenance is not VERIFIED."
+            exit "$code"
+          else
+            echo "status=FAIL" >> "$GITHUB_OUTPUT"
+            echo "Production provenance E2E: FAIL"
+            exit 1
+          fi
+
+      - name: Fail when production provenance E2E failed
+        if: steps.production_e2e.outputs.status == 'FAIL'
+        run: |
+          echo "Production provenance E2E: FAIL"
+          exit 1
+
+      - name: Record production provenance E2E NOT RUN
+        if: steps.production_e2e.outputs.status == 'NOT_RUN'
+        run: |
+          echo "Production provenance E2E: NOT RUN"
+          echo "PRODUCTION SIGNING KEY NOT PROVISIONED"
+          echo "production provenance: NOT VERIFIED"
+          echo "Production provenance E2E is not VERIFIED."
+
       - name: Upload FAST evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

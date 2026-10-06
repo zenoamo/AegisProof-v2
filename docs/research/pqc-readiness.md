@@ -97,6 +97,17 @@ Provisioning states:
 
 A test signer (`test-` key id) can make the manifest signature `PROVENANCE VERIFIED`. That result stays `production provenance: NOT VERIFIED`. Rotation evidence PASS is still a separate assertion from either signature.
 
+## 6.1 Production Provenance Final E2E Verification
+
+`npm run verify:production-provenance-e2e` is the credentialed gate on top of the provisioning boundary.
+
+- No production credential: `UNPROVISIONED`, `PRODUCTION SIGNING KEY NOT PROVISIONED`, `production provenance: NOT VERIFIED`, and `Production provenance E2E: NOT RUN`. Normal CI keeps this result. It is not a failure and it is not VERIFIED.
+- The production private key stays outside the repository. The command does not generate, read, or write one.
+- Signing uses the existing external signer. The live path is Vault/KMS when `AEGIS_PROVENANCE_SIGNING=kms`, `KMS_BACKEND_MODE=live`, and `AEGIS_PROVENANCE_KEY_ID=aegis-provenance-prod-v1`.
+- `aegis-provenance-prod-v1` is the only production identity. CI and `test-` identities are rejected. `publicKeyId` binding is required.
+- `production provenance: VERIFIED` is printed only after that live signer signs the existing canonical entry bytes and the registry public key verifies the signature.
+- Rotation evidence remains a separate result from manifest verification.
+
 ## 7. Production Readiness Gaps
 
 1. `aegis-provenance-prod-v1` registry key not committed — `PRODUCTION SIGNING KEY NOT PROVISIONED`
