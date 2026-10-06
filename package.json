@@ -36,6 +36,7 @@
     "test:artifact-resolution": "node scripts/run-artifact-resolution.mjs",
     "test:artifact-provenance": "node scripts/run-artifact-provenance.mjs",
     "test:provenance-manifest-status": "node tests/provenance-manifest-status.test.mjs",
+    "test:external-provenance-signing": "node tests/external-provenance-signing.test.mjs",
     "test:pqc-signature": "node scripts/run-pqc-signature.mjs",
     "test:hybrid-auth": "node scripts/run-hybrid-auth.mjs",
     "test:sensitive-files-boundary": "node scripts/run-sensitive-files-boundary.mjs",

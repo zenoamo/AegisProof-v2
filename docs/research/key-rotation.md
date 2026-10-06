@@ -62,6 +62,10 @@ Validation fails closed for self-rotation, unknown keys, algorithm/version misma
 
 Rotation evidence is policy metadata; it does not alter the ML-DSA-87 primitive or the Frozen Groth16/BN254 proof path.
 
+Rotation PASS and manifest signature verification are separate assertions. A valid rotation record does not mean the manifest was signed by the successor key. Manifest verification requires the entry signature, `algorithmVersion: ML-DSA-87`, and `publicKeyId` bound to the registered public key.
+
+The production private key is not in this repository. `aegis-provenance-prod-v1` has no committed public key, so production signing status is `PRODUCTION SIGNING KEY NOT PROVISIONED`. Registering a public key later would still not be `production provenance: VERIFIED` until a manifest is signed by that key and the signature verifies. Test fixtures use `test-` key ids and must not impersonate this production id. An external signer that is not available is not reported as VERIFIED.
+
 ## 5. Revocation Semantics
 
 | Event | Effect on verification |
@@ -89,7 +93,8 @@ Remediation `9562d22` semantics preserved — do not weaken.
 ## 7. Research Gaps
 
 - No automated rotation test against live Vault
-- No committed prod registry entry
+- No committed prod registry entry (`PRODUCTION SIGNING KEY NOT PROVISIONED`)
+- Test-key signature PASS is not production provenance VERIFIED
 - PR-tier does not enforce rotation policy
 
 ---

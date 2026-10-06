@@ -31,7 +31,9 @@ ADR-0003: PQC applies to artifact metadata authenticity only.
 | Dev key generation | IMPLEMENTED | `generate:pqc-dev-keys` (gitignored keys) |
 | KMS signing path | IMPLEMENTED / MOCKED | `kms-provenance.mjs` |
 | Live KMS signing | NOT VERIFIED | operator checklist |
-| PR-tier strict | PARTIAL (WARN-only) | Phase 8.15 pending |
+| External signer binding | IMPLEMENTED | `scripts/lib/external-provenance-signer.mjs` |
+| Production key `aegis-provenance-prod-v1` | NOT PROVISIONED | public key not in registry; private key not in repo |
+| PR-tier strict | NOT VERIFIED on unsigned manifest | `--pqc` exits 2; not a WARN success |
 | Key lifecycle policy | IMPLEMENTED | status + validity window + purpose policy |
 | Key rotation evidence | IMPLEMENTED | predecessor/successor evidence + chain validation |
 
@@ -42,7 +44,7 @@ ADR-0003: PQC applies to artifact metadata authenticity only.
 | Mode | Flag | SHA-256 | ML-DSA |
 |------|------|---------|--------|
 | Default | `--live` | required | WARN if unsigned |
-| Strict | `--pqc` / `--require-pqc` | required | required FAIL |
+| Strict | `--pqc` / `--require-pqc` | required | unsigned exit 2; invalid exit 1; verifier unavailable exit 3 |
 
 CI tiers: [phase8.13-pqc-ci-policy.md](./phase8.13-pqc-ci-policy.md)
 
@@ -76,16 +78,27 @@ The default compatibility path remains unchanged so existing signed artifacts ca
 Rotation evidence is validated as policy metadata: strict validation requires an explicit predecessor/successor relationship, effective timestamp, reason, successor validity at the transition time, and no premature predecessor revocation. Rotation chains additionally enforce unique IDs/links and monotonic transition times.
 
 ---
-## 6. Production Readiness Gaps
+## 6. Production Provenance Binding
 
-1. `aegis-provenance-prod-v1` registry key not committed
+ML-DSA-87 authenticates provenance metadata. It does not sign a Groth16 proof and it does not make the proof quantum-resistant.
+
+The private key is not in this repository, not in fixtures, and not in workflow YAML. Signer identity is `publicKeyId` bound to a registered public key. A signature alone does not name the signer.
+
+Rotation evidence and manifest signature verification are different assertions. Rotation PASS does not make a manifest `PROVENANCE VERIFIED`.
+
+`production provenance: VERIFIED` requires a registered production public key, a valid ML-DSA-87 signature, and `publicKeyId` binding to that key. If the external production signer or the production public key is unavailable, the status is `PRODUCTION SIGNING KEY NOT PROVISIONED` and `production provenance: NOT VERIFIED`. A passing test fixture uses a `test-` key id and is not production identity.
+
+## 7. Production Readiness Gaps
+
+1. `aegis-provenance-prod-v1` registry key not committed — `PRODUCTION SIGNING KEY NOT PROVISIONED`
 2. Live Vault Transit signing NOT VERIFIED
-3. PR path allows unsigned manifests (WARN)
+3. Production-like `--pqc` on the unsigned committed manifest is `PROVENANCE NOT VERIFIED` (exit 2), not a WARN success
 4. Hybrid auth not wired to deployment scripts
+5. Test-key verification PASS is not production provenance VERIFIED
 
 ---
 
-## 7. Non-Goals
+## 8. Non-Goals
 
 - Replacing Groth16 with lattice-based SNARKs in v2
 - PQC-protecting ZK proof soundness

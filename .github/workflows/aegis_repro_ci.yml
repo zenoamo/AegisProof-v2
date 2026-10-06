@@ -258,6 +258,9 @@ jobs:
       - name: ML-DSA provenance signature tests
         run: npm run test:pqc-signature
 
+      - name: External provenance signing binding
+        run: npm run test:external-provenance-signing
+
       - name: Upload FAST evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

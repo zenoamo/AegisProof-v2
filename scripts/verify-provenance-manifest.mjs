@@ -27,13 +27,21 @@ import {
   formatProvenanceStatus,
   isPqcAbsenceError,
 } from "./lib/provenance-verification-status.mjs";
+import {
+  assessProductionProvenance,
+  formatProductionProvenanceStatus,
+} from "./lib/external-provenance-signer.mjs";
 
 function reportProvenance(manifest, errors, pqcRequired) {
   const signature = classifyManifestSignatures(manifest);
   const rotation = classifyRotationEvidence(manifest?.rotationEvidence);
   const hardErrors = (errors ?? []).filter((error) => !isPqcAbsenceError(error));
   const decision = decideProvenanceExit({ signature, rotation, pqcRequired, hardErrors });
-  const lines = formatProvenanceStatus(rotation, signature, decision);
+  const production = assessProductionProvenance(manifest, { signature });
+  const lines = [
+    ...formatProvenanceStatus(rotation, signature, decision),
+    ...formatProductionProvenanceStatus(production),
+  ];
   const sink = decision.exitCode === 0 ? console.log : console.error;
   for (const line of lines) sink(line);
   for (const error of hardErrors) console.error(`FAIL ${error}`);
