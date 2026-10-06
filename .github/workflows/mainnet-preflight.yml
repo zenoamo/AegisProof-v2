@@ -72,7 +72,7 @@ jobs:
         run: |
           echo "Mainnet RPC: NOT RUN"
           echo "Mainnet chainId: NOT RUN"
-          echo "Mainnet RPC credential was not provided to this job."
+          echo "Mainnet preflight did not confirm chain id 1."
           echo "This is not a deployed verifier and it is not PASS."
 
       - name: Record Mainnet registry unconfigured

@@ -193,8 +193,10 @@ test("unavailable chain id is NOT RUN and does not query bytecode", async () => 
   );
   assert.equal(called, false);
   assert.equal(result.exitCode, 3);
+  assert.match(linesOf(result), /Mainnet RPC: NOT RUN/);
   assert.match(linesOf(result), /Mainnet chainId: NOT RUN/);
   assert.match(linesOf(result), /Canonical verifier bytecode: NOT RUN/);
+  assert.doesNotMatch(linesOf(result), /Mainnet RPC: CONNECTED/);
   assert.doesNotMatch(linesOf(result), /FAIL unexpected chainId/);
   assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
   assert.doesNotMatch(linesOf(result), /Mainnet Canonical Verifier: READY/);
@@ -322,10 +324,13 @@ test("case F: RPC failure is not reported as missing bytecode", async () => {
       },
     },
   );
-  assert.equal(result.exitCode, 1);
-  assert.match(linesOf(result), /Mainnet RPC: FAIL/);
+  assert.equal(result.exitCode, 3);
+  assert.match(linesOf(result), /Mainnet RPC: NOT RUN/);
+  assert.match(linesOf(result), /Mainnet chainId: NOT RUN/);
   assert.match(linesOf(result), /Reason: Mainnet RPC connection failed/);
   assert.doesNotMatch(linesOf(result), /no deployed bytecode/);
+  assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
+  assert.doesNotMatch(linesOf(result), /Mainnet Canonical Verifier: READY/);
   assert.equal(containsSecret(linesOf(result)), false);
 });
 
@@ -450,17 +455,76 @@ test("case F: Sepolia, localhost, and an env address do not replace verifierForC
   assert.doesNotMatch(linesOf(localhostBinding), /Ethereum Mainnet preflight: PASS/);
 });
 
-test("invalid verifier value is not echoed when a binding exists", async () => {
+test("environment verifier address is not a binding source", async () => {
+  let queried = null;
   const result = await runMainnetPreflight(
-    { MAINNET_RPC_URL: RPC, AEGIS_MAINNET_CANONICAL_VERIFIER: "not-a-key" },
+    {
+      MAINNET_RPC_URL: RPC,
+      AEGIS_MAINNET_CANONICAL_VERIFIER: "not-a-key",
+      AEGIS_MAINNET_CANONICAL_REGISTRY: "also-not-an-address",
+    },
     {
       registrySource: boundSource(),
+      manifest: { deploymentStatus: "not-deployed", chains: {} },
+      connect: async () => ({
+        chainId: 1,
+        getCode: async (address) => {
+          queried = address;
+          return IDENTITY_CODE;
+        },
+      }),
+    },
+  );
+  assert.equal(queried, VERIFIER);
+  assert.equal(result.exitCode, 0);
+  assert.match(linesOf(result), /Mainnet Canonical Verifier: READY/);
+  assert.equal(linesOf(result).includes("not-a-key"), false);
+  assert.equal(linesOf(result).includes("also-not-an-address"), false);
+});
+
+test("unusable RPC URL is NOT RUN and is not echoed", async () => {
+  const secretUrl = "not-a-url rpc-secret";
+  let called = false;
+  const result = await runMainnetPreflight(
+    { MAINNET_RPC_URL: secretUrl },
+    {
+      connect: async () => {
+        called = true;
+        return { chainId: 1, getCode: async () => IDENTITY_CODE };
+      },
+    },
+  );
+  assert.equal(called, false);
+  assert.equal(result.exitCode, 3);
+  assert.match(linesOf(result), /Mainnet RPC: NOT RUN/);
+  assert.match(linesOf(result), /Mainnet chainId: NOT RUN/);
+  assert.match(linesOf(result), /Reason: MAINNET_RPC_URL is invalid/);
+  assert.equal(linesOf(result).includes(secretUrl), false);
+  assert.equal(linesOf(result).includes("rpc-secret"), false);
+  assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
+});
+
+test("manifest chain id mismatch is not READY", async () => {
+  const result = await runMainnetPreflight(
+    { MAINNET_RPC_URL: RPC },
+    {
+      registrySource: boundSource(),
+      manifest: {
+        chains: {
+          "1": {
+            chainId: 11155111,
+            canonicalVerifierAddress: VERIFIER,
+            verifierBytecodeSha256: IDENTITY_HASH,
+          },
+        },
+      },
       connect: async () => ({ chainId: 1, getCode: async () => IDENTITY_CODE }),
     },
   );
   assert.equal(result.exitCode, 1);
-  assert.match(linesOf(result), /Reason: AEGIS_MAINNET_CANONICAL_VERIFIER is invalid/);
-  assert.equal(linesOf(result).includes("not-a-key"), false);
+  assert.match(linesOf(result), /FAIL deployment manifest mismatch/);
+  assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
+  assert.doesNotMatch(linesOf(result), /deployment manifest: MATCHED/);
 });
 
 test("workflow wires Mainnet secrets without Sepolia fallback or secret dumps", () => {
