@@ -1,7 +1,7 @@
 // Ethereum Mainnet canonical verifier preflight.
 // Chain id 1 only. Sepolia, localhost, and test keys are not fallbacks.
 // The active CanonicalRegistry binding is verifierForChain, not a counterfactual constant.
-// address(0) is not a deployment. Missing bytecode stays FAIL.
+// address(0) is not a deployment and is not FAIL. Missing bytecode stays FAIL.
 // This module does not write files, broadcast transactions, or print RPC credentials.
 // A passing preflight is not production provenance VERIFIED and is not Groth16 regression PASS.
 import { createHash } from "node:crypto";
@@ -322,14 +322,14 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
     ]);
   }
 
-  if (binding.registry !== "CONFIGURED") {
-    return finish(EXIT_FAIL, [
+  if (binding.registry !== "CONFIGURED" || !binding.address) {
+    return finish(EXIT_NOT_RUN, [
       "Mainnet RPC: CONNECTED",
       "Mainnet chainId: 1",
       "CanonicalRegistry: NOT CONFIGURED",
       "Canonical verifier: NOT CONFIGURED",
       "Canonical verifier bytecode: NOT RUN",
-      `Reason: ${REASON_UNBOUND}`,
+      "Ethereum Mainnet preflight: NOT CONFIGURED",
     ]);
   }
 
@@ -380,12 +380,13 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
   }
 
   if (!address) {
-    return finish(EXIT_FAIL, [
+    return finish(EXIT_NOT_RUN, [
       "Mainnet RPC: CONNECTED",
       "Mainnet chainId: 1",
       "CanonicalRegistry: NOT CONFIGURED",
       "Canonical verifier: NOT CONFIGURED",
       "Canonical verifier bytecode: NOT RUN",
+      "Ethereum Mainnet preflight: NOT CONFIGURED",
     ]);
   }
 
@@ -476,6 +477,7 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
     "Canonical verifier: CONFIGURED",
     "Canonical verifier: DEPLOYED",
     "Canonical verifier bytecode: PRESENT",
+    "Mainnet Canonical Verifier: READY",
     "Ethereum Mainnet preflight: PASS",
     "No transaction was created or broadcast.",
   ]);

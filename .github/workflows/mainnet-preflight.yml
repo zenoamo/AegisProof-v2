@@ -41,15 +41,18 @@ jobs:
           AEGIS_MAINNET_EXPECTED_DEPLOYER: ${{ secrets.AEGIS_MAINNET_EXPECTED_DEPLOYER }}
         run: |
           set +e
-          node scripts/mainnet-preflight.mjs
+          output=$(node scripts/mainnet-preflight.mjs 2>&1)
           code=$?
           set -e
+          printf '%s\n' "$output"
           if [[ "$code" -eq 0 ]]; then
             echo "status=PASS" >> "$GITHUB_OUTPUT"
           elif [[ "$code" -eq 3 ]]; then
-            echo "status=NOT_RUN" >> "$GITHUB_OUTPUT"
-            echo "Mainnet RPC: NOT RUN"
-            echo "Mainnet chainId: NOT RUN"
+            if printf '%s\n' "$output" | grep -q 'Mainnet RPC: CONNECTED'; then
+              echo "status=NOT_CONFIGURED" >> "$GITHUB_OUTPUT"
+            else
+              echo "status=NOT_RUN" >> "$GITHUB_OUTPUT"
+            fi
             exit 3
           else
             echo "status=FAIL" >> "$GITHUB_OUTPUT"
@@ -70,4 +73,13 @@ jobs:
           echo "Mainnet RPC: NOT RUN"
           echo "Mainnet chainId: NOT RUN"
           echo "Mainnet RPC credential was not provided to this job."
+          echo "This is not a deployed verifier and it is not PASS."
+
+      - name: Record Mainnet registry unconfigured
+        if: steps.mainnet_preflight.outputs.status == 'NOT_CONFIGURED'
+        run: |
+          echo "CanonicalRegistry: NOT CONFIGURED"
+          echo "Canonical verifier: NOT CONFIGURED"
+          echo "Canonical verifier bytecode: NOT RUN"
+          echo "verifierForChain(1) is address(0)."
           echo "This is not a deployed verifier and it is not PASS."

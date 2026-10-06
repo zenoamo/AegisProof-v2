@@ -114,12 +114,14 @@ test("case B: connected Mainnet RPC with no binding does not query bytecode", as
     },
   );
   assert.equal(called, false);
-  assert.equal(result.exitCode, 1);
+  assert.equal(result.exitCode, 3);
   assert.match(linesOf(result), /Mainnet RPC: CONNECTED/);
   assert.match(linesOf(result), /Mainnet chainId: 1/);
   assert.match(linesOf(result), /CanonicalRegistry: NOT CONFIGURED/);
   assert.match(linesOf(result), /Canonical verifier: NOT CONFIGURED/);
   assert.match(linesOf(result), /Canonical verifier bytecode: NOT RUN/);
+  assert.match(linesOf(result), /Ethereum Mainnet preflight: NOT CONFIGURED/);
+  assert.doesNotMatch(linesOf(result), /FAIL/);
   assert.doesNotMatch(linesOf(result), /no deployed bytecode/);
   assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
   assert.doesNotMatch(linesOf(result), /sepolia\.example/);
@@ -144,6 +146,7 @@ test("case D: bound verifier bytecode reaches identity validation", async () => 
   assert.match(linesOf(result), /Canonical verifier: CONFIGURED/);
   assert.match(linesOf(result), /Canonical verifier: DEPLOYED/);
   assert.match(linesOf(result), /Canonical verifier bytecode: PRESENT/);
+  assert.match(linesOf(result), /Mainnet Canonical Verifier: READY/);
   assert.match(linesOf(result), /Ethereum Mainnet preflight: PASS/);
   assert.doesNotMatch(linesOf(result), /production provenance: VERIFIED/);
   assert.doesNotMatch(linesOf(result), /Groth16 regression: PASS/);
@@ -192,9 +195,14 @@ test("case C: address zero is not configured and is not a deployment", async () 
     },
   );
   assert.equal(called, false);
-  assert.equal(result.exitCode, 1);
+  assert.equal(result.exitCode, 3);
+  assert.match(linesOf(result), /Mainnet RPC: CONNECTED/);
+  assert.match(linesOf(result), /Mainnet chainId: 1/);
   assert.match(linesOf(result), /Canonical verifier: NOT CONFIGURED/);
   assert.match(linesOf(result), /CanonicalRegistry: NOT CONFIGURED/);
+  assert.match(linesOf(result), /Canonical verifier bytecode: NOT RUN/);
+  assert.match(linesOf(result), /Ethereum Mainnet preflight: NOT CONFIGURED/);
+  assert.doesNotMatch(linesOf(result), /FAIL/);
   assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
   assert.doesNotMatch(linesOf(result), /no deployed bytecode/);
 });
@@ -366,10 +374,12 @@ test("case F: Sepolia, localhost, and an env address do not replace verifierForC
     },
   );
   assert.equal(called, false);
-  assert.equal(result.exitCode, 1);
+  assert.equal(result.exitCode, 3);
   assert.match(linesOf(result), /CanonicalRegistry: NOT CONFIGURED/);
   assert.match(linesOf(result), /Canonical verifier: NOT CONFIGURED/);
   assert.match(linesOf(result), /Canonical verifier bytecode: NOT RUN/);
+  assert.match(linesOf(result), /Ethereum Mainnet preflight: NOT CONFIGURED/);
+  assert.doesNotMatch(linesOf(result), /FAIL/);
   assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
   assert.doesNotMatch(linesOf(result), /no deployed bytecode/);
 
@@ -406,6 +416,8 @@ test("workflow wires Mainnet secrets without Sepolia fallback or secret dumps", 
   assert.doesNotMatch(workflow, /vars\.MAINNET_RPC_URL|SEPOLIA_RPC_URL|SEPOLIA_PRIVATE_KEY|printenv|set -x|toJSON\(secrets\)/);
   assert.match(workflow, /Mainnet preflight: FAIL/);
   assert.match(workflow, /status=NOT_RUN/);
+  assert.match(workflow, /status=NOT_CONFIGURED/);
+  assert.match(workflow, /verifierForChain\(1\) is address\(0\)/);
   const lib = fs.readFileSync(path.join(ROOT, "scripts/lib/mainnet-preflight.mjs"), "utf8");
   assert.equal(lib.includes("SEPOLIA_RPC_URL"), false);
   assert.equal(lib.includes("SEPOLIA_PRIVATE_KEY"), false);

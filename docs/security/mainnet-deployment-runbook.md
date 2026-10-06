@@ -26,7 +26,7 @@ npm run preflight:mainnet
 
 The preflight performs RPC reads only. It must not broadcast a transaction.
 
-`npm run preflight:mainnet` checks Mainnet RPC, chain ID 1, `verifierForChain(1)`, and that address's bytecode. With no `MAINNET_RPC_URL` the result is `NOT RUN` (exit 3), which is not an undeployed-verifier finding. `address(0)` is `Canonical verifier: NOT CONFIGURED`. A non-zero binding with no bytecode exits 1 with `FAIL canonical verifier address has no deployed bytecode`. Bytecode alone is not a pass: it must match the existing production verifier declaration, and any recorded manifest address or hash. The command does not write the manifest or print the RPC URL. Sepolia and localhost addresses are not substitutes.
+`npm run preflight:mainnet` checks Mainnet RPC, chain ID 1, `verifierForChain(1)`, and that address's bytecode. With no `MAINNET_RPC_URL` the result is `NOT RUN` (exit 3), which is not an undeployed-verifier finding. `address(0)` is `Canonical verifier: NOT CONFIGURED` and exits 3. That is not FAIL. A non-zero binding with no bytecode exits 1 with `FAIL canonical verifier address has no deployed bytecode`. Bytecode alone is not a pass: it must match the existing production verifier declaration, and any recorded manifest address or hash. The command does not write the manifest or print the RPC URL. Sepolia and localhost addresses are not substitutes.
 
 ## Deployment order
 
