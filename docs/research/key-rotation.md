@@ -68,7 +68,7 @@ The production private key is not in this repository. `aegis-provenance-prod-v1`
 
 A later operator-supplied public key becomes `PROVISIONED` only when its `publicKeyId` is `aegis-provenance-prod-v1`, the algorithm is ML-DSA-87, and the key is active. The CI key `aegis-ci-mldsa87-v1` is not a production identity. A revoked or malformed record is `INVALID`. Production signing uses the external signer declared for that id and does not read a local private key. `production provenance: VERIFIED` still requires the manifest signature to verify against that registered key. Rotation PASS does not supply that signature.
 
-Test signers use `test-` key ids. A test signature is not production identity. After rotation, an old or revoked key does not remain production VERIFIED; only a signature bound to the current active production id can reach that state.
+Test signers use `test-` key ids. A test signature is not production identity. After rotation, an old or revoked key does not remain production VERIFIED; only a signature bound to the current active production id can reach that state. The final E2E command reaches `production provenance: VERIFIED` only when a live external signer for `aegis-provenance-prod-v1` is available. Without that credential the E2E result is `NOT RUN` and production provenance stays `NOT VERIFIED`. Rotation PASS still does not verify the manifest.
 
 ## 5. Revocation Semantics
 

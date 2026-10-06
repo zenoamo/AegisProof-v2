@@ -267,16 +267,7 @@ export function productionSigningKeyStatus(lookup = loadRegistryPublicKey) {
   }
 }
 
-/**
- * Sign with the external production signer only.
- * Does not read a local private key, does not accept a test identity,
- * and does not infer identity from signature bytes.
- * @param {object} manifest
- * @param {object | null | undefined} signer
- * @param {{ record?: object | null }} [opts]
- */
-export function signManifestWithProductionSigner(manifest, signer, opts = {}) {
-  const provisioning = classifyProductionProvisioning(opts.record ?? null, opts);
+function assertReadyProductionSigner(signer, provisioning) {
   if (provisioning.state === PROVISIONING_UNPROVISIONED) {
     throw new ExternalSignerError(PRODUCTION_SIGNING_KEY_NOT_PROVISIONED);
   }
@@ -299,28 +290,87 @@ export function signManifestWithProductionSigner(manifest, signer, opts = {}) {
     throw new ExternalSignerError("signer public key does not match provisioned production public key");
   }
   assertExternalSigner(signer);
+}
+
+function normalizeProductionSignatureResult(result) {
+  if (!result || typeof result !== "object" || typeof result.then === "function") {
+    throw new ExternalSignerError("production signer must return signature and publicKeyId");
+  }
+  const returnedId = result.publicKeyId ?? result.keyId;
+  if (!returnedId) throw new ExternalSignerError("signer identity missing");
+  if (returnedId !== PRODUCTION_PROVENANCE_KEY_ID) {
+    throw new ExternalSignerError("signature keyId does not match requested production identity");
+  }
+  if (typeof result.signature !== "string" || !/^[0-9a-fA-F]+$/.test(result.signature)) {
+    throw new ExternalSignerError("external signer must return a hex ML-DSA-87 signature");
+  }
+  if (String(result.signature).startsWith("vault-stub-")) {
+    throw new ExternalSignerError("stub signature is not a production credential");
+  }
+  return { signature: result.signature, keyId: returnedId };
+}
+
+function productionPolicy(manifest) {
+  return {
+    ...(manifest?.pqcPolicy ?? {}),
+    algorithmVersion: PQC_ALGORITHM,
+    version: PQC_VERSION,
+    signingKeyId: PRODUCTION_PROVENANCE_KEY_ID,
+  };
+}
+
+/**
+ * Sign with the external production signer only.
+ * Does not read a local private key, does not accept a test identity,
+ * and does not infer identity from signature bytes.
+ * @param {object} manifest
+ * @param {object | null | undefined} signer
+ * @param {{ record?: object | null }} [opts]
+ */
+export function signManifestWithProductionSigner(manifest, signer, opts = {}) {
+  const provisioning = classifyProductionProvisioning(opts.record ?? null, opts);
+  assertReadyProductionSigner(signer, provisioning);
   const bound = {
     identity: "production",
     algorithm: PQC_ALGORITHM,
     keyId: PRODUCTION_PROVENANCE_KEY_ID,
     publicKeyHex: signer.publicKeyHex,
     signMessage(message) {
-      const result = signer.signMessage(message);
-      if (!result || typeof result !== "object") {
-        throw new ExternalSignerError("production signer must return signature and publicKeyId");
-      }
-      const returnedId = result.publicKeyId ?? result.keyId;
-      if (!returnedId) throw new ExternalSignerError("signer identity missing");
-      if (returnedId !== PRODUCTION_PROVENANCE_KEY_ID) {
-        throw new ExternalSignerError("signature keyId does not match requested production identity");
-      }
-      if (typeof result.signature !== "string" || !/^[0-9a-fA-F]+$/.test(result.signature)) {
-        throw new ExternalSignerError("external signer must return a hex ML-DSA-87 signature");
-      }
-      return { signature: result.signature, keyId: returnedId };
+      return normalizeProductionSignatureResult(signer.signMessage(message));
     },
   };
   return signManifestWithExternalSigner(manifest, bound);
+}
+
+/**
+ * Async form of the same production signer contract.
+ * The signature result is still bound to aegis-provenance-prod-v1.
+ * @param {object} manifest
+ * @param {object} signer
+ * @param {{ record?: object | null }} [opts]
+ */
+export async function signManifestWithProductionSignerAsync(manifest, signer, opts = {}) {
+  const provisioning = classifyProductionProvisioning(opts.record ?? null, opts);
+  assertReadyProductionSigner(signer, provisioning);
+  const entries = [];
+  for (const entry of manifest?.entries ?? []) {
+    if (!entry?.present || !entry.sha256) {
+      entries.push(entry);
+      continue;
+    }
+    const normalized = normalizeProductionSignatureResult(await signer.signMessage(canonicalEntrySigningBytes(entry)));
+    const oneShot = {
+      identity: "production",
+      algorithm: PQC_ALGORITHM,
+      keyId: PRODUCTION_PROVENANCE_KEY_ID,
+      publicKeyHex: signer.publicKeyHex,
+      signMessage() {
+        return normalized;
+      },
+    };
+    entries.push(signEntryWithExternalSigner(entry, oneShot));
+  }
+  return { ...manifest, entries, pqcPolicy: productionPolicy(manifest) };
 }
 
 /**

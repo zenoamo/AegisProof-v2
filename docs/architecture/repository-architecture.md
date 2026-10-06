@@ -274,6 +274,8 @@ production provenance が VERIFIED になるのは、その本番公開鍵が re
 
 rotation evidence の PASS は、その鍵でこの manifest が署名されたという assertion ではない。PQC 実装、Groth16 proof の署名、production provenance の署名、ZK の量子耐性は別の概念である。test signer、production signer、rotation evidence、manifest signature も別々に判定する。
 
+Production Provenance Final E2E Verification は `scripts/verify-production-provenance-e2e.mjs` である。#85 の provisioning boundary の上で、live な外部 production signer が `aegis-provenance-prod-v1` を返し、既存の canonical entry bytes への署名が registry の公開鍵で検証できたときだけ `production provenance: VERIFIED` になる。credential が無い通常 CI では `Production provenance E2E: NOT RUN` と `PRODUCTION SIGNING KEY NOT PROVISIONED` と `production provenance: NOT VERIFIED` であり、これは失敗ではない。テスト鍵、CI 鍵、stub 署名、fixture ではこの VERIFIED に到達しない。本番 secret はこのコマンドが生成も保存もしない。
+
 ### 5.3 コントラクトポリシー
 
 `AegisShieldV2.verifyAndAccept` は Groth16 の後に、次をこの順で要求する。
