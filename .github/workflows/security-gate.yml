@@ -647,7 +647,7 @@ jobs:
   # ============================================================
 
   regression:
-    name: T1-T9 Regression
+    name: Groth16 regression status
     runs-on: ubuntu-latest
 
     needs:
@@ -682,9 +682,39 @@ jobs:
         run: |
           npx hardhat compile --config scripts/hardhat-prover.config.ts
 
-      - name: T1-T9
+      - name: Frozen Core artifact integrity
+        run: npm run verify:frozen-core-integrity
+
+      - name: Groth16 regression
+        id: groth16
+        continue-on-error: true
+        env:
+          AEGIS_PRODUCTION_ZKEY_AVAILABLE: ${{ vars.AEGIS_PRODUCTION_ZKEY_AVAILABLE }}
         run: |
-          npm run test:prover-compat
+          set +e
+          node scripts/run-prover-compat.mjs
+          code=$?
+          set -e
+          if [[ "$code" -eq 0 ]]; then
+            echo "status=PASS" >> "$GITHUB_OUTPUT"
+            echo "Groth16 regression: PASS"
+          elif [[ "$code" -eq 2 ]]; then
+            echo "status=NOT_RUN" >> "$GITHUB_OUTPUT"
+            echo "Groth16 regression: NOT RUN"
+            echo "Reason: production.zkey unavailable"
+            echo "Groth16 regression is not PASS."
+            exit 2
+          else
+            echo "status=FAIL" >> "$GITHUB_OUTPUT"
+            echo "Groth16 regression: FAIL"
+            exit 1
+          fi
+
+      - name: Fail when Groth16 regression executed and failed
+        if: steps.groth16.outputs.status == 'FAIL'
+        run: |
+          echo "Groth16 regression: FAIL"
+          exit 1
 
       # ----------------------------------------------------------
       # Deployment manifest integrity

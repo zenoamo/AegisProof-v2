@@ -12,6 +12,13 @@
 // T7 VK hash equality
 // T8 tamper reject
 // T9 benchmark output validation
+//
+// Exit codes:
+//   0  Groth16 regression PASS (T1–T9 executed)
+//   1  Groth16 regression FAIL
+//   2  Groth16 regression NOT RUN (production.zkey unavailable)
+// NOT RUN is never exit 0 and is never "Groth16 regression: PASS".
+// Static WASM/R1CS/vkey hashes are verify:frozen-core-integrity, not this suite.
 // ============================================================================
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -35,11 +42,12 @@ interface ProofBundle {
 const {
   PRODUCTION_ZKEY_HASH,
   PRODUCTION_VKEY_HASH,
-  artifactsReady,
   resolveArtifacts,
   sha256File,
   sha256VkeyCeremony,
 } = await import("../scripts/lib/resolve-artifacts.mjs");
+
+const { classifyGroth16Regression } = await import("../scripts/lib/groth16-regression-gate.mjs");
 
 const { isRapidsnarkAvailable, proveCanonical } = await import("../scripts/lib/provers.mjs");
 
@@ -90,10 +98,20 @@ function validateBenchReport(report: Record<string, unknown>) {
 }
 
 async function main() {
-  if (!artifactsReady()) {
-    console.log("SKIP prover-compatibility: production artifacts absent");
-    process.exit(0);
+  const decision = classifyGroth16Regression();
+  if (decision.status === "NOT_RUN") {
+    console.log("Groth16 regression: NOT RUN");
+    console.log(`Reason: ${decision.reason}`);
+    process.exit(decision.exitCode ?? 2);
   }
+  if (decision.status !== "RUN") {
+    console.error("Groth16 regression: FAIL");
+    console.error(`Reason: ${decision.reason}`);
+    process.exit(decision.exitCode ?? 1);
+  }
+
+  console.log("Groth16 regression: RUN");
+  console.log(`Reason: ${decision.reason}`);
 
   const paths = resolveArtifacts();
   const vkey = JSON.parse(fs.readFileSync(paths.vkey, "utf8"));
@@ -206,10 +224,12 @@ async function main() {
   validateBenchReport(latest);
 
   console.log(`\nPROVER COMPATIBILITY: ${passed} checks PASS`);
+  console.log("Groth16 regression: PASS");
   process.exit(0);
 }
 
 main().catch((e) => {
+  console.error("Groth16 regression: FAIL");
   console.error("FAIL:", e);
   process.exit(1);
 });

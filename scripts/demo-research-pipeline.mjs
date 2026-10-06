@@ -36,9 +36,14 @@ function run(label, cmd, args, opts = {}) {
     env: { ...process.env, ...opts.env },
   });
   const ms = Date.now() - t0;
-  const ok = r.status === 0;
+  const status = r.status ?? 1;
+  if (opts.allowNotRun && status === 2) {
+    console.log(`NOT RUN ${label} (${ms}ms)`);
+    return { ok: true, ms, status, notRun: true };
+  }
+  const ok = status === 0;
   console.log(`${ok ? "PASS" : "SKIP/FAIL"} ${label} (${ms}ms)`);
-  return { ok, ms };
+  return { ok, ms, status };
 }
 
 function main() {
@@ -60,8 +65,18 @@ function main() {
     })
   );
 
-  // 3. Groth16 regression (T1–T9) — uses Frozen Core read-only
-  results.push(run("Groth16 T1–T9 regression", "npm", ["run", "test:prover-compat"], { quiet: false }));
+  // 3. Groth16 regression (T1–T9) — uses Frozen Core read-only.
+  // Exit 2 is NOT RUN (no production.zkey). That is not a regression PASS
+  // and does not fail this research demo.
+  const regression = run("Groth16 T1–T9 regression", "node", ["scripts/run-prover-compat.mjs"], {
+    quiet: false,
+    allowNotRun: true,
+  });
+  if (regression.notRun) {
+    console.log("Groth16 regression: NOT RUN");
+    console.log("Reason: production.zkey unavailable");
+  }
+  results.push(regression);
 
   // 4. Provenance SHA-256 verification
   results.push(run("Provenance verify (--live)", "npm", ["run", "verify:provenance", "--", "--live"]));
@@ -75,7 +90,8 @@ function main() {
 
   console.log("\n=== RESEARCH PIPELINE SUMMARY ===");
   for (const r of results) {
-    console.log(`  ${r.ok ? "✓" : "✗"} ${r.ms}ms`);
+    const mark = r.notRun ? "NOT RUN" : r.ok ? "✓" : "✗";
+    console.log(`  ${mark} ${r.ms}ms`);
   }
 
   console.log(`
