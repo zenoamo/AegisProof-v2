@@ -264,6 +264,18 @@ ML-DSA-87 が扱うのは provenance のメタデータ、鍵 lifecycle、rotati
 
 KMS 実装は `scripts/lib/kms-signer.mjs` と `scripts/lib/kms-backends/`（env、vault-auth、vault-transit、cloud-hsm、local-openssl、http-fetch）にある。テストは `tests/security/kms-signer.test.mjs` などである。ライブ HSM が本番で使われている証拠は、このツリーには無い。
 
+外部署名の入口は `scripts/lib/external-provenance-signer.mjs` である。署名関数は canonical entry bytes を受け、hex 署名を返す。封筒の `publicKeyId` はその signer が宣言した key id であり、署名バイトから署名者を推測しない。`algorithmVersion`、`publicKeyId`、`signature` は別フィールドである。
+
+本番 provenance identity は `aegis-provenance-prod-v1` の公開鍵、アルゴリズム ML-DSA-87、lifecycle、rotation metadata の関係である。このリポジトリにその秘密鍵は無く、公開鍵ファイルも `artifacts/provenance/public-keys/` に無い。未登録は provisioning state `UNPROVISIONED` であり、表示は `PRODUCTION SIGNING KEY NOT PROVISIONED` と `production provenance: NOT VERIFIED` である。これは実装の失敗ではなく、production credential がまだ無い環境の正常状態である。壊れた公開鍵、アルゴリズム不一致、`publicKeyId` 不一致、CI 公開鍵の流用、revoked は `INVALID` であり、別の鍵へはフォールバックしない。
+
+`PROVISIONED` は、その production id の公開鍵が ML-DSA-87 として有効で active なときだけである。署名は外部 production signer だけが行う。signer が宣言した `publicKeyId` が `aegis-provenance-prod-v1` と一致しない場合は失敗する。ローカル秘密鍵の探索、テスト鍵、署名バイトからの identity 推測は使わない。公開鍵が `PROVISIONED` でも、その鍵による署名検証が VERIFIED になるまで `production provenance: VERIFIED` にはならない。
+
+production provenance が VERIFIED になるのは、その本番公開鍵が registry にあり、manifest の各エントリがその `publicKeyId` で署名され、署名検証が VERIFIED のときだけである。テスト鍵（key id は `test-` で始まり、本番 id と CI id を使わない）の検証 PASS は `production provenance: NOT VERIFIED` のままである。外部 signer も本番鍵も無い環境で、検証コードがあることだけを production provenance VERIFIED とは書かない。
+
+rotation evidence の PASS は、その鍵でこの manifest が署名されたという assertion ではない。PQC 実装、Groth16 proof の署名、production provenance の署名、ZK の量子耐性は別の概念である。test signer、production signer、rotation evidence、manifest signature も別々に判定する。
+
+Production Provenance Final E2E Verification は `scripts/verify-production-provenance-e2e.mjs` である。#85 の provisioning boundary の上で、live な外部 production signer が `aegis-provenance-prod-v1` を返し、既存の canonical entry bytes への署名が registry の公開鍵で検証できたときだけ `production provenance: VERIFIED` になる。credential が無い通常 CI では `Production provenance E2E: NOT RUN` と `PRODUCTION SIGNING KEY NOT PROVISIONED` と `production provenance: NOT VERIFIED` であり、これは失敗ではない。テスト鍵、CI 鍵、stub 署名、fixture ではこの VERIFIED に到達しない。本番 secret はこのコマンドが生成も保存もしない。
+
 ### 5.3 コントラクトポリシー
 
 `AegisShieldV2.verifyAndAccept` は Groth16 の後に、次をこの順で要求する。
@@ -580,7 +592,7 @@ ClaimsGate、TEE、PQC、STARK、PQ-ZK の分類は次のとおり。
 | ClaimsGate | EXPERIMENTAL | 実装とテストはある。`protocol/` へ未接続。出力は `claims-mapper-poc` |
 | TEE 境界の本番適用 | PLANNED / DOCUMENTED ONLY | ADR と Lean モデルはある。本番証明経路に enforcement は無い |
 | TEE 研究コード | EXPERIMENTAL | `tee/` と CI の `tee-layer-regression` |
-| PQC（ML-DSA-87 プロベナンス） | IMPLEMENTED / PARTIAL | 署名・検証・鍵 lifecycle・rotation evidence・公開鍵・テストはある。コミット済みマニフェストは未署名なので `NOT VERIFIED`。rotation evidence は manifest 署名の代替ではない。Groth16 の量子耐性ではない |
+| PQC（ML-DSA-87 プロベナンス） | IMPLEMENTED / PARTIAL | 署名・検証・鍵 lifecycle・rotation evidence・外部 signer・公開鍵束縛のテストはある。コミット済みマニフェストは未署名なので `NOT VERIFIED`。本番公開鍵 `aegis-provenance-prod-v1` は未登録なので `PRODUCTION SIGNING KEY NOT PROVISIONED`。テスト鍵の PASS は production provenance VERIFIED ではない。rotation evidence は manifest 署名の代替ではない。Groth16 の量子耐性ではない |
 | STARK | PLANNED / DOCUMENTED ONLY | 実装無し |
 | PQ-ZK | PLANNED / DOCUMENTED ONLY | 実装無し。文書は Groth16 の量子リスクが残ると書いている |
 
@@ -606,6 +618,7 @@ ClaimsGate、TEE、PQC、STARK、PQ-ZK の分類は次のとおり。
 | `packages/sdk/src/core.ts` | calldata と eth_call | Extension / SDK | 高 |
 | `scripts/lib/artifact-provenance.mjs` | SHA-256 マニフェスト | Extension | 高 |
 | `scripts/lib/pqc-signature.mjs` | ML-DSA-87 | Extension | 高 |
+| `scripts/lib/external-provenance-signer.mjs` | 外部署名と本番 key id の束縛 | Extension | 高 |
 | `artifacts/provenance/manifest.json` | コミット済みハッシュ。zkey 欠落、未署名 | Extension | 高 |
 | `artifacts/provenance/public-keys/aegis-ci-mldsa87-v1.json` | CI 公開鍵 | Extension | 高 |
 | `tests/prover-compatibility.test.ts` | T1–T9 | Extension | 高 |
