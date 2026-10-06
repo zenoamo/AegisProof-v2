@@ -64,7 +64,11 @@ Rotation evidence is policy metadata; it does not alter the ML-DSA-87 primitive 
 
 Rotation PASS and manifest signature verification are separate assertions. A valid rotation record does not mean the manifest was signed by the successor key. Manifest verification requires the entry signature, `algorithmVersion: ML-DSA-87`, and `publicKeyId` bound to the registered public key.
 
-The production private key is not in this repository. `aegis-provenance-prod-v1` has no committed public key, so production signing status is `PRODUCTION SIGNING KEY NOT PROVISIONED`. Registering a public key later would still not be `production provenance: VERIFIED` until a manifest is signed by that key and the signature verifies. Test fixtures use `test-` key ids and must not impersonate this production id. An external signer that is not available is not reported as VERIFIED.
+The production private key is not in this repository. `aegis-provenance-prod-v1` has no committed public key, so the live provisioning state is `UNPROVISIONED`: `PRODUCTION SIGNING KEY NOT PROVISIONED` and `production provenance: NOT VERIFIED`. That status means the credential is absent. It does not mean the verifier implementation failed.
+
+A later operator-supplied public key becomes `PROVISIONED` only when its `publicKeyId` is `aegis-provenance-prod-v1`, the algorithm is ML-DSA-87, and the key is active. The CI key `aegis-ci-mldsa87-v1` is not a production identity. A revoked or malformed record is `INVALID`. Production signing uses the external signer declared for that id and does not read a local private key. `production provenance: VERIFIED` still requires the manifest signature to verify against that registered key. Rotation PASS does not supply that signature.
+
+Test signers use `test-` key ids. A test signature is not production identity. After rotation, an old or revoked key does not remain production VERIFIED; only a signature bound to the current active production id can reach that state.
 
 ## 5. Revocation Semantics
 

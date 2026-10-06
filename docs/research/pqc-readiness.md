@@ -32,7 +32,8 @@ ADR-0003: PQC applies to artifact metadata authenticity only.
 | KMS signing path | IMPLEMENTED / MOCKED | `kms-provenance.mjs` |
 | Live KMS signing | NOT VERIFIED | operator checklist |
 | External signer binding | IMPLEMENTED | `scripts/lib/external-provenance-signer.mjs` |
-| Production key `aegis-provenance-prod-v1` | NOT PROVISIONED | public key not in registry; private key not in repo |
+| Production provisioning boundary | IMPLEMENTED | `UNPROVISIONED` / `PROVISIONED` / `INVALID` |
+| Production key `aegis-provenance-prod-v1` | UNPROVISIONED | public key not in registry; private key not in repo |
 | PR-tier strict | NOT VERIFIED on unsigned manifest | `--pqc` exits 2; not a WARN success |
 | Key lifecycle policy | IMPLEMENTED | status + validity window + purpose policy |
 | Key rotation evidence | IMPLEMENTED | predecessor/successor evidence + chain validation |
@@ -86,7 +87,15 @@ The private key is not in this repository, not in fixtures, and not in workflow 
 
 Rotation evidence and manifest signature verification are different assertions. Rotation PASS does not make a manifest `PROVENANCE VERIFIED`.
 
-`production provenance: VERIFIED` requires a registered production public key, a valid ML-DSA-87 signature, and `publicKeyId` binding to that key. If the external production signer or the production public key is unavailable, the status is `PRODUCTION SIGNING KEY NOT PROVISIONED` and `production provenance: NOT VERIFIED`. A passing test fixture uses a `test-` key id and is not production identity.
+`production provenance: VERIFIED` requires provisioning state `PROVISIONED`, a valid ML-DSA-87 signature, and `publicKeyId` binding to `aegis-provenance-prod-v1`. These are separate from a Groth16 proof signature and from ZK quantum resistance.
+
+Provisioning states:
+
+- `UNPROVISIONED` — production public key is absent. This is `PRODUCTION SIGNING KEY NOT PROVISIONED` and `production provenance: NOT VERIFIED`. It records incomplete credential provisioning, not an implementation failure.
+- `PROVISIONED` — the production public key exists, its id is `aegis-provenance-prod-v1`, the algorithm is ML-DSA-87, and the lifecycle status is active. Signing still requires an external production signer. The signer must return that same `publicKeyId`.
+- `INVALID` — malformed key, algorithm mismatch, identity mismatch, CI-key reuse, or a revoked key. Verification fails closed and does not select another key.
+
+A test signer (`test-` key id) can make the manifest signature `PROVENANCE VERIFIED`. That result stays `production provenance: NOT VERIFIED`. Rotation evidence PASS is still a separate assertion from either signature.
 
 ## 7. Production Readiness Gaps
 

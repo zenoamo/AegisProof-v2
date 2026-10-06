@@ -266,11 +266,13 @@ KMS 実装は `scripts/lib/kms-signer.mjs` と `scripts/lib/kms-backends/`（env
 
 外部署名の入口は `scripts/lib/external-provenance-signer.mjs` である。署名関数は canonical entry bytes を受け、hex 署名を返す。封筒の `publicKeyId` はその signer が宣言した key id であり、署名バイトから署名者を推測しない。`algorithmVersion`、`publicKeyId`、`signature` は別フィールドである。
 
-本番 provenance identity は `aegis-provenance-prod-v1` の公開鍵、アルゴリズム ML-DSA-87、lifecycle、rotation metadata の関係である。このリポジトリにその秘密鍵は無く、公開鍵ファイルも `artifacts/provenance/public-keys/` に無い。未登録は `PRODUCTION SIGNING KEY NOT PROVISIONED` であり、`PROVENANCE VERIFIED` にしない。公開鍵の登録だけでも production provenance の VERIFIED にはならない。
+本番 provenance identity は `aegis-provenance-prod-v1` の公開鍵、アルゴリズム ML-DSA-87、lifecycle、rotation metadata の関係である。このリポジトリにその秘密鍵は無く、公開鍵ファイルも `artifacts/provenance/public-keys/` に無い。未登録は provisioning state `UNPROVISIONED` であり、表示は `PRODUCTION SIGNING KEY NOT PROVISIONED` と `production provenance: NOT VERIFIED` である。これは実装の失敗ではなく、production credential がまだ無い環境の正常状態である。壊れた公開鍵、アルゴリズム不一致、`publicKeyId` 不一致、CI 公開鍵の流用、revoked は `INVALID` であり、別の鍵へはフォールバックしない。
+
+`PROVISIONED` は、その production id の公開鍵が ML-DSA-87 として有効で active なときだけである。署名は外部 production signer だけが行う。signer が宣言した `publicKeyId` が `aegis-provenance-prod-v1` と一致しない場合は失敗する。ローカル秘密鍵の探索、テスト鍵、署名バイトからの identity 推測は使わない。公開鍵が `PROVISIONED` でも、その鍵による署名検証が VERIFIED になるまで `production provenance: VERIFIED` にはならない。
 
 production provenance が VERIFIED になるのは、その本番公開鍵が registry にあり、manifest の各エントリがその `publicKeyId` で署名され、署名検証が VERIFIED のときだけである。テスト鍵（key id は `test-` で始まり、本番 id と CI id を使わない）の検証 PASS は `production provenance: NOT VERIFIED` のままである。外部 signer も本番鍵も無い環境で、検証コードがあることだけを production provenance VERIFIED とは書かない。
 
-rotation evidence の PASS は、その鍵でこの manifest が署名されたという assertion ではない。
+rotation evidence の PASS は、その鍵でこの manifest が署名されたという assertion ではない。PQC 実装、Groth16 proof の署名、production provenance の署名、ZK の量子耐性は別の概念である。test signer、production signer、rotation evidence、manifest signature も別々に判定する。
 
 ### 5.3 コントラクトポリシー
 
