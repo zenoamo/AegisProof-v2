@@ -298,7 +298,7 @@ Production Provenance Final E2E Verification は `scripts/verify-production-prov
 | 証明直後 | `proveCanonical` の `verify` | snarkjs。既定で有効 |
 | 開発者コマンド | `npm run verify:provenance -- --live` | 存在する成果物の SHA-256。zkey 欠落を許すフラグがある |
 | 開発者コマンド | `npm run check:sensitive-files` | 秘密鍵パターンは即失敗。zkey / ptau / wtns は allowlist 以外で失敗 |
-| 開発者コマンド | `npm run verify:sepolia` | Sepolia RPC の chainId `11155111`、signer address、native balance。Production Provenance の成功条件ではない |
+| 開発者コマンド | `npm run verify:sepolia` | Sepolia RPC の chainId `11155111` と signer address。credential が無いときは NOT RUN。Production Provenance や Groth16 regression の成功条件ではない |
 | オフチェーン契約読み取り | SDK `verifyOnChain` / `offChainVerify` | デプロイ済み検証器への `eth_call`。トランザクションは送らない |
 | オンチェーン受理 | `AegisShieldV2.verifyAndAccept` | 検証に加えポリシー。operator だけが呼べる |
 | サーバ | `server/src/routes/sessions.ts` | `sessionExists`、`sessions`、`usedNullifiers` の読み取り。証明はしない |
@@ -307,9 +307,22 @@ Production Provenance Final E2E Verification は `scripts/verify-production-prov
 
 ### 5.5 Sepolia 接続確認
 
-`scripts/verify-sepolia.mjs`（`npm run verify:sepolia`）は Extension Layer のデプロイ接続確認である。credential はプロセス環境の `SEPOLIA_PRIVATE_KEY` と `SEPOLIA_RPC_URL` だけを読む。RPC が返す chainId が `11155111` のときだけ成功し、signer address と native ETH 残高を出す。秘密鍵と RPC URL はログ、エラー、ファイルへ出さない。
+`scripts/verify-sepolia.mjs`（`npm run verify:sepolia`）は Extension Layer の EVM 接続確認である。network は `sepolia`、chainId は `11155111` である。RPC URL は `SEPOLIA_RPC_URL` だけ、EVM account は `SEPOLIA_PRIVATE_KEY` だけから取る。どちらもハードコードしない。
 
-未設定、接続失敗、chainId 不一致は `Sepolia connection: FAIL` で終了する。この結果は Production Provenance の VERIFIED 条件でも、Frozen Core の完全性条件でもない。Groth16、canonical 30 public signals、WASM、R1CS、production vkey、production.zkey pin は Sepolia 接続のために変更しない。
+確認は次の順で、RPC と signer を分けて出す。
+
+1. `SEPOLIA_RPC_URL` から provider を作る
+2. chainId が `11155111` であることを確認する
+3. `SEPOLIA_PRIVATE_KEY` から signer を作る
+4. signer address を出す
+
+成功時の行は `Sepolia RPC: CONNECTED`、`Sepolia chainId: 11155111`、`Sepolia signer: AVAILABLE`、`Signer address: 0x...` である。秘密鍵、その長さ、先頭、末尾、RPC URL はログ、エラー、ファイルへ出さない。signer と provider は serialize しない。
+
+credential が未設定の項目は NOT RUN である。`SEPOLIA_RPC_URL is not configured` または `SEPOLIA_PRIVATE_KEY is not configured` を理由にし、終了コードは 3 である。CI はこの NOT RUN では失敗しない。URL または秘密鍵が設定されているのに、URL が不正、秘密鍵が不正、RPC 接続に失敗、または chainId が `11155111` でない場合は FAIL で終了コード 1 である。chainId 不一致の理由は `unexpected chainId` であり、`Sepolia RPC: FAIL` を出す。一部だけ成功しても全体は成功にしない。
+
+`AegisCanonicalRegistry.verifierForChain` と `registryForChain` は chainId `31337` だけ非ゼロアドレスを返す。Sepolia の registry address は未登録なので `Sepolia CanonicalRegistry: NOT CONFIGURED` である。`address(0)` は deployment ではない。接続確認はアドレスを作らず、推測しない。
+
+この EVM account は production signer、ML-DSA production key、provenance signing key、`aegis-provenance-prod-v1` とは別である。Sepolia signer があっても `production provenance: VERIFIED` にはならない。Groth16 regression の PASS でも、production deployment でもない。Groth16、canonical 30 public signals、WASM、R1CS、production vkey、production.zkey pin は Sepolia 接続のために変更しない。
 
 ## 6. TEE / ClaimsGate Boundary
 

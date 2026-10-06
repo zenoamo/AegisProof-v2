@@ -300,6 +300,51 @@ jobs:
           echo "production provenance: NOT VERIFIED"
           echo "Production provenance E2E is not VERIFIED."
 
+      - name: Sepolia connection unit tests
+        run: npm run test:sepolia-connection
+
+      - name: Sepolia connection check
+        id: sepolia
+        continue-on-error: true
+        env:
+          SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+          SEPOLIA_PRIVATE_KEY: ${{ secrets.SEPOLIA_PRIVATE_KEY }}
+        run: |
+          set +e
+          node scripts/verify-sepolia.mjs
+          code=$?
+          set -e
+          if [[ "$code" -eq 0 ]]; then
+            echo "status=CONNECTED" >> "$GITHUB_OUTPUT"
+          elif [[ "$code" -eq 3 ]]; then
+            echo "status=NOT_RUN" >> "$GITHUB_OUTPUT"
+            echo "Sepolia RPC: NOT RUN"
+            echo "Sepolia chainId: NOT RUN"
+            echo "Sepolia signer: NOT RUN"
+            exit 3
+          else
+            echo "status=FAIL" >> "$GITHUB_OUTPUT"
+            echo "Sepolia connection: FAIL"
+            exit 1
+          fi
+
+      - name: Fail when Sepolia connection failed
+        if: steps.sepolia.outputs.status == 'FAIL'
+        run: |
+          echo "Sepolia RPC: FAIL"
+          echo "Sepolia connection failed with credentials present."
+          exit 1
+
+      - name: Record Sepolia connection NOT RUN
+        if: steps.sepolia.outputs.status == 'NOT_RUN'
+        run: |
+          echo "Sepolia RPC: NOT RUN"
+          echo "Sepolia chainId: NOT RUN"
+          echo "Sepolia signer: NOT RUN"
+          echo "Sepolia connection is not a production deployment."
+          echo "Sepolia connection is not production provenance VERIFIED."
+          echo "Sepolia connection is not Groth16 regression PASS."
+
       - name: Upload FAST evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
