@@ -10,6 +10,7 @@ import fs from "fs";
 import path from "path";
 import { execFileSync, spawnSync } from "child_process";
 import { ROOT } from "./resolve-artifacts.mjs";
+import { assertCanonicalV2ProvingArtifacts } from "./canonical-v2-guard.mjs";
 
 const require = createRequire(import.meta.url);
 const snarkjs = require("snarkjs");
@@ -201,6 +202,14 @@ export async function proveCanonical(input, opts = {}) {
   const measure = opts.measure ?? false;
   const verify = opts.verify ?? true;
   const requestedBackend = opts.backend ?? getProverName();
+
+  // Reject a 29-signal legacy circuit before witness or proof generation.
+  // The production verification key's nPublic is not sufficient by itself.
+  assertCanonicalV2ProvingArtifacts({
+    r1cs: paths.r1cs,
+    vkey: paths.vkey,
+    publicSignals: opts.publicSignals,
+  });
 
   assertCoreArtifacts(paths);
 

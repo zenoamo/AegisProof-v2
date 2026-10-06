@@ -249,6 +249,9 @@ jobs:
       - name: Artifact resolution regression
         run: npm run test:artifact-resolution
 
+      - name: Canonical v2 30-signal guard
+        run: npm run test:canonical-v2-guard
+
       - name: Artifact provenance unit tests
         run: npm run test:artifact-provenance
 

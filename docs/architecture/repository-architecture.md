@@ -147,11 +147,12 @@ CI が差分を拒否するパスは、この宣言より狭い。`.github/workf
 
 `proveCanonical(input, opts)`（`scripts/lib/provers.mjs`）:
 
-1. `assertCoreArtifacts` で wasm、witness calculator、zkey、vkey、input の存在を要求する。
-2. witness calculator で `.wtns` を書く。
-3. `SnarkjsProver` または、バイナリがあるときの `RapidsnarkProver` で証明する。rapidsnark が無く `allowFallback` が真なら snarkjs に落ち、警告を出す。
-4. `publicSignals.length` が 30 でなければ例外。
-5. `opts.verify !== false` なら vkey で `snarkjs.groth16.verify` し、偽なら例外。
+1. `assertCanonicalV2ProvingArtifacts` が、witness を書く前に R1CS の公開信号数と検証鍵の `nPublic` / `IC.length` を見る。三つが 30 / 30 / 31 で一致しないと canonical 証明を開始しない。29 信号の `circuits/aegis_commit_core.r1cs` はここで拒否する。検証鍵が 30 であることだけでは通さない。`publicSignals` を 30 個に水増ししても 29 信号 R1CS は canonical にならない。この検査は欠けている v2 Circom ソースを再構成も改変もしない。
+2. `assertCoreArtifacts` で wasm、witness calculator、zkey、vkey、input の存在を要求する。
+3. witness calculator で `.wtns` を書く。
+4. `SnarkjsProver` または、バイナリがあるときの `RapidsnarkProver` で証明する。rapidsnark が無く `allowFallback` が真なら snarkjs に落ち、警告を出す。
+5. `publicSignals.length` が 30 でなければ例外。
+6. `opts.verify !== false` なら vkey で `snarkjs.groth16.verify` し、偽なら例外。
 
 オンチェーン側の T3 は、Hardhat 上に `scripts/prover-contracts/Groth16VerifierV2Production.sol` をデプロイして `verifyProof` を呼ぶ。このファイルは `protocol/contracts/Groth16VerifierV2Production.sol` とバイト一致である（どちらも 19069 バイト）。
 
@@ -171,6 +172,8 @@ v2 の正本については、次がすべて 30 で一致した。
 | `artifacts/phase4/reports/production_proof_baseline.json` | `publicSignals` の長さ 30 |
 | `packages/sdk/src/generated/AegisSignals.ts` | `N_PUBLIC_SIGNALS = 30` |
 | `proveCanonical` | `EXPECTED_PUBLIC_SIGNALS = 30` |
+
+`protocol/circuits/aegis_commit_core.circom` は 29 公開信号の legacy circuit であり、30 信号の canonical v2 circuit のソースではない。canonical proving path には入れない。legacy circuit をその経路の外で読むこと自体は、この guard は止めない。この guard は、欠けている v2 Circom source を再構成も改変もしない。
 
 29 は別世代である。`build/vkey.json` は `nPublic: 29`。`Groth16Verifier.sol`、`Groth16Verifier24.sol`、`Groth16Verifier29.sol`、`AegisShield.sol` は `uint[29]`。`AegisVerifier.sol` は `uint[28]`。`DEPLOYMENT_INFO.md` は localhost の歴史的記録として 29 信号と `Groth16Verifier29` を書いており、本番マニフェストではないと冒頭で断っている。`verification/tests/integration/testVerifyAndAccept.ts` と `AegisShield.penetration.ts` には「Expected exactly 29 public signals」というアサーションが残っている。これは v2 の 30 信号テスト（`verification/tests/integration/AegisShieldV2.ts`、`Groth16VerifierV2Production.ts`）とは別ファイルである。
 
