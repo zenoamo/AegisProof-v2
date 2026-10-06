@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { getAddress, isAddress } from "viem";
+import { getAddress, isAddress, toFunctionSelector } from "viem";
 
 export const MAINNET_CHAIN_ID = 1;
 export const EXIT_PASS = 0;
@@ -26,12 +26,16 @@ const REASON_MISMATCH = "canonical verifier address does not match CanonicalRegi
 const REASON_NO_CODE = "canonical verifier address has no deployed bytecode";
 const REASON_LOCALHOST = "localhost verifier is not a Mainnet deployment";
 const REASON_UNBOUND = "CanonicalRegistry mainnet binding is not active";
+const REASON_IDENTITY = "deployed bytecode is not the canonical verifier";
+const REASON_IDENTITY_METADATA = "canonical verifier identity metadata is unavailable";
+const VERIFY_PROOF_SELECTOR = "function verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[30])";
 const REASON_HASH = "canonical verifier bytecode does not match deployment manifest";
 const REASON_MANIFEST_ADDRESS = "deployment manifest verifier address does not match CanonicalRegistry";
 const REASON_SOURCE = "CanonicalRegistry source is unavailable";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const REGISTRY_SOURCE = path.join(ROOT, "protocol/contracts/AegisCanonicalRegistry.sol");
+const VERIFIER_SOURCE = path.join(ROOT, "protocol/contracts/Groth16VerifierV2Production.sol");
 const MANIFEST_PATH = path.join(ROOT, "deployments/manifest.json");
 
 function isHttpUrl(value) {
@@ -183,6 +187,26 @@ function loadText(file, override) {
   }
 }
 
+/**
+ * Selector of the production verifier's verifyProof, taken from that contract's
+ * existing declaration. A missing declaration does not invent an identity.
+ * @param {string | null | undefined} source
+ */
+export function canonicalVerifierSelector(source) {
+  if (typeof source !== "string" || !source.includes("contract Groth16VerifierV2Production")) return null;
+  if (!/function\s+verifyProof\s*\(\s*uint\[2\]\s+calldata\s+_pA\s*,\s*uint\[2\]\[2\]\s+calldata\s+_pB\s*,\s*uint\[2\]\s+calldata\s+_pC\s*,\s*uint\[30\]\s+calldata\s+_pubSignals\s*\)/.test(source)) {
+    return null;
+  }
+  return toFunctionSelector(VERIFY_PROOF_SELECTOR);
+}
+
+function bytecodeMatchesVerifier(code, selector) {
+  if (!selector || !bytecodePresent(code)) return false;
+  const body = selector.startsWith("0x") ? selector.slice(2) : selector;
+  const hex = code.startsWith("0x") || code.startsWith("0X") ? code.slice(2) : code;
+  return hex.toLowerCase().includes(body.toLowerCase());
+}
+
 function loadManifest(override) {
   if (override === null) return null;
   if (override && typeof override === "object") return override;
@@ -239,14 +263,14 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
   const configured = readAddress(env?.AEGIS_MAINNET_CANONICAL_VERIFIER);
   const manifest = manifestVerifier(loadManifest(deps.manifest));
   const registryStatus = registryLabel(binding);
+  const verifierFromBinding = binding.registry === "CONFIGURED" ? "CONFIGURED" : "NOT CONFIGURED";
 
   if (!rpcRaw) {
-    const verifier = configured.state === "present" ? "CONFIGURED" : "NOT CONFIGURED";
     return finish(EXIT_NOT_RUN, [
       "Mainnet RPC: NOT RUN",
       "Mainnet chainId: NOT RUN",
       `CanonicalRegistry: ${registryStatus}`,
-      `Canonical verifier: ${verifier}`,
+      `Canonical verifier: ${verifierFromBinding}`,
       "Canonical verifier bytecode: NOT RUN",
       `Reason: ${REASON_RPC_MISSING}`,
     ]);
@@ -284,7 +308,7 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
       "Mainnet chainId: FAIL",
       `CanonicalRegistry: ${registryStatus}`,
       "Canonical verifier bytecode: NOT RUN",
-      `Reason: ${REASON_CHAIN}`,
+      `FAIL ${REASON_CHAIN}`,
     ]);
   }
 
@@ -298,10 +322,30 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
     ]);
   }
 
-  let address = null;
-  let verifierState = "NOT CONFIGURED";
-  if (binding.registry === "CONFIGURED" && configured.state === "present"
-    && binding.address.toLowerCase() !== configured.address.toLowerCase()) {
+  if (binding.registry !== "CONFIGURED") {
+    return finish(EXIT_FAIL, [
+      "Mainnet RPC: CONNECTED",
+      "Mainnet chainId: 1",
+      "CanonicalRegistry: NOT CONFIGURED",
+      "Canonical verifier: NOT CONFIGURED",
+      "Canonical verifier bytecode: NOT RUN",
+      `Reason: ${REASON_UNBOUND}`,
+    ]);
+  }
+
+  let address = binding.address;
+  const verifierState = "CONFIGURED";
+  if (configured.state === "invalid") {
+    return finish(EXIT_FAIL, [
+      "Mainnet RPC: CONNECTED",
+      "Mainnet chainId: 1",
+      "CanonicalRegistry: CONFIGURED",
+      "Canonical verifier: FAIL",
+      "Canonical verifier bytecode: NOT RUN",
+      `Reason: ${REASON_VERIFIER_INVALID}`,
+    ]);
+  }
+  if (configured.state === "present" && binding.address.toLowerCase() !== configured.address.toLowerCase()) {
     return finish(EXIT_FAIL, [
       "Mainnet RPC: CONNECTED",
       "Mainnet chainId: 1",
@@ -310,22 +354,6 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
       "Canonical verifier bytecode: NOT RUN",
       `Reason: ${REASON_MISMATCH}`,
     ]);
-  }
-  if (binding.registry === "CONFIGURED") {
-    address = binding.address;
-    verifierState = "CONFIGURED";
-  } else if (configured.state === "invalid") {
-    return finish(EXIT_FAIL, [
-      "Mainnet RPC: CONNECTED",
-      "Mainnet chainId: 1",
-      "CanonicalRegistry: NOT CONFIGURED",
-      "Canonical verifier: FAIL",
-      "Canonical verifier bytecode: NOT RUN",
-      `Reason: ${REASON_VERIFIER_INVALID}`,
-    ]);
-  } else if (configured.state === "present") {
-    address = configured.address;
-    verifierState = "CONFIGURED";
   }
 
   if (address && binding.localAddresses.some((local) => local.toLowerCase() === address.toLowerCase())) {
@@ -416,6 +444,28 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
       "Canonical verifier: CONFIGURED",
       "Canonical verifier bytecode: FAIL",
       `Reason: ${REASON_HASH}`,
+    ]);
+  }
+
+  const selector = canonicalVerifierSelector(loadText(VERIFIER_SOURCE, deps.verifierSource));
+  if (!selector) {
+    return finish(EXIT_FAIL, [
+      "Mainnet RPC: CONNECTED",
+      "Mainnet chainId: 1",
+      "CanonicalRegistry: CONFIGURED",
+      "Canonical verifier: CONFIGURED",
+      "Canonical verifier bytecode: PRESENT",
+      `Reason: ${REASON_IDENTITY_METADATA}`,
+    ]);
+  }
+  if (!bytecodeMatchesVerifier(code, selector)) {
+    return finish(EXIT_FAIL, [
+      "Mainnet RPC: CONNECTED",
+      "Mainnet chainId: 1",
+      "CanonicalRegistry: CONFIGURED",
+      "Canonical verifier: CONFIGURED",
+      "Canonical verifier bytecode: PRESENT",
+      `Reason: ${REASON_IDENTITY}`,
     ]);
   }
 
