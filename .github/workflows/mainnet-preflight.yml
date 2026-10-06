@@ -48,7 +48,7 @@ jobs:
           if [[ "$code" -eq 0 ]]; then
             echo "status=PASS" >> "$GITHUB_OUTPUT"
           elif [[ "$code" -eq 3 ]]; then
-            if printf '%s\n' "$output" | grep -q 'Mainnet RPC: CONNECTED'; then
+            if printf '%s\n' "$output" | grep -q 'Ethereum Mainnet preflight: NOT CONFIGURED'; then
               echo "status=NOT_CONFIGURED" >> "$GITHUB_OUTPUT"
             else
               echo "status=NOT_RUN" >> "$GITHUB_OUTPUT"

@@ -28,6 +28,8 @@ const REASON_LOCALHOST = "localhost verifier is not a Mainnet deployment";
 const REASON_UNBOUND = "CanonicalRegistry mainnet binding is not active";
 const REASON_IDENTITY = "deployed bytecode is not the canonical verifier";
 const REASON_IDENTITY_METADATA = "canonical verifier identity metadata is unavailable";
+const FAIL_IDENTITY = "FAIL canonical verifier identity mismatch";
+const FAIL_MANIFEST = "FAIL deployment manifest mismatch";
 const VERIFY_PROOF_SELECTOR = "function verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[30])";
 const REASON_HASH = "canonical verifier bytecode does not match deployment manifest";
 const REASON_MANIFEST_ADDRESS = "deployment manifest verifier address does not match CanonicalRegistry";
@@ -302,6 +304,15 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
   }
 
   const chainId = toSafeChainId(snapshot?.chainId);
+  if (chainId === null) {
+    return finish(EXIT_NOT_RUN, [
+      "Mainnet RPC: CONNECTED",
+      "Mainnet chainId: NOT RUN",
+      `CanonicalRegistry: ${registryStatus}`,
+      `Canonical verifier: ${verifierFromBinding}`,
+      "Canonical verifier bytecode: NOT RUN",
+    ]);
+  }
   if (chainId !== MAINNET_CHAIN_ID) {
     return finish(EXIT_FAIL, [
       "Mainnet RPC: FAIL",
@@ -427,13 +438,28 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
     ]);
   }
 
-  if (manifest.address && manifest.address.toLowerCase() !== address.toLowerCase()) {
+  const selector = canonicalVerifierSelector(loadText(VERIFIER_SOURCE, deps.verifierSource));
+  if (!selector || !bytecodeMatchesVerifier(code, selector)) {
     return finish(EXIT_FAIL, [
       "Mainnet RPC: CONNECTED",
       "Mainnet chainId: 1",
       "CanonicalRegistry: CONFIGURED",
       "Canonical verifier: CONFIGURED",
       "Canonical verifier bytecode: PRESENT",
+      FAIL_IDENTITY,
+      `Reason: ${selector ? REASON_IDENTITY : REASON_IDENTITY_METADATA}`,
+    ]);
+  }
+
+  if (manifest.address && manifest.address.toLowerCase() !== address.toLowerCase()) {
+    return finish(EXIT_FAIL, [
+      "Mainnet RPC: CONNECTED",
+      "Mainnet chainId: 1",
+      "CanonicalRegistry: CONFIGURED",
+      "Canonical verifier: CONFIGURED",
+      "Canonical verifier identity: VERIFIED",
+      "Canonical verifier bytecode: PRESENT",
+      FAIL_MANIFEST,
       `Reason: ${REASON_MANIFEST_ADDRESS}`,
     ]);
   }
@@ -443,42 +469,30 @@ export async function runMainnetPreflight(env = process.env, deps = {}) {
       "Mainnet chainId: 1",
       "CanonicalRegistry: CONFIGURED",
       "Canonical verifier: CONFIGURED",
-      "Canonical verifier bytecode: FAIL",
+      "Canonical verifier identity: VERIFIED",
+      "Canonical verifier bytecode: PRESENT",
+      FAIL_MANIFEST,
       `Reason: ${REASON_HASH}`,
     ]);
   }
 
-  const selector = canonicalVerifierSelector(loadText(VERIFIER_SOURCE, deps.verifierSource));
-  if (!selector) {
-    return finish(EXIT_FAIL, [
-      "Mainnet RPC: CONNECTED",
-      "Mainnet chainId: 1",
-      "CanonicalRegistry: CONFIGURED",
-      "Canonical verifier: CONFIGURED",
-      "Canonical verifier bytecode: PRESENT",
-      `Reason: ${REASON_IDENTITY_METADATA}`,
-    ]);
-  }
-  if (!bytecodeMatchesVerifier(code, selector)) {
-    return finish(EXIT_FAIL, [
-      "Mainnet RPC: CONNECTED",
-      "Mainnet chainId: 1",
-      "CanonicalRegistry: CONFIGURED",
-      "Canonical verifier: CONFIGURED",
-      "Canonical verifier bytecode: PRESENT",
-      `Reason: ${REASON_IDENTITY}`,
-    ]);
-  }
-
-  return finish(EXIT_PASS, [
+  const lines = [
     "Mainnet RPC: CONNECTED",
+    "Mainnet RPC: PASS",
     "Mainnet chainId: 1",
     "CanonicalRegistry: CONFIGURED",
     "Canonical verifier: CONFIGURED",
+    `Canonical verifier: ${address}`,
     "Canonical verifier: DEPLOYED",
     "Canonical verifier bytecode: PRESENT",
+    "Canonical verifier bytecode: DEPLOYED",
+    "Canonical verifier identity: VERIFIED",
+  ];
+  if (manifest.address || manifest.hash) lines.push("deployment manifest: MATCHED");
+  lines.push(
     "Mainnet Canonical Verifier: READY",
     "Ethereum Mainnet preflight: PASS",
     "No transaction was created or broadcast.",
-  ]);
+  );
+  return finish(EXIT_PASS, lines);
 }

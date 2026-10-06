@@ -18,7 +18,6 @@ const RPC = "https://rpc.example.test/mainnet?token=hidden-query";
 const VERIFIER = getAddress("0x1111111111111111111111111111111111111111");
 const HARDHAT = getAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3");
 const CODE = "0x6001600c600052";
-const CODE_HASH = createHash("sha256").update(Buffer.from(CODE.slice(2), "hex")).digest("hex");
 const VERIFIER_SOL = fs.readFileSync(path.join(ROOT, "protocol/contracts/Groth16VerifierV2Production.sol"), "utf8");
 const SELECTOR = canonicalVerifierSelector(VERIFIER_SOL);
 const IDENTITY_CODE = `0x${SELECTOR.slice(2)}6001`;
@@ -146,11 +145,59 @@ test("case D: bound verifier bytecode reaches identity validation", async () => 
   assert.match(linesOf(result), /Canonical verifier: CONFIGURED/);
   assert.match(linesOf(result), /Canonical verifier: DEPLOYED/);
   assert.match(linesOf(result), /Canonical verifier bytecode: PRESENT/);
+  assert.match(linesOf(result), /Mainnet RPC: PASS/);
+  assert.match(linesOf(result), new RegExp(`Canonical verifier: ${VERIFIER}`));
+  assert.match(linesOf(result), /Canonical verifier bytecode: DEPLOYED/);
+  assert.match(linesOf(result), /Canonical verifier identity: VERIFIED/);
+  assert.doesNotMatch(linesOf(result), /deployment manifest: MATCHED/);
   assert.match(linesOf(result), /Mainnet Canonical Verifier: READY/);
   assert.match(linesOf(result), /Ethereum Mainnet preflight: PASS/);
   assert.doesNotMatch(linesOf(result), /production provenance: VERIFIED/);
   assert.doesNotMatch(linesOf(result), /Groth16 regression: PASS/);
   assert.equal(containsSecret(linesOf(result)), false);
+});
+
+test("manifest address mismatch is not READY", async () => {
+  const other = getAddress("0x2222222222222222222222222222222222222222");
+  const result = await runMainnetPreflight(
+    { MAINNET_RPC_URL: RPC },
+    {
+      registrySource: boundSource(),
+      manifest: {
+        chains: { "1": { canonicalVerifierAddress: other, verifierBytecodeSha256: IDENTITY_HASH } },
+      },
+      connect: async () => ({ chainId: 1, getCode: async () => IDENTITY_CODE }),
+    },
+  );
+  assert.equal(result.exitCode, 1);
+  assert.match(linesOf(result), /FAIL deployment manifest mismatch/);
+  assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
+  assert.doesNotMatch(linesOf(result), /deployment manifest: MATCHED/);
+  assert.doesNotMatch(linesOf(result), /Mainnet Canonical Verifier: READY/);
+});
+
+test("unavailable chain id is NOT RUN and does not query bytecode", async () => {
+  let called = false;
+  const result = await runMainnetPreflight(
+    { MAINNET_RPC_URL: RPC },
+    {
+      registrySource: boundSource(),
+      connect: async () => ({
+        chainId: undefined,
+        getCode: async () => {
+          called = true;
+          return IDENTITY_CODE;
+        },
+      }),
+    },
+  );
+  assert.equal(called, false);
+  assert.equal(result.exitCode, 3);
+  assert.match(linesOf(result), /Mainnet chainId: NOT RUN/);
+  assert.match(linesOf(result), /Canonical verifier bytecode: NOT RUN/);
+  assert.doesNotMatch(linesOf(result), /FAIL unexpected chainId/);
+  assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
+  assert.doesNotMatch(linesOf(result), /Mainnet Canonical Verifier: READY/);
 });
 
 test("case E: wrong chain fails closed", async () => {
@@ -240,7 +287,11 @@ test("case E: deployed bytecode continues into verifier validation", async () =>
   );
   assert.equal(result.exitCode, 0);
   assert.match(linesOf(result), /Canonical verifier bytecode: PRESENT/);
-  assert.match(linesOf(result), /Canonical verifier: DEPLOYED/);
+  assert.match(linesOf(result), /Canonical verifier bytecode: DEPLOYED/);
+  assert.match(linesOf(result), /Canonical verifier identity: VERIFIED/);
+  assert.match(linesOf(result), /deployment manifest: MATCHED/);
+  assert.match(linesOf(result), /Mainnet Canonical Verifier: READY/);
+  assert.match(linesOf(result), /Ethereum Mainnet preflight: PASS/);
 });
 
 test("bytecode hash mismatch does not pass", async () => {
@@ -251,12 +302,14 @@ test("bytecode hash mismatch does not pass", async () => {
       manifest: {
         chains: { "1": { canonicalVerifierAddress: VERIFIER, verifierBytecodeSha256: "ab".repeat(32) } },
       },
-      connect: async () => ({ chainId: 1, getCode: async () => CODE }),
+      connect: async () => ({ chainId: 1, getCode: async () => IDENTITY_CODE }),
     },
   );
   assert.equal(result.exitCode, 1);
+  assert.match(linesOf(result), /FAIL deployment manifest mismatch/);
   assert.match(linesOf(result), /Reason: canonical verifier bytecode does not match deployment manifest/);
   assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
+  assert.doesNotMatch(linesOf(result), /Mainnet Canonical Verifier: READY/);
 });
 
 test("case F: RPC failure is not reported as missing bytecode", async () => {
@@ -347,8 +400,10 @@ test("arbitrary bytecode is not accepted as the canonical verifier", async () =>
   );
   assert.equal(result.exitCode, 1);
   assert.match(linesOf(result), /Canonical verifier bytecode: PRESENT/);
+  assert.match(linesOf(result), /FAIL canonical verifier identity mismatch/);
   assert.match(linesOf(result), /Reason: deployed bytecode is not the canonical verifier/);
   assert.doesNotMatch(linesOf(result), /Ethereum Mainnet preflight: PASS/);
+  assert.doesNotMatch(linesOf(result), /Mainnet Canonical Verifier: READY/);
   assert.doesNotMatch(linesOf(result), /production provenance: VERIFIED/);
   assert.doesNotMatch(linesOf(result), /Groth16 regression: PASS/);
 });
