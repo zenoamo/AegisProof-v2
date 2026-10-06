@@ -31,6 +31,8 @@
 
 Registry validation: `public-key-registry.mjs` → `validateRegistryRecord()`
 
+Rotation evidence validation: `validateKeyRotationEvidence()` and `validateKeyRotationChain()`.
+
 ---
 
 ## 3. Rotation Procedure (Design)
@@ -46,7 +48,21 @@ Per runbook (operator — NOT VERIFIED live):
 
 ---
 
-## 4. Revocation Semantics
+## 4. Auditable Rotation Evidence
+
+Rotation transitions use versioned evidence records with:
+
+- `rotationId` — unique transition identifier.
+- `predecessorKeyId` / `successorKeyId` — explicit registry linkage.
+- `effectiveAt` — canonical ISO-8601 transition time.
+- `reason` — mandatory operator/audit rationale.
+- `recordedAt` — optional evidence-record timestamp.
+
+Validation fails closed for self-rotation, unknown keys, algorithm/version mismatch, malformed timestamps, successors that are not active at `effectiveAt`, and predecessors revoked before `effectiveAt`. Chains additionally reject duplicate rotation IDs/links and non-monotonic transition times.
+
+Rotation evidence is policy metadata; it does not alter the ML-DSA-87 primitive or the Frozen Groth16/BN254 proof path.
+
+## 5. Revocation Semantics
 
 | Event | Effect on verification |
 |-------|------------------------|
@@ -58,7 +74,7 @@ Per runbook (operator — NOT VERIFIED live):
 
 ---
 
-## 5. Failure Semantics (Code)
+## 6. Failure Semantics (Code)
 
 | Error | Meaning |
 |-------|---------|
@@ -70,7 +86,7 @@ Remediation `9562d22` semantics preserved — do not weaken.
 
 ---
 
-## 6. Research Gaps
+## 7. Research Gaps
 
 - No automated rotation test against live Vault
 - No committed prod registry entry

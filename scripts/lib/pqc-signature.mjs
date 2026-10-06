@@ -11,6 +11,7 @@ import {
   loadRegistryPublicKey,
   validateEnvelopeKeyReference,
   validateEnvelopeMetadata,
+  validateRegistryKeyLifecycle,
 } from "./public-key-registry.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -119,7 +120,7 @@ export function createPqcSignatureEnvelope(payload, options = {}) {
  * @param {Record<string, unknown>} payload
  * @param {object} envelope
  * @param {Uint8Array | string} [publicKeyOverride]
- * @param {{ maxSignatureAgeMs?: number, requireRegistry?: boolean }} [opts]
+ * @param {{ maxSignatureAgeMs?: number, requireRegistry?: boolean, requireActiveKey?: boolean, keyPurpose?: string }} [opts]
  */
 export function verifyEnvelope(payload, envelope, publicKeyOverride, opts = {}) {
   if (!envelope?.signature) {
@@ -152,6 +153,15 @@ export function verifyEnvelope(payload, envelope, publicKeyOverride, opts = {}) 
       return keyRef;
     }
     if (keyRef.record) {
+      if (opts.requireActiveKey) {
+        const lifecycle = validateRegistryKeyLifecycle(keyRef.record, {
+          requireActive: true,
+          purpose: opts.keyPurpose,
+        });
+        if (!lifecycle.ok) {
+          return { ok: false, error: lifecycle.errors.join("; ") };
+        }
+      }
       pkHex = keyRef.record.publicKey;
     } else if (envelope.publicKey) {
       pkHex = envelope.publicKey;
@@ -170,7 +180,7 @@ export function verifyEnvelope(payload, envelope, publicKeyOverride, opts = {}) 
 /**
  * Verify PQC signatures across manifest entries.
  * @param {object} manifest
- * @param {{ required?: boolean, requiredArtifacts?: Set<string>, maxSignatureAgeMs?: number, requireRegistry?: boolean }} [options]
+ * @param {{ required?: boolean, requiredArtifacts?: Set<string>, maxSignatureAgeMs?: number, requireRegistry?: boolean, requireActiveKey?: boolean, keyPurpose?: string }} [options]
  */
 export function verifyPqcSignatureEnvelope(manifest, options = {}) {
   const requiredArtifacts =
@@ -204,6 +214,8 @@ export function verifyPqcSignatureEnvelope(manifest, options = {}) {
     const result = verifyEnvelope(payload, env, undefined, {
       maxSignatureAgeMs: options.maxSignatureAgeMs,
       requireRegistry: options.requireRegistry,
+      requireActiveKey: options.requireActiveKey,
+      keyPurpose: options.keyPurpose,
     });
     if (!result.ok) {
       errors.push(`PQC verify failed: ${entry.artifact}: ${result.error}`);
