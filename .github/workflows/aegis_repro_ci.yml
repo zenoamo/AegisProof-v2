@@ -303,6 +303,45 @@ jobs:
       - name: Sepolia connection unit tests
         run: npm run test:sepolia-connection
 
+      - name: Upload FAST evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase2-evidence-fast
+          path: |
+            artifacts/phase2/reports/phase2_evidence_fast.json
+            artifacts/phase2/reports/phase2_verify_run_fast.log
+          if-no-files-found: warn
+
+
+  # ==========================================================================
+  # SEPOLIA CONNECTION
+  # Credentials live in the production Environment, same as MAINNET_RPC_URL.
+  # This job is separate so the FAST suite does not receive those secrets.
+  # ==========================================================================
+
+  sepolia-connection:
+    name: Sepolia connection
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    environment: production
+    outputs:
+      status: ${{ steps.sepolia.outputs.status }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
       - name: Sepolia connection check
         id: sepolia
         continue-on-error: true
@@ -344,16 +383,6 @@ jobs:
           echo "Sepolia connection is not a production deployment."
           echo "Sepolia connection is not production provenance VERIFIED."
           echo "Sepolia connection is not Groth16 regression PASS."
-
-      - name: Upload FAST evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: phase2-evidence-fast
-          path: |
-            artifacts/phase2/reports/phase2_evidence_fast.json
-            artifacts/phase2/reports/phase2_verify_run_fast.log
-          if-no-files-found: warn
 
 
   # ==========================================================================
@@ -1009,6 +1038,7 @@ jobs:
       # PUSH / PR jobs
       - security-boundary-check
       - fast
+      - sepolia-connection
       - phase5-readiness
       - tee-layer-regression
       - prover-compatibility
@@ -1035,6 +1065,8 @@ jobs:
 
           SECURITY_BOUNDARY: ${{ needs.security-boundary-check.result }}
           FAST: ${{ needs.fast.result }}
+          SEPOLIA: ${{ needs.sepolia-connection.result }}
+          SEPOLIA_STATUS: ${{ needs.sepolia-connection.outputs.status }}
           PHASE5: ${{ needs.phase5-readiness.result }}
           TEE: ${{ needs.tee-layer-regression.result }}
           PROVER_COMPATIBILITY: ${{ needs.prover-compatibility.result }}
@@ -1075,6 +1107,23 @@ jobs:
 
               validate "security-boundary-check" "$SECURITY_BOUNDARY"
               validate "fast" "$FAST"
+              validate "sepolia-connection" "$SEPOLIA"
+              if [[ "$SEPOLIA_STATUS" == "CONNECTED" ]]; then
+                echo "Sepolia RPC: CONNECTED"
+                echo "Sepolia chainId: 11155111"
+                echo "Sepolia signer: AVAILABLE"
+                echo "Sepolia connection is not production provenance VERIFIED."
+                echo "Sepolia connection is not Groth16 regression PASS."
+              elif [[ "$SEPOLIA_STATUS" == "NOT_RUN" ]]; then
+                echo "Sepolia RPC: NOT RUN"
+                echo "Sepolia chainId: NOT RUN"
+                echo "Sepolia signer: NOT RUN"
+                echo "Sepolia credentials were not provided to this job."
+              else
+                echo "Sepolia connection: FAIL"
+                echo "ERROR: Sepolia connection did not report CONNECTED or NOT RUN (status=${SEPOLIA_STATUS})"
+                exit 1
+              fi
               validate "phase5-readiness" "$PHASE5"
               validate "tee-layer-regression" "$TEE"
               validate "formal-assurance" "$FORMAL_ASSURANCE"
@@ -1106,6 +1155,26 @@ jobs:
 
             schedule|workflow_dispatch)
               echo "Validating WEEKLY / MANUAL required jobs..."
+
+              if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+                validate "sepolia-connection" "$SEPOLIA"
+                if [[ "$SEPOLIA_STATUS" == "CONNECTED" ]]; then
+                  echo "Sepolia RPC: CONNECTED"
+                  echo "Sepolia chainId: 11155111"
+                  echo "Sepolia signer: AVAILABLE"
+                  echo "Sepolia connection is not production provenance VERIFIED."
+                  echo "Sepolia connection is not Groth16 regression PASS."
+                elif [[ "$SEPOLIA_STATUS" == "NOT_RUN" ]]; then
+                  echo "Sepolia RPC: NOT RUN"
+                  echo "Sepolia chainId: NOT RUN"
+                  echo "Sepolia signer: NOT RUN"
+                  echo "Sepolia credentials were not provided to this job."
+                else
+                  echo "Sepolia connection: FAIL"
+                  echo "ERROR: Sepolia connection did not report CONNECTED or NOT RUN (status=${SEPOLIA_STATUS})"
+                  exit 1
+                fi
+              fi
 
               validate "full" "$FULL"
               validate "prover-benchmark" "$PROVER_BENCHMARK"

@@ -318,7 +318,9 @@ Production Provenance Final E2E Verification は `scripts/verify-production-prov
 
 成功時の行は `Sepolia RPC: CONNECTED`、`Sepolia chainId: 11155111`、`Sepolia signer: AVAILABLE`、`Signer address: 0x...` である。秘密鍵、その長さ、先頭、末尾、RPC URL はログ、エラー、ファイルへ出さない。signer と provider は serialize しない。
 
-credential が未設定の項目は NOT RUN である。`SEPOLIA_RPC_URL is not configured` または `SEPOLIA_PRIVATE_KEY is not configured` を理由にし、終了コードは 3 である。CI はこの NOT RUN では失敗しない。URL または秘密鍵が設定されているのに、URL が不正、秘密鍵が不正、RPC 接続に失敗、または chainId が `11155111` でない場合は FAIL で終了コード 1 である。chainId 不一致の理由は `unexpected chainId` であり、`Sepolia RPC: FAIL` を出す。一部だけ成功しても全体は成功にしない。
+credential が未設定の項目は NOT RUN である。`SEPOLIA_RPC_URL is not configured` または `SEPOLIA_PRIVATE_KEY is not configured` を理由にし、終了コードは 3 である。URL または秘密鍵が設定されているのに、URL が不正、秘密鍵が不正、RPC 接続に失敗、または chainId が `11155111` でない場合は FAIL で終了コード 1 である。chainId 不一致の理由は `unexpected chainId` であり、`Sepolia RPC: FAIL` を出す。一部だけ成功しても全体は成功にしない。
+
+CI の実接続は `sepolia-connection` job だけが行う。この job は Mainnet preflight と同じく `environment: production` を指定し、`SEPOLIA_RPC_URL` と `SEPOLIA_PRIVATE_KEY` を GitHub Environment の secrets から渡す。FAST job は secret を受け取らず、unit test だけを実行する。実行コンテキストに secret が無いときは NOT RUN で、CI のその項目は失敗にしない。別の鍵や `.env` へはフォールバックしない。
 
 `AegisCanonicalRegistry.verifierForChain` と `registryForChain` は chainId `31337` だけ非ゼロアドレスを返す。Sepolia の registry address は未登録なので `Sepolia CanonicalRegistry: NOT CONFIGURED` である。`address(0)` は deployment ではない。接続確認はアドレスを作らず、推測しない。
 

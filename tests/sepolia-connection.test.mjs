@@ -336,4 +336,30 @@ ok(
   "rpc query fixtures are not written outside the test",
 );
 
+function workflowJob(yaml, name) {
+  const marker = `\n  ${name}:\n`;
+  const start = yaml.indexOf(marker);
+  ok(start >= 0, `workflow job ${name} exists`);
+  const rest = yaml.slice(start + 1);
+  const next = rest.slice(1).search(/\n {2}[a-z0-9-]+:\n/);
+  return next === -1 ? rest : rest.slice(0, next + 1);
+}
+
+const workflow = fs.readFileSync(path.join(ROOT, ".github/workflows/aegis_repro_ci.yml"), "utf8");
+const fastJob = workflowJob(workflow, "fast");
+const sepoliaJob = workflowJob(workflow, "sepolia-connection");
+const gateJob = workflowJob(workflow, "required-gate");
+ok(fastJob.includes("npm run test:sepolia-connection"), "fast job runs sepolia unit tests");
+ok(!fastJob.includes("environment:"), "fast job does not attach an environment");
+ok(!fastJob.includes("secrets.SEPOLIA_") && !fastJob.includes("vars.SEPOLIA_"), "fast job does not receive sepolia credentials");
+ok(sepoliaJob.includes("environment: production"), "sepolia job uses the production environment");
+ok(sepoliaJob.includes("SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}"), "sepolia rpc url comes from environment secrets");
+ok(sepoliaJob.includes("SEPOLIA_PRIVATE_KEY: ${{ secrets.SEPOLIA_PRIVATE_KEY }}"), "sepolia private key comes from environment secrets");
+ok(!sepoliaJob.includes("vars.SEPOLIA_"), "sepolia credentials are not read from vars");
+ok(!/echo .*(SEPOLIA_PRIVATE_KEY|SEPOLIA_RPC_URL)|printenv|env \|+|set -x|toJSON\(secrets\)/.test(sepoliaJob), "sepolia job does not dump credentials");
+ok(!sepoliaJob.includes(".env") && !sepoliaJob.includes("upload-artifact"), "sepolia job does not write or upload secrets");
+ok(!sepoliaJob.includes(PRODUCTION_PROVENANCE_KEY_ID) && !sepoliaJob.includes("AEGIS_PQC_PRIVATE_KEY"), "sepolia job does not use provenance credentials");
+ok(gateJob.includes("needs.sepolia-connection.result"), "required gate observes the sepolia job");
+ok(gateJob.includes('"$SEPOLIA_STATUS" == "CONNECTED"') && gateJob.includes('"$SEPOLIA_STATUS" == "NOT_RUN"'), "required gate accepts only connected or not run");
+
 console.log(`\n${passed} PASS`);
