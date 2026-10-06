@@ -177,9 +177,9 @@ jobs:
       - name: Live artifact provenance verification
         run: |
           if [[ -n "$AEGIS_PRODUCTION_ZKEY_PATH" ]]; then
-            npm run verify:provenance -- --live
+            npm run verify:provenance -- --live --pqc
           else
-            npm run verify:provenance -- --live --allow-missing-production-zkey
+            npm run verify:provenance -- --live --pqc --allow-missing-production-zkey
           fi
 
       - name: Compile prover verifier
@@ -232,9 +232,9 @@ jobs:
       - name: Live artifact provenance verification
         run: |
           if [[ -n "$AEGIS_PRODUCTION_ZKEY_PATH" ]]; then
-            npm run verify:provenance -- --live
+            npm run verify:provenance -- --live --pqc
           else
-            npm run verify:provenance -- --live --allow-missing-production-zkey
+            npm run verify:provenance -- --live --pqc --allow-missing-production-zkey
           fi
 
       - name: Standalone build gates
@@ -296,9 +296,9 @@ jobs:
       - name: Live artifact provenance verification
         run: |
           if [[ -n "$AEGIS_PRODUCTION_ZKEY_PATH" ]]; then
-            npm run verify:provenance -- --live
+            npm run verify:provenance -- --live --pqc
           else
-            npm run verify:provenance -- --live --allow-missing-production-zkey
+            npm run verify:provenance -- --live --pqc --allow-missing-production-zkey
           fi
 
       - name: Standalone build gates
@@ -585,11 +585,11 @@ jobs:
 
       - name: Artifact provenance verification
         if: steps.groth16.outputs.status == 'PASS'
-        run: npm run verify:provenance -- --live
+        run: npm run verify:provenance -- --live --pqc
 
       - name: Artifact provenance verification without production zkey
         if: steps.groth16.outputs.status == 'NOT_RUN'
-        run: npm run verify:provenance -- --live --allow-missing-production-zkey
+        run: npm run verify:provenance -- --live --pqc --allow-missing-production-zkey
 
       - name: Artifact provenance tests
         run: npm run test:artifact-provenance
@@ -784,7 +784,7 @@ jobs:
             exit 0
           fi
 
-          npm run verify:provenance -- --live --require-pqc
+          npm run verify:provenance -- --live --pqc --require-pqc
 
       - name: Provenance verification benchmark
         run: npm run bench:provenance

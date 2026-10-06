@@ -251,7 +251,11 @@ nullifier の 8 入力は `DOMAIN_NULLIFIER_V2`、`secretKey`、`deviceId`、`pu
 
 公開鍵は `artifacts/provenance/public-keys/aegis-ci-mldsa87-v1.json` にあり、`immutable: true`、用途は「CI verification registry」と書かれている。秘密鍵ディレクトリ `artifacts/provenance/keys/` は gitignore されている。この作業ツリーに秘密鍵ファイルは無い。
 
-`verifyPqcSignatureEnvelope()` は、`required: false` のとき未署名を警告にし、エラーにはしない。`--pqc` または `--require-pqc` のとき必須成果物の未署名はエラーになる。PR の `aegis_repro_ci.yml` は `--pqc` を付けない。`--pqc` が付くのは、スケジュールまたは手動の `provenance-pqc-hardening` と、タグ時の `release.yml` である。
+ML-DSA-87 が扱うのは provenance のメタデータ、鍵 lifecycle、rotation evidence、manifest の真正性である。Groth16 proof の署名でも、証明の量子耐性でも、回路の暗号更新でもない。
+
+`rotation evidence` は鍵 A から鍵 B への記録が妥当かだけを見る。`manifest signature verification` は manifest、署名、公開鍵、key id の束縛を見る。rotation evidence が PASS でも、エントリが `unsigned` なら manifest signature は `NOT VERIFIED` であり、`PROVENANCE VERIFIED` にはしない。`publicKeyId` が無い署名は `signer binding unavailable` であり、verified にしない。
+
+`verifyPqcSignatureEnvelope()` は、`required: false` のとき未署名を警告にし、ライブラリの `ok` はハッシュ検証の成否のままである。この警告は署名検証の成功ではない。`--pqc` または `--require-pqc` は ML-DSA 検証を有効にする。production-like の live provenance（`security-boundary-check`、`fast`、`full`、`prover-compatibility`、`provenance-pqc-hardening`）と `release.yml` はこのフラグを使う。未署名は `Provenance manifest signature: NOT VERIFIED` と `PROVENANCE NOT VERIFIED` で exit 2 になる。署名が不正、または成果物ハッシュが不一致なら `PROVENANCE FAIL` で exit 1 になる。検証器が使えないときは `PROVENANCE NOT RUN` で exit 3 になる。`--pqc` が無い古典ハッシュ確認は、未署名でも exit 0 のままだが、`PROVENANCE VERIFIED` とは出さない。
 
 `release.yml` は環境 `release-signing` で `KMS_BACKEND_MODE=live`、Vault Transit、キー ID `aegis-provenance-prod-v1` を要求する。ライブ Vault がこのリポジトリの CI ランナーに接続され、そのジョブが成功しているかは、ワークフロー定義だけでは確認できない。README は「OIDC から Vault Transit への実接続は未検証」と書いている。`scripts/local-openssl-signer.mjs` と `security-kms-live-smoke.yml` は、セルフホストランナー上の OpenSSL ML-DSA-87 を想定した別経路である。
 
@@ -363,7 +367,7 @@ input JSON (32 keys: 30 public + secretKey + deviceId)
 | 開発 vkey | FAST の `node scripts/gates/run_all.mjs` | CI とローカル | `gate_icvk.mjs` | `nPublic`、IC 長、bn128 上の点 |
 | 信号レイアウト | 同上 | 同上 | `gate_layout.mjs`、`gate_binding.mjs`、`gate_domain.mjs`、`gate_forbidden_hardcode.mjs` | SSoT、sym、R1CS、Poseidon 束縛 |
 | publicSignals 個数（JSON） | `security-gate.yml` の `public-signals` | CI | インライン Node | `specs/aegis-protocol.v2.json` の配列長が 30。中身の名前は見ない |
-| ML-DSA | 署名があるとき、または `--pqc` | `verifyEnvelope` | `ml_dsa87.verify` | レジストリまたは封筒内の公開鍵。PR の live provenance は未署名を警告のまま成功させうる |
+| ML-DSA manifest 署名 | production-like provenance は `--pqc` | `classifyManifestSignatures` と `verifyEnvelope` | `ml_dsa87.verify` と `publicKeyId` の束縛 | 未署名は `NOT VERIFIED`（exit 2）。不正署名は `FAIL`。rotation evidence の PASS とは別 |
 | 秘密ファイル | `security-boundary-check` | `npm run check:sensitive-files` | `scripts/check-sensitive-files.mjs` | CRITICAL は allowlist なし。zkey/ptau/wtns は `scripts/sensitive-files-allowlist.json` の 7 パスだけ許可 |
 
 allowlist の 7 パスは、開発 zkey 1、ptau 5、`witness_v2_baseline.wtns` 1 である。README は移行債務を 8 パスと書いている。allowlist ファイルの配列長は 7 である。
@@ -541,7 +545,7 @@ Groth16 の健全性、Poseidon の衝突耐性、BN254 の離散対数、セレ
 ### IMPLEMENTED / PARTIAL
 
 - 本番証明: コードはある。`production.zkey` はツリーに無く、そのとき T1–T9 は NOT RUN（exit 2）であり PASS ではない。静的ハッシュ確認は別結果である
-- PQC の CI 強制: 検証器はある。PR は未署名を警告にしうる。タグの release ワークフローは `--pqc` と live Vault を要求するが、接続成功は未確認
+- PQC の CI: production-like provenance は `--pqc` を使う。コミット済みマニフェストは未署名なので、その経路は `PROVENANCE NOT VERIFIED`（exit 2）であり `VERIFIED` ではない。タグの release は `--pqc` と live Vault を要求するが、接続成功は未確認
 - KMS / HSM / OIDC: バックエンドとモックテストはある。ライブ適用は未確認
 - mainnet: アドレス定数と fail-closed の lookup がある。chainId 1 では Shield を構築できない。ライブデプロイは確認できない
 - rapidsnark: 任意。無いと T2/T4 はスキップ
@@ -573,7 +577,7 @@ ClaimsGate、TEE、PQC、STARK、PQ-ZK の分類は次のとおり。
 | ClaimsGate | EXPERIMENTAL | 実装とテストはある。`protocol/` へ未接続。出力は `claims-mapper-poc` |
 | TEE 境界の本番適用 | PLANNED / DOCUMENTED ONLY | ADR と Lean モデルはある。本番証明経路に enforcement は無い |
 | TEE 研究コード | EXPERIMENTAL | `tee/` と CI の `tee-layer-regression` |
-| PQC（ML-DSA-87 プロベナンス） | IMPLEMENTED / PARTIAL | 署名・検証・公開鍵・テストはある。コミット済みマニフェストは未署名。PR は非強制 |
+| PQC（ML-DSA-87 プロベナンス） | IMPLEMENTED / PARTIAL | 署名・検証・鍵 lifecycle・rotation evidence・公開鍵・テストはある。コミット済みマニフェストは未署名なので `NOT VERIFIED`。rotation evidence は manifest 署名の代替ではない。Groth16 の量子耐性ではない |
 | STARK | PLANNED / DOCUMENTED ONLY | 実装無し |
 | PQ-ZK | PLANNED / DOCUMENTED ONLY | 実装無し。文書は Groth16 の量子リスクが残ると書いている |
 

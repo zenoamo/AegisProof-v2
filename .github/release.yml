@@ -23,7 +23,7 @@ frozen_core:
 
 verification_commands:
   - npm run check:sensitive-files
-  - npm run verify:provenance -- --live
+  - npm run verify:provenance -- --live --pqc
   - npm run test:prover-compat
   - npm run test:penetration
   - npm run test:phase813
