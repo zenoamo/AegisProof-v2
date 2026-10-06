@@ -303,6 +303,9 @@ jobs:
       - name: Sepolia connection unit tests
         run: npm run test:sepolia-connection
 
+      - name: Sepolia canonical verifier preflight unit tests
+        run: npm run test:sepolia-preflight
+
       - name: Upload FAST evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -383,6 +386,53 @@ jobs:
           echo "Sepolia connection is not a production deployment."
           echo "Sepolia connection is not production provenance VERIFIED."
           echo "Sepolia connection is not Groth16 regression PASS."
+
+      - name: Sepolia canonical verifier preflight
+        id: sepolia_preflight
+        continue-on-error: true
+        env:
+          SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+          SEPOLIA_PRIVATE_KEY: ${{ secrets.SEPOLIA_PRIVATE_KEY }}
+        run: |
+          set +e
+          output=$(node scripts/sepolia-preflight.mjs 2>&1)
+          code=$?
+          set -e
+          printf '%s\n' "$output"
+          if [[ "$code" -eq 0 ]]; then
+            echo "status=PASS" >> "$GITHUB_OUTPUT"
+          elif [[ "$code" -eq 3 ]]; then
+            if printf '%s\n' "$output" | grep -q 'Sepolia CanonicalRegistry: NOT CONFIGURED'; then
+              echo "status=NOT_CONFIGURED" >> "$GITHUB_OUTPUT"
+            else
+              echo "status=NOT_RUN" >> "$GITHUB_OUTPUT"
+            fi
+            exit 3
+          else
+            echo "status=FAIL" >> "$GITHUB_OUTPUT"
+            echo "Sepolia preflight: FAIL"
+            exit 1
+          fi
+
+      - name: Fail when Sepolia canonical verifier preflight failed
+        if: steps.sepolia_preflight.outputs.status == 'FAIL'
+        run: |
+          echo "Sepolia preflight: FAIL"
+          echo "Undeployed canonical verifier bytecode remains FAIL."
+          echo "Sepolia preflight is not production provenance VERIFIED."
+          echo "Sepolia preflight is not Groth16 regression PASS."
+          exit 1
+
+      - name: Record Sepolia canonical verifier NOT CONFIGURED
+        if: steps.sepolia_preflight.outputs.status == 'NOT_CONFIGURED'
+        run: |
+          echo "Sepolia CanonicalRegistry: NOT CONFIGURED"
+          echo "Sepolia Canonical verifier: NOT CONFIGURED"
+          echo "Sepolia Canonical verifier bytecode: NOT RUN"
+          echo "verifierForChain(11155111) is address(0)."
+          echo "This is not a Sepolia canonical verifier deployment."
+          echo "Sepolia preflight is not production provenance VERIFIED."
+          echo "Sepolia preflight is not Groth16 regression PASS."
 
 
   # ==========================================================================

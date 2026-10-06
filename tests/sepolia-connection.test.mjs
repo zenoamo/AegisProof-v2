@@ -330,9 +330,14 @@ function workspaceContains(secret, ignored = new Set()) {
 }
 
 const selfPath = fileURLToPath(import.meta.url);
+const queryFixtureTests = new Set([
+  selfPath,
+  path.join(ROOT, "tests/security/mainnet-preflight.test.mjs"),
+  path.join(ROOT, "tests/security/sepolia-preflight.test.mjs"),
+]);
 ok(!workspaceContains(ephemeralKey) && !workspaceContains(ephemeralKey.slice(2)), "ephemeral key is not stored in the workspace");
 ok(
-  !workspaceContains("cli-hidden-token", new Set([selfPath])) && !workspaceContains("hidden-query", new Set([selfPath])),
+  !workspaceContains("cli-hidden-token", new Set([selfPath])) && !workspaceContains("hidden-query", queryFixtureTests),
   "rpc query fixtures are not written outside the test",
 );
 

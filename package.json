@@ -42,6 +42,8 @@
     "verify:production-provenance-e2e": "node scripts/verify-production-provenance-e2e.mjs",
     "test:sepolia-connection": "node tests/sepolia-connection.test.mjs",
     "verify:sepolia": "node scripts/verify-sepolia.mjs",
+    "preflight:sepolia": "node scripts/sepolia-preflight.mjs",
+    "test:sepolia-preflight": "node --test tests/security/sepolia-preflight.test.mjs",
     "test:pqc-signature": "node scripts/run-pqc-signature.mjs",
     "test:hybrid-auth": "node scripts/run-hybrid-auth.mjs",
     "test:sensitive-files-boundary": "node scripts/run-sensitive-files-boundary.mjs",
