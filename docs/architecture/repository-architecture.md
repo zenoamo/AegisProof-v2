@@ -298,11 +298,18 @@ Production Provenance Final E2E Verification は `scripts/verify-production-prov
 | 証明直後 | `proveCanonical` の `verify` | snarkjs。既定で有効 |
 | 開発者コマンド | `npm run verify:provenance -- --live` | 存在する成果物の SHA-256。zkey 欠落を許すフラグがある |
 | 開発者コマンド | `npm run check:sensitive-files` | 秘密鍵パターンは即失敗。zkey / ptau / wtns は allowlist 以外で失敗 |
+| 開発者コマンド | `npm run verify:sepolia` | Sepolia RPC の chainId `11155111`、signer address、native balance。Production Provenance の成功条件ではない |
 | オフチェーン契約読み取り | SDK `verifyOnChain` / `offChainVerify` | デプロイ済み検証器への `eth_call`。トランザクションは送らない |
 | オンチェーン受理 | `AegisShieldV2.verifyAndAccept` | 検証に加えポリシー。operator だけが呼べる |
 | サーバ | `server/src/routes/sessions.ts` | `sessionExists`、`sessions`、`usedNullifiers` の読み取り。証明はしない |
 
 `computeProofHash`（SDK）は XOR であり、コメントが「暗号学的ハッシュではない」と書いている。
+
+### 5.5 Sepolia 接続確認
+
+`scripts/verify-sepolia.mjs`（`npm run verify:sepolia`）は Extension Layer のデプロイ接続確認である。credential はプロセス環境の `SEPOLIA_PRIVATE_KEY` と `SEPOLIA_RPC_URL` だけを読む。RPC が返す chainId が `11155111` のときだけ成功し、signer address と native ETH 残高を出す。秘密鍵と RPC URL はログ、エラー、ファイルへ出さない。
+
+未設定、接続失敗、chainId 不一致は `Sepolia connection: FAIL` で終了する。この結果は Production Provenance の VERIFIED 条件でも、Frozen Core の完全性条件でもない。Groth16、canonical 30 public signals、WASM、R1CS、production vkey、production.zkey pin は Sepolia 接続のために変更しない。
 
 ## 6. TEE / ClaimsGate Boundary
 
